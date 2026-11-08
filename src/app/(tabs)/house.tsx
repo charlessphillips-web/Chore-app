@@ -2,7 +2,7 @@ import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { jpegUri } from '../../lib/photos';
-import { Button, Card, Empty, Icon, Label, Loading, Screen, Title, timeAgo } from '../../components/ui';
+import { Button, Card, Empty, HouseName, Icon, Label, Loading, Screen, timeAgo } from '../../components/ui';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, space, type } from '../../components/theme';
 
@@ -16,7 +16,7 @@ export default function HouseTab() {
 
   return (
     <Screen>
-      <Title>{house.name}</Title>
+      <HouseName name={house.name} />
 
       <Card style={{ alignItems: 'center' }}>
         <Text style={type.label}>House code</Text>

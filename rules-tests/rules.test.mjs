@@ -288,18 +288,20 @@ test('delete account', async () => {
   await assertSucceeds(deleteDoc(doc(db('a'), 'users', 'a')));
 });
 
-test('bug reports: anyone can send, nobody can read them back', async () => {
+test('feedback: anyone can send a bug or suggestion, nobody can read them back', async () => {
   const report = (uid, over = {}) => ({
-    userId: uid, username: 'Sam', houseId: null, message: 'Log chore button does nothing', screenshot: null,
+    type: 'bug', userId: uid, username: 'Sam', houseId: null, message: 'Log chore button does nothing', screenshot: null,
     device: { os: 'ios' }, createdAt: serverTimestamp(), ...over,
   });
-  const ref = doc(collection(db('sam'), 'bugReports'));
+  const ref = doc(collection(db('sam'), 'feedback'));
   await assertSucceeds(setDoc(ref, report('sam')));
-  await assertSucceeds(setDoc(doc(collection(db('sam'), 'bugReports')), report('sam', { screenshot: 'imgdata' })));
-  await assertFails(getDoc(doc(db('sam'), 'bugReports', ref.id)));
-  await assertFails(getDocs(collection(db('alice'), 'bugReports')));
-  await assertFails(setDoc(doc(collection(db('sam'), 'bugReports')), report('alice')));
-  await assertFails(setDoc(doc(collection(db('sam'), 'bugReports')), report('sam', { message: 'hi' })));
-  await assertFails(updateDoc(doc(db('sam'), 'bugReports', ref.id), { message: 'changed it' }));
-  await assertFails(setDoc(doc(collection(env.unauthenticatedContext().firestore(), 'bugReports')), report('x')));
+  await assertSucceeds(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { screenshot: 'imgdata' })));
+  await assertFails(getDoc(doc(db('sam'), 'feedback', ref.id)));
+  await assertFails(getDocs(collection(db('alice'), 'feedback')));
+  await assertFails(setDoc(doc(collection(db('sam'), 'feedback')), report('alice')));
+  await assertFails(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { message: 'hi' })));
+  await assertFails(updateDoc(doc(db('sam'), 'feedback', ref.id), { message: 'changed it' }));
+  await assertFails(setDoc(doc(collection(env.unauthenticatedContext().firestore(), 'feedback')), report('x')));
+  await assertSucceeds(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { type: 'suggestion', message: 'Add a bin day reminder' })));
+  await assertFails(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { type: 'spam' })));
 });

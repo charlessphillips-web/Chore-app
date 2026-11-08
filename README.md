@@ -5,6 +5,7 @@ A chore app for uni houses. Log chores with a photo, flag chores that need doing
 ![Screens](docs/screens-1.png)
 ![Screens](docs/screens-2.png)
 ![Screens](docs/screens-3.png)
+![Screens](docs/screens-4.png)
 
 ## How it works
 
@@ -25,7 +26,7 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 - **House:** house code to share, housemates, recent activity with photos.
 - **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.
 
-**Report a bug:** in Settings, anyone can describe a problem and attach a screenshot. Reports are saved in the database, and only you can read them (see "Bug reports" below).
+**Feedback:** in Settings, anyone can **report a bug** or **make a suggestion**, optionally with a screenshot. These are saved in the database, and only you can read them (see "Feedback" below).
 
 **Privacy:** date of birth, gender and university go in a private record that housemates can't read. Only you (the app owner) can export it (see below).
 
@@ -83,15 +84,41 @@ To export every user's answers to a spreadsheet:
 
 This writes `demographics-YYYY-MM-DD.csv` and prints a summary: % students, gender split, top universities and age range.
 
-## Bug reports
+## Feedback
 
-Reports appear in the Firebase console → Firestore Database → `bugReports`. To get them all as a spreadsheet, with screenshots saved as pictures (uses the same `service-account.json` as the demographics export):
+Bug reports and suggestions appear in the Firebase console → Firestore Database → `feedback`. Each one has a `type` (`bug` or `suggestion`), the message, the username, and the phone model. To get them all as a spreadsheet, with screenshots saved as pictures (uses the same `service-account.json` as the demographics export):
 
 ```bash
-cd scripts && npm install && npm run export-bug-reports
+cd scripts && npm install && npm run export-feedback
 ```
 
-This creates `bug-reports-YYYY-MM-DD.csv` plus a folder of screenshots.
+This creates `feedback-YYYY-MM-DD.csv` plus a folder of screenshots.
+
+## Releasing a beta (TestFlight / Google Play)
+
+App builds are made in the cloud with EAS (`eas.json`). The app ID is `com.charlesphillips.choreboard`.
+
+1. Copy your Firebase settings so the cloud build can see them (`.env.local` is never uploaded):
+   ```bash
+   cp .env.local .env
+   ```
+2. Link the project to your Expo account (this adds a project ID, which push notifications need):
+   ```bash
+   npx eas-cli@latest init
+   ```
+3. iPhone: build, then send the build to TestFlight. This needs an Apple Developer account.
+   ```bash
+   npx eas-cli@latest build --platform ios --profile production
+   ```
+   ```bash
+   npx eas-cli@latest submit --platform ios --latest
+   ```
+4. Android: build an installable test file (`.apk`) and share the link it gives you:
+   ```bash
+   npx eas-cli@latest build --platform android --profile preview
+   ```
+
+A privacy policy is required by the App Store. There's a draft in `docs/privacy-policy.md`.
 
 ## Tests
 

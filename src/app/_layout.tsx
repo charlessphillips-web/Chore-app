@@ -11,6 +11,7 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, ...darkHeader }}>
           <Stack.Screen name="chore/[key]" options={{ presentation: 'modal', headerShown: true, title: '' }} />
+          <Stack.Screen name="how-it-works" options={{ presentation: 'modal', headerShown: true, title: 'How Choreboard works' }} />
           <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'Photo' }} />
         </Stack>
       </AppProvider>

@@ -2,13 +2,16 @@
   "expo": {
     "name": "Choreboard",
     "slug": "choreboard",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.choreboard.app"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.charlesphillips.choreboard",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +21,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.choreboard.app"
+      "package": "com.charlesphillips.choreboard"
     },
     "web": {
       "favicon": "./assets/favicon.png"

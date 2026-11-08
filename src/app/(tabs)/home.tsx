@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { periodLabel } from '../../lib/period';
-import { Card, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
+import { Card, HouseName, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { space, type } from '../../components/theme';
 
 export default function Home() {
@@ -20,7 +20,7 @@ export default function Home() {
       <View style={styles.header}>
         <Logo size={44} />
         <View style={{ flex: 1 }}>
-          <Text style={type.title} numberOfLines={1}>{house.name}</Text>
+          <HouseName name={house.name} />
           <Text style={type.small}>{periodLabel()}</Text>
         </View>
       </View>

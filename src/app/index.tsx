@@ -16,8 +16,10 @@ export default function Index() {
     );
   }
   if (!ready) return <Loading />;
-  // No profile yet, or an older one from before date of birth was asked.
-  if (!profile || !profile.dob) return <Redirect href="/onboarding" />;
+  // Brand new: explain the app first, then the questions.
+  if (!profile) return <Redirect href="/welcome" />;
+  // An older account from before date of birth was asked.
+  if (!profile.dob) return <Redirect href="/onboarding" />;
   if (!profile.houseId) return <Redirect href="/house-setup" />;
   return <Redirect href="/home" />;
 }

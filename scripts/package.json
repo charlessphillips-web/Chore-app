@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "export-demographics": "node export-demographics.mjs",
-    "export-bug-reports": "node export-bug-reports.mjs"
+    "export-feedback": "node export-feedback.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0"

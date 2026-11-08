@@ -48,6 +48,29 @@ export function Title({ children }: { children: React.ReactNode }) {
   return <Text style={type.title}>{children}</Text>;
 }
 
+/** Text size for a house name: smaller the longer it is, so it always fits. */
+export function houseNameSize(name: string): number {
+  const n = name.length;
+  if (n <= 10) return 28;
+  if (n <= 16) return 24;
+  if (n <= 24) return 20;
+  return 17;
+}
+
+/** The house name, shrinking to fit (up to 2 lines) so it's never cut off. */
+export function HouseName({ name }: { name: string }) {
+  return (
+    <Text
+      style={[type.title, { fontSize: houseNameSize(name), lineHeight: houseNameSize(name) * 1.2 }]}
+      numberOfLines={2}
+      adjustsFontSizeToFit
+      minimumFontScale={0.6}
+    >
+      {name}
+    </Text>
+  );
+}
+
 export function Subtitle({ children }: { children: React.ReactNode }) {
   return <Text style={[type.small, { fontSize: 15, lineHeight: 21 }]}>{children}</Text>;
 }

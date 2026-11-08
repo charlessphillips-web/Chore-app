@@ -53,12 +53,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ---- Bug reports. Anyone signed in can send one; nobody can read them
-    // back through the app (you read them in the Firebase console or with
-    // scripts/export-bug-reports.mjs).
-    match /bugReports/{reportId} {
+    // ---- Feedback (bug reports + suggestions). Anyone signed in can send
+    // one; nobody can read them back through the app (you read them in the
+    // Firebase console or with scripts/export-feedback.mjs).
+    match /feedback/{feedbackId} {
       allow create: if signedIn()
         && request.resource.data.userId == me()
+        && request.resource.data.type in ['bug', 'suggestion']
         && request.resource.data.message is string
         && request.resource.data.message.size() >= 5
         && request.resource.data.message.size() <= 2000

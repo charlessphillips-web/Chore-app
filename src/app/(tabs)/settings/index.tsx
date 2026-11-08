@@ -70,7 +70,9 @@ export default function SettingsIndex() {
       )}
 
       <Label>Help</Label>
-      <RowButton icon="bug-outline" title="Report a bug" subtitle="Something not working? Tell us" onPress={() => router.push('/settings/report-bug')} />
+      <RowButton icon="information-circle-outline" title="How Choreboard works" onPress={() => router.push('/how-it-works')} />
+      <RowButton icon="bug-outline" title="Report a bug" subtitle="Something not working? Tell us" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'bug' } })} />
+      <RowButton icon="bulb-outline" title="Make a suggestion" subtitle="Ideas to make Choreboard better" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'suggestion' } })} />
 
       <Label>Account</Label>
       <Button title="Leave house" icon="exit-outline" variant="secondary" onPress={leave} loading={busy === 'leave'} disabled={!!busy} />

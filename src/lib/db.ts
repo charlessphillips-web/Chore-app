@@ -404,23 +404,26 @@ export async function requestChore(opts: {
   return { assignee, notified };
 }
 
-// ---------- Bug reports ----------
+// ---------- Feedback (bug reports + suggestions) ----------
+
+export type FeedbackType = 'bug' | 'suggestion';
 
 /**
- * Sends a bug report to bugReports/{id}. Only the app owner can read these
- * (via the Firebase console or scripts/export-bug-reports.mjs).
+ * Sends a bug report or suggestion to feedback/{id}. Only the app owner can
+ * read these (Firebase console, or scripts/export-feedback.mjs).
  */
-export async function submitBugReport(opts: {
+export async function submitFeedback(opts: {
+  type: FeedbackType;
   uid: string;
   username: string | null;
   houseId: string | null;
   message: string;
   screenshot: string | null;
-  screen?: string;
 }): Promise<void> {
   const message = opts.message.trim();
-  if (message.length < 5) throw new Error('Tell us a bit more about what went wrong.');
-  await setDoc(doc(collection(db, 'bugReports')), {
+  if (message.length < 5) throw new Error('Tell us a bit more.');
+  await setDoc(doc(collection(db, 'feedback')), {
+    type: opts.type,
     userId: opts.uid,
     username: opts.username,
     houseId: opts.houseId,
