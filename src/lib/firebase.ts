@@ -30,12 +30,15 @@ export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseCon
 const firstInit = getApps().length === 0;
 const app = firstInit ? initializeApp(firebaseConfig) : getApp();
 
-export const auth: Auth = firstInit
-  ? initializeAuth(
-      app,
-      Platform.OS === 'web' ? {} : { persistence: getReactNativePersistence(AsyncStorage) },
-    )
-  : getAuth(app);
+// Stay signed in between launches. On phones that's AsyncStorage; in a web
+// browser getAuth() keeps the sign-in in the browser's storage, so people
+// using the web link keep their account when they reopen it.
+export const auth: Auth =
+  Platform.OS === 'web'
+    ? getAuth(app)
+    : firstInit
+      ? initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) })
+      : getAuth(app);
 
 export const db: Firestore = firstInit
   ? initializeFirestore(app, { experimentalAutoDetectLongPolling: true })

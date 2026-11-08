@@ -24,7 +24,12 @@
       "package": "com.charlesphillips.choreboard"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "name": "Choreboard",
+      "shortName": "Choreboard",
+      "backgroundColor": "#000000",
+      "themeColor": "#000000"
     },
     "plugins": [
       "expo-router",
@@ -39,6 +44,12 @@
       "@react-native-community/datetimepicker"
     ],
     "scheme": "choreboard",
-    "backgroundColor": "#000000"
+    "backgroundColor": "#000000",
+    "owner": "choreboard",
+    "extra": {
+      "eas": {
+        "projectId": "c4acb62e-73e6-4d2d-8523-6d8bac597f57"
+      }
+    }
   }
 }

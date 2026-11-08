@@ -117,6 +117,13 @@ App builds are made in the cloud with EAS (`eas.json`). The app ID is `com.charl
    ```bash
    npx eas-cli@latest build --platform android --profile preview
    ```
+5. Web link (free; iPhone testers can "Add to Home Screen", but there are no notifications):
+   ```bash
+   npx expo export --platform web
+   ```
+   ```bash
+   npx eas-cli@latest deploy --prod
+   ```
 
 A privacy policy is required by the App Store. There's a draft in `docs/privacy-policy.md`.
 
