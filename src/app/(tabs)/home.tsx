@@ -1,31 +1,24 @@
-import { useState } from 'react';
-import { Alert, Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
-import { logChore } from '../../lib/db';
 import { Button, Card, Loading, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
 import { colors, space } from '../../components/theme';
 import type { ChoreRequest } from '../../lib/types';
 
 export default function Home() {
-  const { user, profile, house, members, openRequests } = useApp();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { user, profile, house, members, openRequests, logs } = useApp();
   if (!user || !profile || !house) return <Loading />;
 
   const mine = openRequests.filter((r) => r.assignedTo === user.uid);
   const others = openRequests.filter((r) => r.assignedTo !== user.uid);
+  const toCheck = logs.filter(
+    (l) => l.userId !== user.uid && l.status === 'pending' && !l.okVoters.includes(user.uid) && !l.notOkVoters.includes(user.uid),
+  ).length;
   const leaderboard = [...members].sort((a, b) => b.totalCompleted - a.totalCompleted);
 
-  async function markDone(r: ChoreRequest) {
-    setBusyId(r.id);
-    try {
-      await logChore(house!.id, user!.uid, profile!.username, r.choreName, r.id);
-    } catch (e) {
-      Alert.alert('Could not save', (e as Error).message);
-    } finally {
-      setBusyId(null);
-    }
-  }
+  // Doing a requested chore still needs a photo, so go via the log screen.
+  const markDone = (r: ChoreRequest) =>
+    router.push({ pathname: '/log', params: { requestId: r.id, chore: r.choreName } });
 
   const RequestRow = ({ r, highlight }: { r: ChoreRequest; highlight?: boolean }) => (
     <View style={[styles.row, highlight && styles.highlight]}>
@@ -35,19 +28,27 @@ export default function Home() {
           {highlight ? `${r.requestedByName} flagged this` : `Asked ${r.assignedToName}`} · {timeAgo(r.createdAt)}
         </Text>
       </View>
-      <Button title="Done ✓" onPress={() => markDone(r)} loading={busyId === r.id} style={styles.doneBtn} />
+      <Button title="Done ✓" onPress={() => markDone(r)} style={styles.doneBtn} />
     </View>
   );
 
   return (
     <Screen>
       <Title>{house.name}</Title>
-      <Subtitle>Hey {profile.username} — what's happening?</Subtitle>
+      <Subtitle>Hey {profile.username} — what&apos;s happening?</Subtitle>
 
       <View style={{ flexDirection: 'row', gap: space.sm }}>
         <Button title="✅ I did a chore" onPress={() => router.push('/log')} style={{ flex: 1 }} />
         <Button title="🔔 Needs doing" variant="secondary" onPress={() => router.push('/request')} style={{ flex: 1 }} />
       </View>
+
+      {toCheck > 0 && (
+        <Button
+          title={`📷 ${toCheck} chore photo${toCheck === 1 ? '' : 's'} to check`}
+          variant="secondary"
+          onPress={() => router.push('/activity')}
+        />
+      )}
 
       {mine.length > 0 && (
         <Card>

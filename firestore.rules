@@ -10,6 +10,41 @@ service cloud.firestore {
     function memberPath(houseId, uid) { return /databases/$(database)/documents/houses/$(houseId)/members/$(uid); }
     function isMember(houseId) { return signedIn() && exists(memberPath(houseId, me())); }
 
+    // ---- Photo verification (mirrors src/lib/review.ts) ----
+    function reviewStatus(d) {
+      return d.notOkVoters.size() > d.okVoters.size() ? 'rejected'
+        : (d.okVoters.size() > 0 ? 'verified' : 'pending');
+    }
+    function onlyMyVoteChanged(after, before) {
+      return after.removeAll([me()]) == before.removeAll([me()])
+        && after.size() <= before.removeAll([me()]).size() + 1;
+    }
+    // If the vote flips the chore into/out of "rejected", the chore-doer's
+    // score must change in the same write (unless they've left the house).
+    function scoreAdjustedIfNeeded(houseId, before, after) {
+      let flipped = (before.status == 'rejected') != (after.status == 'rejected');
+      return !flipped
+        || !exists(memberPath(houseId, before.userId))
+        || getAfter(memberPath(houseId, before.userId)).data.totalCompleted
+             == get(memberPath(houseId, before.userId)).data.totalCompleted
+                + (after.status == 'rejected' ? -1 : 1);
+    }
+    function isReviewAdjustment(houseId, uid) {
+      let logId = request.resource.data.lastReviewAdjust;
+      let logPath = /databases/$(database)/documents/houses/$(houseId)/logs/$(logId);
+      let before = get(logPath).data;
+      let after = getAfter(logPath).data;
+      let delta = after.status == 'rejected' ? -1 : 1;
+      let key = after.choreKey;
+      return after.userId == uid
+        && (before.status == 'rejected') != (after.status == 'rejected')
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['totalCompleted', 'choreCounts', 'lastReviewAdjust'])
+        && request.resource.data.totalCompleted == resource.data.totalCompleted + delta
+        && request.resource.data.choreCounts.diff(resource.data.choreCounts).affectedKeys().hasOnly([key])
+        && request.resource.data.choreCounts.get(key, 0) == resource.data.choreCounts.get(key, 0) + delta;
+    }
+
     // ---- Private profile + demographics. Only the owner (and you, via the
     // admin export script) can read it. Housemates never see age/gender/uni.
     function validProfile(d) {
@@ -62,12 +97,45 @@ service cloud.firestore {
                .hasOnly(['username', 'pushToken', 'totalCompleted', 'choreCounts', 'lastCompletedAt'])
           && request.resource.data.totalCompleted >= resource.data.totalCompleted
           && request.resource.data.totalCompleted <= resource.data.totalCompleted + 1;
+        // A housemate's vote that tips a chore into/out of "rejected"
+        // adjusts the chore-doer's score by exactly -1/+1 for that chore.
+        allow update: if isMember(houseId) && me() != uid && isReviewAdjustment(houseId, uid);
         allow delete: if signedIn() && me() == uid;
       }
 
+      // A chore someone has done. Must come with a photo (photos/{logId}).
       match /logs/{logId} {
         allow read: if isMember(houseId);
-        allow create: if isMember(houseId) && request.resource.data.userId == me();
+        allow create: if isMember(houseId)
+          && request.resource.data.userId == me()
+          && request.resource.data.status == 'pending'
+          && request.resource.data.okVoters == []
+          && request.resource.data.notOkVoters == []
+          && request.resource.data.photoThumb is string
+          && request.resource.data.photoThumb.size() < 100000
+          && existsAfter(/databases/$(database)/documents/houses/$(houseId)/photos/$(logId));
+        // Voting: housemates (not the chore-doer) can add, change or remove
+        // only their own vote, and status must match the votes.
+        allow update: if isMember(houseId)
+          && resource.data.userId != me()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['okVoters', 'notOkVoters', 'status'])
+          && onlyMyVoteChanged(request.resource.data.okVoters, resource.data.okVoters)
+          && onlyMyVoteChanged(request.resource.data.notOkVoters, resource.data.notOkVoters)
+          && !(me() in request.resource.data.okVoters && me() in request.resource.data.notOkVoters)
+          && request.resource.data.status == reviewStatus(request.resource.data)
+          && scoreAdjustedIfNeeded(houseId, resource.data, request.resource.data);
+        allow delete: if false;
+      }
+
+      // Full-size chore photos. Everyone in the house can see them.
+      match /photos/{logId} {
+        allow read: if isMember(houseId);
+        allow create: if isMember(houseId)
+          && request.resource.data.userId == me()
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 900000
+          && getAfter(/databases/$(database)/documents/houses/$(houseId)/logs/$(logId)).data.userId == me();
         allow update, delete: if false;
       }
 

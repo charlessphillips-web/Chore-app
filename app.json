@@ -25,7 +25,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Choreboard uses your camera so you can photograph chores you have done for your housemates to check.",
+          "photosPermission": false
+        }
+      ]
     ],
     "scheme": "choreboard"
   }

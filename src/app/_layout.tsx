@@ -16,6 +16,7 @@ export default function RootLayout() {
           }}
         >
           <Stack.Screen name="log" options={{ presentation: 'modal', headerShown: true, title: 'I did a chore' }} />
+          <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'Check photo' }} />
           <Stack.Screen name="request" options={{ presentation: 'modal', headerShown: true, title: 'Needs doing' }} />
         </Stack>
       </AppProvider>

@@ -1,4 +1,5 @@
 import type { AssignMode, MemberStats } from './assign';
+import type { ReviewStatus } from './review';
 
 export type Gender = 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
 
@@ -36,6 +37,11 @@ export interface ChoreLog {
   username: string;
   at: number;
   requestId: string | null;
+  /** Small JPEG (base64) shown in the feed. Full photo is in photos/{logId}. */
+  photoThumb: string | null;
+  okVoters: string[];
+  notOkVoters: string[];
+  status: ReviewStatus;
 }
 
 /** houses/{houseId}/requests/{id} — "this needs doing". */

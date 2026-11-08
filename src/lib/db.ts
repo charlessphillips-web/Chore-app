@@ -8,6 +8,7 @@ import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, cleanChoreName } from './chores';
 import { pickAssignee, type AssignMode } from './assign';
 import { sendPush } from './notifications';
+import { applyVote, reviewStatus, scoreDelta, type ReviewStatus, type Vote } from './review';
 import type { ChoreLog, ChoreRequest, House, Member, UserProfile } from './types';
 
 // Firestore stores server timestamps; the app works in millis.
@@ -35,7 +36,9 @@ export async function saveProfile(
 }
 
 export function watchProfile(uid: string, cb: (p: UserProfile | null) => void) {
-  return onSnapshot(userRef(uid), (snap) => {
+  // includeMetadataChanges: also tell us when the server confirms a write,
+  // even if the data itself didn't change.
+  return onSnapshot(userRef(uid), { includeMetadataChanges: true }, (snap) => {
     // Ignore the instant local copy of our own write: wait until the server
     // has confirmed it, otherwise we'd try to read a house before the server
     // knows we've joined it (and the security rules would refuse).
@@ -157,7 +160,21 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
   const q = query(collection(db, 'houses', houseId, 'logs'), orderBy('at', 'desc'), limit(50));
   return onSnapshot(
     q,
-    (snap) => cb(snap.docs.map((s) => ({ ...(s.data() as ChoreLog), id: s.id, at: ms(s.data().at) ?? Date.now() }))),
+    (snap) =>
+      cb(
+        snap.docs.map((s) => {
+          const d = s.data();
+          return {
+            ...(d as ChoreLog),
+            id: s.id,
+            at: ms(d.at) ?? Date.now(),
+            photoThumb: d.photoThumb ?? null,
+            okVoters: d.okVoters ?? [],
+            notOkVoters: d.notOkVoters ?? [],
+            status: d.status ?? 'pending',
+          };
+        }),
+      ),
     onError,
   );
 }
@@ -169,24 +186,31 @@ export async function setPushToken(houseId: string, uid: string, token: string |
 // ---------- Chores ----------
 
 /**
- * "I did a chore." Adds to the activity log and bumps the user's own
- * counters. If it fulfils an open request, that request is closed too.
+ * "I did a chore." Saves the photo, adds to the activity log and bumps the
+ * user's own counters. If it fulfils an open request, that request is closed too.
  */
-export async function logChore(
-  houseId: string,
-  uid: string,
-  username: string,
-  rawName: string,
-  requestId: string | null = null,
-): Promise<void> {
-  const name = cleanChoreName(rawName);
+export async function logChore(opts: {
+  houseId: string;
+  uid: string;
+  username: string;
+  choreName: string;
+  photo: { thumb: string; full: string };
+  requestId?: string | null;
+}): Promise<void> {
+  const { houseId, uid, username, photo } = opts;
+  const requestId = opts.requestId ?? null;
+  const name = cleanChoreName(opts.choreName);
   const key = choreKey(name);
   if (!key) throw new Error('Give the chore a name.');
+  if (!photo?.thumb || !photo?.full) throw new Error('Take a photo of the finished chore first.');
 
   const batch = writeBatch(db);
-  batch.set(doc(collection(db, 'houses', houseId, 'logs')), {
+  const logRef = doc(collection(db, 'houses', houseId, 'logs'));
+  batch.set(logRef, {
     choreKey: key, choreName: name, userId: uid, username, at: serverTimestamp(), requestId,
+    photoThumb: photo.thumb, okVoters: [], notOkVoters: [], status: 'pending',
   });
+  batch.set(doc(db, 'houses', houseId, 'photos', logRef.id), { userId: uid, data: photo.full });
   // Dot-path so only this chore's counter changes (choreKey has no dots).
   batch.update(memberRef(houseId, uid), {
     totalCompleted: increment(1),
@@ -199,6 +223,45 @@ export async function logChore(
     });
   }
   await batch.commit();
+}
+
+/** Loads the full-size photo for one chore. */
+export async function getChorePhoto(houseId: string, logId: string): Promise<string | null> {
+  const snap = await getDoc(doc(db, 'houses', houseId, 'photos', logId));
+  return snap.exists() ? (snap.data().data as string) : null;
+}
+
+/**
+ * A housemate votes on whether a chore photo is OK (or clears their vote
+ * with null). If that tips the chore into or out of "rejected", the
+ * chore-doer's score goes down or back up in the same write.
+ */
+export async function voteOnChore(houseId: string, logId: string, voterUid: string, vote: Vote | null) {
+  const logRef = doc(db, 'houses', houseId, 'logs', logId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(logRef);
+    if (!snap.exists()) throw new Error('That chore no longer exists.');
+    const log = snap.data();
+    if (log.userId === voterUid) throw new Error("You can't check your own chore.");
+
+    // Transactions must do all reads before any writes.
+    const ownerRef = memberRef(houseId, log.userId);
+    const ownerStillInHouse = (await tx.get(ownerRef)).exists();
+
+    const before: ReviewStatus = log.status ?? 'pending';
+    const votes = applyVote(log.okVoters ?? [], log.notOkVoters ?? [], voterUid, vote);
+    const after = reviewStatus(votes.okVoters, votes.notOkVoters);
+    tx.update(logRef, { ...votes, status: after });
+
+    const delta = scoreDelta(before, after);
+    if (delta !== 0 && ownerStillInHouse) {
+      tx.update(ownerRef, {
+        totalCompleted: increment(delta),
+        [`choreCounts.${log.choreKey}`]: increment(delta),
+        lastReviewAdjust: logId,
+      });
+    }
+  });
 }
 
 /**

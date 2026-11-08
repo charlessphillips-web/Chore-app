@@ -51,7 +51,7 @@ export default function RequestChore() {
 
   return (
     <Screen>
-      <Subtitle>Spotted something that needs doing? We'll ask whoever's done the least.</Subtitle>
+      <Subtitle>Spotted something that needs doing? We&apos;ll ask whoever&apos;s done the least.</Subtitle>
       <ChorePicker value={chore} onChange={setChore} />
 
       <Label>Who should do it?</Label>

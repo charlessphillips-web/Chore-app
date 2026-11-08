@@ -4,18 +4,31 @@ A chore app for uni houses. Log chores you've done; flag chores that need doing 
 
 ![Screens](docs/screenshots.png)
 
+![Photo verification](docs/photo-verification.png)
+
 ## How it works
 
 ```
 Open app ─► Questions (username, age, gender, student? which uni?)
           ─► Create a house (get a 6-letter code)  OR  Join with a housemate's code
           ─► Home
-               ├─ ✅ "I did a chore"   ─► +1 on your score, shows in Activity
+               ├─ ✅ "I did a chore"   ─► take a photo (required) ─► +1 on your score
+               │                          ─► housemates see the photo and vote 👍 / 👎
                └─ 🔔 "Needs doing"     ─► picks who has done the fewest chores
                                            (or fewest of THAT chore, if you choose)
                                            ─► push notification to them
                                            ─► sits in their "Your turn" list until someone taps Done
 ```
+
+**Photo checks:** every chore needs a camera photo, and everyone in the house can see it. Housemates vote 👍 "Looks good" or 👎 "Not done". You can't vote on your own chore, and you can change your vote.
+
+```
+no votes yet       ─► ⏳ Waiting for a check   (still counts)
+more 👍 than 👎     ─► ✓ Verified               (counts; a tie also counts)
+more 👎 than 👍     ─► ✗ Rejected               (removed from your score)
+```
+
+Photos are compressed and stored in Firestore, so no paid storage plan is needed. Logic: `src/lib/review.ts`.
 
 **Who gets picked?** Never the person who flagged it. Then fewest chores (overall or of that chore). Ties go to whoever has gone longest without doing anything. Logic: `src/lib/assign.ts`.
 
@@ -84,11 +97,15 @@ npm test
 npm run typecheck
 ```
 ```bash
+npx expo lint
+```
+```bash
 npm run test:rules
 ```
 
-- `npm test` checks who-gets-picked and house codes.
+- `npm test` checks who-gets-picked, photo voting and house codes.
 - `npm run typecheck` checks the TypeScript.
+- `npx expo lint` checks code style and common mistakes.
 - `npm run test:rules` checks the security rules against a local emulator and needs Java installed.
 
 ## Project layout
@@ -99,8 +116,10 @@ src/app/          screens (each file = a screen)
   house-setup.tsx   create / join house
   (tabs)/home.tsx   main screen, leaderboard, "your turn"
   (tabs)/activity.tsx, (tabs)/house.tsx
-  log.tsx, request.tsx
-src/lib/          logic + database (assign.ts, db.ts, notifications.ts)
+  log.tsx           log a chore + take photo
+  request.tsx       flag a chore for someone else
+  photo/[logId].tsx full-size photo + voting
+src/lib/          logic + database (assign.ts, review.ts, photos.ts, db.ts, notifications.ts)
 firestore.rules   who can read/write what
 scripts/          demographics export
 rules-tests/      security rule tests

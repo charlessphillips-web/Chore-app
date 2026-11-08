@@ -27,15 +27,22 @@ export function useApp(): AppState {
   return ctx;
 }
 
+/** Data tagged with the house it belongs to, so stale data is never shown after switching. */
+interface HouseData {
+  houseId: string;
+  house: House | null;
+  members: Member[];
+  openRequests: ChoreRequest[];
+  logs: ChoreLog[];
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileReady, setProfileReady] = useState(false);
-  const [house, setHouse] = useState<House | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [openRequests, setOpenRequests] = useState<ChoreRequest[]>([]);
-  const [logs, setLogs] = useState<ChoreLog[]>([]);
+  // The profile, tagged with whose it is (undefined = not loaded yet).
+  const [profileState, setProfileState] = useState<{ uid: string; profile: UserProfile | null }>();
+  const [houseData, setHouseData] = useState<HouseData | null>(null);
+  // Retry counter for loading house data, tagged with the house.
+  const [retry, setRetry] = useState<{ houseId: string; n: number } | null>(null);
   const [error, setError] = useState<string | null>(
     isFirebaseConfigured ? null : 'Firebase is not configured. Copy .env.example to .env.local and fill it in.',
   );
@@ -44,37 +51,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     return onAuthStateChanged(auth, (u) => {
-      if (u) {
-        setUser(u);
-        setAuthReady(true);
-      } else {
-        signInAnonymously(auth).catch((e) => setError(`Sign-in failed: ${e.message}`));
-      }
+      if (u) setUser(u);
+      else signInAnonymously(auth).catch((e) => setError(`Sign-in failed: ${e.message}`));
     });
   }, []);
 
   // 2. Their profile (demographics + which house they're in).
   useEffect(() => {
     if (!user) return;
-    setProfileReady(false);
-    return watchProfile(user.uid, (p) => {
-      setProfile(p);
-      setProfileReady(true);
-    });
+    return watchProfile(user.uid, (profile) => setProfileState({ uid: user.uid, profile }));
   }, [user]);
 
-  // 3. Everything about their house, live.
+  const profileReady = !!user && profileState?.uid === user.uid;
+  const profile = profileReady ? profileState!.profile : null;
   const houseId = profile?.houseId ?? null;
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => setAttempt(0), [houseId]);
+  const attempt = retry && retry.houseId === houseId ? retry.n : 0;
+
+  // 3. Everything about their house, live.
   useEffect(() => {
-    if (!houseId) {
-      setHouse(null);
-      setMembers([]);
-      setOpenRequests([]);
-      setLogs([]);
-      return;
-    }
+    if (!houseId) return;
+    const update = (patch: Partial<HouseData>) =>
+      setHouseData((prev) => ({
+        ...(prev?.houseId === houseId ? prev : { houseId, house: null, members: [], openRequests: [], logs: [] }),
+        ...patch,
+      }));
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let failed = false;
     const onError = (e: FirestoreError) => {
@@ -83,16 +83,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Straight after joining, the server can briefly refuse reads until it
       // sees our membership. Retry a few times before giving up.
       if (e.code === 'permission-denied' && attempt < 5) {
-        retryTimer = setTimeout(() => setAttempt((a) => a + 1), 500 * (attempt + 1));
+        retryTimer = setTimeout(() => setRetry({ houseId, n: attempt + 1 }), 500 * (attempt + 1));
       } else {
         setError(`Couldn't load your house: ${e.message}`);
       }
     };
     const unsubs = [
-      watchHouse(houseId, setHouse, onError),
-      watchMembers(houseId, setMembers, onError),
-      watchOpenRequests(houseId, setOpenRequests, onError),
-      watchRecentLogs(houseId, setLogs, onError),
+      watchHouse(houseId, (house) => update({ house }), onError),
+      watchMembers(houseId, (members) => update({ members }), onError),
+      watchOpenRequests(houseId, (openRequests) => update({ openRequests }), onError),
+      watchRecentLogs(houseId, (logs) => update({ logs }), onError),
     ];
     return () => {
       clearTimeout(retryTimer);
@@ -112,15 +112,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [houseId, user]);
 
+  const current = houseData && houseData.houseId === houseId ? houseData : null;
   const value: AppState = {
-    ready: authReady && profileReady,
+    ready: profileReady,
     error,
     user,
     profile,
-    house,
-    members,
-    openRequests,
-    logs,
+    house: current?.house ?? null,
+    members: current?.members ?? [],
+    openRequests: current?.openRequests ?? [],
+    logs: current?.logs ?? [],
   };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
