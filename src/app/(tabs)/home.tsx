@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
+import { NotificationCard } from '../../components/NotificationCard';
 import { periodLabel } from '../../lib/period';
 import { Card, HouseName, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { space, type } from '../../components/theme';
@@ -24,6 +25,8 @@ export default function Home() {
           <Text style={type.small}>{periodLabel()}</Text>
         </View>
       </View>
+
+      <NotificationCard />
 
       {mine.length > 0 && (
         <>

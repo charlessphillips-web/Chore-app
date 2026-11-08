@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { AppState as RNAppState } from 'react-native';
 import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
@@ -6,7 +7,7 @@ import {
   clearRemovedHouse, setPushToken, watchHouse, watchMembers, watchOpenRequests, watchProfile,
   watchRecentLogs, watchWallpaper,
 } from '../lib/db';
-import { registerForPushNotifications } from '../lib/notifications';
+import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
 import type { ChoreLog, ChoreRequest, House, Member, UserProfile } from '../lib/types';
 
@@ -25,6 +26,10 @@ interface AppState {
   logs: ChoreLog[];
   /** House wallpaper as a data URI, if the admin set one. */
   wallpaper: string | null;
+  /** Whether this phone has notifications on. */
+  notifStatus: NotificationStatus | null;
+  /** Shows the phone's "allow notifications" pop-up and saves the token. */
+  enableNotifications: () => Promise<NotificationStatus>;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -55,6 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Retry counter for loading house data, tagged with the house.
   const [retry, setRetry] = useState<{ houseId: string; n: number } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [notifStatus, setNotifStatus] = useState<NotificationStatus | null>(null);
   const [error, setError] = useState<string | null>(
     isFirebaseConfigured ? null : 'Firebase is not configured. Copy .env.example to .env.local and fill it in.',
   );
@@ -120,17 +126,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [houseId, uid, attempt]);
 
-  // 4. Once in a house, register this phone for chore notifications.
+  // 4. Once in a house: if notifications are allowed, save this phone's
+  // token. (If not, Home explains why and asks — see NotificationCard.)
+  // Checked again whenever the app comes back to the front, e.g. after the
+  // user turned notifications on in their phone's Settings.
   useEffect(() => {
     if (!houseId || !uid) return;
     let cancelled = false;
-    registerForPushNotifications().then((token) => {
-      if (!cancelled && token) setPushToken(houseId, uid, token).catch(() => {});
-    });
+    const check = () =>
+      getNotificationStatus().then((status) => {
+        if (cancelled) return;
+        setNotifStatus(status);
+        if (status === 'granted') {
+          registerForPushNotifications({ ask: false }).then((token) => {
+            if (!cancelled && token) setPushToken(houseId, uid, token).catch(() => {});
+          });
+        }
+      });
+    check();
+    const sub = RNAppState.addEventListener('change', (s) => s === 'active' && check());
     return () => {
       cancelled = true;
+      sub.remove();
     };
   }, [houseId, uid]);
+
+  async function enableNotifications(): Promise<NotificationStatus> {
+    const token = await registerForPushNotifications({ ask: true });
+    if (token && houseId && uid) await setPushToken(houseId, uid, token).catch(() => {});
+    const status = await getNotificationStatus();
+    setNotifStatus(status);
+    return status;
+  }
 
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
@@ -147,6 +174,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     openRequests: current?.openRequests ?? [],
     logs: current?.logs ?? [],
     wallpaper: current?.wallpaper ?? null,
+    notifStatus,
+    enableNotifications,
   };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
