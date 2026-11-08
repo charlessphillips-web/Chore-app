@@ -1,12 +1,15 @@
-import type { AssignMode, MemberStats } from './assign';
+import type { MemberStats } from './assign';
+import type { HouseChore } from './chores';
 import type { ReviewStatus } from './review';
 
 export type Gender = 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
+export const GENDERS: Gender[] = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'];
 
 /** users/{uid} — private to the user. Demographics live here for later analysis. */
 export interface UserProfile {
   username: string;
-  age: number;
+  /** "YYYY-MM-DD". Older test accounts may not have one yet. */
+  dob: string | null;
   gender: Gender;
   isStudent: boolean;
   university: string | null;
@@ -14,16 +17,24 @@ export interface UserProfile {
   createdAt: number;
 }
 
+export type ProfileDetails = Pick<UserProfile, 'username' | 'dob' | 'gender' | 'isStudent' | 'university'>;
+
 /** houses/{houseId} */
 export interface House {
   id: string;
   name: string;
   code: string;
   createdBy: string;
+  /** The house admin: first person in, or whoever it was handed to. */
+  adminUid: string;
+  chores: HouseChore[];
   createdAt: number;
 }
 
-/** houses/{houseId}/members/{uid} — visible to everyone in the house. */
+/**
+ * houses/{houseId}/members/{uid} — visible to everyone in the house.
+ * totalCompleted / choreCounts are for the CURRENT 2-month period.
+ */
 export interface Member extends MemberStats {
   pushToken: string | null;
 }
@@ -36,12 +47,14 @@ export interface ChoreLog {
   userId: string;
   username: string;
   at: number;
+  /** 2-month period it counts towards, e.g. "p2026_11". */
+  period: string | null;
   requestId: string | null;
-  /** Small JPEG (base64) shown in the feed. Full photo is in photos/{logId}. */
+  /** Small JPEG (base64). Full photo is in photos/{logId}. */
   photoThumb: string | null;
-  okVoters: string[];
-  notOkVoters: string[];
   status: ReviewStatus;
+  reviewedBy: string | null;
+  reviewedByName: string | null;
 }
 
 /** houses/{houseId}/requests/{id} — "this needs doing". */
@@ -49,7 +62,7 @@ export interface ChoreRequest {
   id: string;
   choreKey: string;
   choreName: string;
-  mode: AssignMode;
+  needs: string;
   requestedBy: string;
   requestedByName: string;
   assignedTo: string;

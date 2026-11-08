@@ -1,67 +1,137 @@
 import React from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, Image, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   type TextInputProps, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, space } from './theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, space, type } from './theme';
 
-export function Screen({ children, scroll = true }: { children: React.ReactNode; scroll?: boolean }) {
-  return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
-      {scroll ? (
-        <ScrollView contentContainerStyle={styles.screenInner} keyboardShouldPersistTaps="handled">
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.screenInner, { flex: 1 }]}>{children}</View>
-      )}
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/**
+ * A scrollable page. On iOS the content moves up when the keyboard opens and
+ * there's extra room at the bottom, so you can always scroll the box you're
+ * typing in into view.
+ */
+export function Screen({
+  children,
+  edges = ['top', 'left', 'right'],
+  background,
+}: {
+  children: React.ReactNode;
+  edges?: ('top' | 'left' | 'right' | 'bottom')[];
+  /** Optional wallpaper (data URI), shown faintly behind the page. */
+  background?: string | null;
+}) {
+  const content = (
+    <SafeAreaView style={styles.screen} edges={edges}>
+      <ScrollView
+        contentContainerStyle={styles.screenInner}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+      >
+        {children}
+      </ScrollView>
     </SafeAreaView>
+  );
+  if (!background) return <View style={styles.root}>{content}</View>;
+  return (
+    <ImageBackground source={{ uri: background }} style={styles.root} imageStyle={{ opacity: 0.28 }} resizeMode="cover">
+      {content}
+    </ImageBackground>
   );
 }
 
 export function Title({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.title}>{children}</Text>;
+  return <Text style={type.title}>{children}</Text>;
 }
 
 export function Subtitle({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.subtitle}>{children}</Text>;
+  return <Text style={[type.small, { fontSize: 15, lineHeight: 21 }]}>{children}</Text>;
 }
 
 export function Label({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.label}>{children}</Text>;
+  return <Text style={[type.label, { marginTop: space.sm }]}>{children}</Text>;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
+export function Icon({ name, size = 20, color = colors.text }: { name: IconName; size?: number; color?: string }) {
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
 export function Button({
-  title, onPress, variant = 'primary', loading, disabled, style,
+  title, onPress, variant = 'primary', loading, disabled, style, icon,
 }: {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  icon?: IconName;
 }) {
-  const bg = variant === 'primary' ? colors.primary : variant === 'danger' ? colors.danger : colors.card;
-  const fg = variant === 'secondary' ? colors.primary : colors.primaryText;
+  const filled = variant === 'primary';
+  const fg = variant === 'danger' ? colors.danger : colors.text;
   const off = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!off }}
       onPress={onPress}
       disabled={off}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: bg, opacity: off ? 0.5 : pressed ? 0.8 : 1 },
-        variant === 'secondary' && { borderWidth: 1.5, borderColor: colors.primary },
+        filled && { backgroundColor: colors.primary, borderColor: colors.primary },
+        variant === 'secondary' && { borderColor: colors.primaryBright },
+        variant === 'danger' && { borderColor: colors.danger },
+        variant === 'ghost' && { borderColor: 'transparent' },
+        { opacity: off ? 0.45 : pressed ? 0.75 : 1 },
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={fg} /> : <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color={fg} />
+      ) : (
+        <View style={styles.buttonInner}>
+          {icon && <Icon name={icon} size={18} color={fg} />}
+          <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/** A tappable row with a purple outline and a white arrow, e.g. a chore. */
+export function RowButton({
+  title, subtitle, onPress, icon, right, testID,
+}: {
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+  icon?: IconName;
+  right?: React.ReactNode;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      testID={testID}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.cardRaised }]}
+    >
+      {icon && <Icon name={icon} size={20} color={colors.primaryBright} />}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        {subtitle ? <Text style={type.small}>{subtitle}</Text> : null}
+      </View>
+      {right}
+      <Icon name="chevron-forward" size={20} color={colors.text} />
     </Pressable>
   );
 }
@@ -76,9 +146,9 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+      style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.primaryBright }]}
     >
-      <Text style={[styles.chipText, selected && { color: colors.primaryText }]}>{label}</Text>
+      <Text style={[styles.chipText, selected && { color: colors.text }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -92,12 +162,42 @@ export function ErrorText({ children }: { children: React.ReactNode }) {
   return <Text style={styles.error}>{children}</Text>;
 }
 
+export function Empty({ icon, children }: { icon: IconName; children: React.ReactNode }) {
+  return (
+    <View style={styles.empty}>
+      <Icon name={icon} size={28} color={colors.muted} />
+      <Text style={[type.small, { textAlign: 'center' }]}>{children}</Text>
+    </View>
+  );
+}
+
 export function Loading() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator size="large" color={colors.primaryBright} />
     </View>
   );
+}
+
+/** Dark purple square with a white house-and-tick symbol (same as the app icon). */
+export function Logo({ size = 40 }: { size?: number }) {
+  return <Image source={require('../../assets/logo.png')} style={{ width: size, height: size }} accessibilityLabel="Choreboard" />;
+}
+
+/** Yes/no question that works on phones and in a web browser. */
+export function confirm(title: string, message: string, okLabel: string): Promise<boolean> {
+  if (Platform.OS === 'web') return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+  return new Promise((resolve) =>
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+      { text: okLabel, style: 'destructive', onPress: () => resolve(true) },
+    ]),
+  );
+}
+
+export function notify(title: string, message: string) {
+  if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
+  else Alert.alert(title, message);
 }
 
 export function timeAgo(ms: number): string {
@@ -111,26 +211,35 @@ export function timeAgo(ms: number): string {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  screenInner: { padding: space.md, gap: space.md, paddingBottom: space.xl },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 16, color: colors.muted, lineHeight: 22 },
-  label: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: -space.xs },
+  root: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1 },
+  screenInner: { padding: space.md, gap: space.md, paddingBottom: 160 },
   card: {
     backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm,
     borderWidth: 1, borderColor: colors.border,
   },
-  button: { borderRadius: radius, paddingVertical: 14, paddingHorizontal: space.md, alignItems: 'center' },
-  buttonText: { fontSize: 16, fontWeight: '700' },
+  button: {
+    borderRadius: radius, paddingVertical: 14, paddingHorizontal: space.md, alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  buttonInner: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  buttonText: { fontSize: 16, fontWeight: '600' },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    borderWidth: 1.5, borderColor: colors.primaryBright, borderRadius: radius,
+    paddingVertical: 16, paddingHorizontal: space.md, backgroundColor: 'rgba(17,17,20,0.85)',
+  },
+  rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   input: {
     backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16, color: colors.text,
+    paddingHorizontal: space.md, paddingVertical: 14, fontSize: 16, color: colors.text,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
     borderColor: colors.border, backgroundColor: colors.card,
   },
-  chipText: { fontSize: 15, color: colors.text, fontWeight: '600' },
+  chipText: { fontSize: 15, color: colors.muted, fontWeight: '500' },
   error: { color: colors.danger, fontSize: 14 },
+  empty: { alignItems: 'center', gap: space.sm, paddingVertical: space.lg },
 });

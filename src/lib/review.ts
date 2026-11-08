@@ -1,41 +1,40 @@
 /**
- * Photo verification. Housemates vote on each chore photo.
+ * Photo checks. Each chore photo is checked by ONE housemate (not the person
+ * who did it), who either verifies or rejects it. If nobody checks it within
+ * 24 hours it counts as verified automatically.
  *
- *   no votes yet            -> 'pending'   (still counts)
- *   👍 >= 👎 and at least one 👍 -> 'verified'  (counts)
- *   👎 > 👍                  -> 'rejected'  (does NOT count on the leaderboard)
+ *   pending  -> still counts, shown in everyone else's Checks tab
+ *   verified -> counts
+ *   rejected -> taken off the chore-doer's score
  *
- * Kept free of Firebase so it can be tested, and mirrored in firestore.rules.
+ * Kept free of Firebase so it can be tested; mirrored in firestore.rules.
  */
 export type ReviewStatus = 'pending' | 'verified' | 'rejected';
-export type Vote = 'ok' | 'not_ok';
 
-export function reviewStatus(okVoters: string[], notOkVoters: string[]): ReviewStatus {
-  if (notOkVoters.length > okVoters.length) return 'rejected';
-  if (okVoters.length > 0) return 'verified';
-  return 'pending';
+export const AUTO_VERIFY_MS = 24 * 60 * 60 * 1000;
+
+/** What the status really is right now, taking the 24-hour rule into account. */
+export function effectiveStatus(
+  log: { status: ReviewStatus; at: number },
+  now: number = Date.now(),
+): ReviewStatus | 'auto_verified' {
+  if (log.status === 'pending' && now - log.at >= AUTO_VERIFY_MS) return 'auto_verified';
+  return log.status;
 }
 
-/** Sets (or clears, with null) one person's vote. Each person has at most one vote. */
-export function applyVote(
-  okVoters: string[],
-  notOkVoters: string[],
+/** Should this chore be in `uid`'s Checks list? */
+export function needsCheckBy(
+  log: { status: ReviewStatus; at: number; userId: string },
   uid: string,
-  vote: Vote | null,
-): { okVoters: string[]; notOkVoters: string[] } {
-  const ok = okVoters.filter((v) => v !== uid);
-  const notOk = notOkVoters.filter((v) => v !== uid);
-  if (vote === 'ok') ok.push(uid);
-  if (vote === 'not_ok') notOk.push(uid);
-  return { okVoters: ok, notOkVoters: notOk };
+  now: number = Date.now(),
+): boolean {
+  return log.userId !== uid && effectiveStatus(log, now) === 'pending';
 }
 
-/**
- * How much the chore-doer's score changes when status goes from `before` to
- * `after`: -1 when it becomes rejected, +1 when a rejection is overturned.
- */
-export function scoreDelta(before: ReviewStatus, after: ReviewStatus): -1 | 0 | 1 {
-  const was = before === 'rejected';
-  const now = after === 'rejected';
-  return was === now ? 0 : now ? -1 : 1;
+/** Hours and minutes left before auto-verification, e.g. "23h left". */
+export function timeLeft(at: number, now: number = Date.now()): string {
+  const ms = Math.max(0, at + AUTO_VERIFY_MS - now);
+  const h = Math.floor(ms / 3_600_000);
+  if (h >= 1) return `${h}h left`;
+  return `${Math.max(1, Math.ceil(ms / 60_000))}m left`;
 }

@@ -16,13 +16,23 @@ const keyPath = new URL('./service-account.json', import.meta.url);
 initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf8'))) });
 const db = getFirestore();
 
+const ageFrom = (dob) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob ?? '');
+  if (!m) return '';
+  const now = new Date();
+  let age = now.getFullYear() - Number(m[1]);
+  if (now.getMonth() + 1 < Number(m[2]) || (now.getMonth() + 1 === Number(m[2]) && now.getDate() < Number(m[3]))) age--;
+  return age;
+};
+
 const snap = await db.collection('users').get();
 const rows = snap.docs.map((d) => {
   const u = d.data();
   return {
     userId: d.id,
     username: u.username ?? '',
-    age: u.age ?? '',
+    dateOfBirth: u.dob ?? '',
+    age: u.dob ? ageFrom(u.dob) : (u.age ?? ''),
     gender: u.gender ?? '',
     isStudent: u.isStudent ?? '',
     university: u.university ?? '',

@@ -1,30 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyVote, reviewStatus, scoreDelta } from './review.ts';
+import { AUTO_VERIFY_MS, effectiveStatus, needsCheckBy, timeLeft } from './review.ts';
 
-test('status from votes', () => {
-  assert.equal(reviewStatus([], []), 'pending');
-  assert.equal(reviewStatus(['a'], []), 'verified');
-  assert.equal(reviewStatus(['a'], ['b']), 'verified'); // tie goes to the chore-doer
-  assert.equal(reviewStatus([], ['b']), 'rejected');
-  assert.equal(reviewStatus(['a'], ['b', 'c']), 'rejected');
+const H = 3_600_000;
+
+test('pending becomes auto-verified after 24 hours', () => {
+  assert.equal(effectiveStatus({ status: 'pending', at: 0 }, 23 * H), 'pending');
+  assert.equal(effectiveStatus({ status: 'pending', at: 0 }, AUTO_VERIFY_MS), 'auto_verified');
+  assert.equal(effectiveStatus({ status: 'rejected', at: 0 }, 48 * H), 'rejected');
+  assert.equal(effectiveStatus({ status: 'verified', at: 0 }, 48 * H), 'verified');
 });
 
-test('one vote per person, can change or clear it', () => {
-  let v = applyVote([], [], 'a', 'ok');
-  assert.deepEqual(v, { okVoters: ['a'], notOkVoters: [] });
-  v = applyVote(v.okVoters, v.notOkVoters, 'a', 'ok');
-  assert.deepEqual(v, { okVoters: ['a'], notOkVoters: [] });
-  v = applyVote(v.okVoters, v.notOkVoters, 'a', 'not_ok');
-  assert.deepEqual(v, { okVoters: [], notOkVoters: ['a'] });
-  v = applyVote(v.okVoters, v.notOkVoters, 'a', null);
-  assert.deepEqual(v, { okVoters: [], notOkVoters: [] });
+test('checks list: only other people\'s pending chores, within 24h', () => {
+  const log = { status: 'pending' as const, at: 0, userId: 'alice' };
+  assert.equal(needsCheckBy(log, 'sam', H), true);
+  assert.equal(needsCheckBy(log, 'alice', H), false);
+  assert.equal(needsCheckBy(log, 'sam', 25 * H), false);
+  assert.equal(needsCheckBy({ ...log, status: 'verified' }, 'sam', H), false);
 });
 
-test('score only changes when crossing into or out of rejected', () => {
-  assert.equal(scoreDelta('pending', 'verified'), 0);
-  assert.equal(scoreDelta('pending', 'rejected'), -1);
-  assert.equal(scoreDelta('verified', 'rejected'), -1);
-  assert.equal(scoreDelta('rejected', 'verified'), 1);
-  assert.equal(scoreDelta('rejected', 'rejected'), 0);
+test('time left label', () => {
+  assert.equal(timeLeft(0, H), '23h left');
+  assert.equal(timeLeft(0, 23.5 * H), '30m left');
 });

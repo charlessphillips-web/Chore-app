@@ -1,38 +1,31 @@
 # Choreboard
 
-A chore app for uni houses. Log chores you've done; flag chores that need doing and the app pings whoever has done the least.
+A chore app for uni houses. Log chores with a photo, flag chores that need doing, and the app asks whoever has done the least.
 
-![Screens](docs/screenshots.png)
-
-![Photo verification](docs/photo-verification.png)
+![Screens](docs/screens-1.png)
+![Screens](docs/screens-2.png)
+![Screens](docs/screens-3.png)
 
 ## How it works
 
 ```
-Open app ─► Questions (username, age, gender, student? which uni?)
-          ─► Create a house (get a 6-letter code)  OR  Join with a housemate's code
-          ─► Home
-               ├─ ✅ "I did a chore"   ─► take a photo (required) ─► +1 on your score
-               │                          ─► housemates see the photo and vote 👍 / 👎
-               └─ 🔔 "Needs doing"     ─► picks who has done the fewest chores
-                                           (or fewest of THAT chore, if you choose)
-                                           ─► push notification to them
-                                           ─► sits in their "Your turn" list until someone taps Done
+Open app ─► Questions (username, date of birth, gender, student? which uni?)
+          ─► Create a house (you become ADMIN, get a 6-letter code)  OR  join with a code
+          ─► Home: house name + list of chores
+               Tap a chore (e.g. Bins) ─┬─► "I've done it"  ─► photo ─► +1 on your score
+                                         │                       ─► housemates notified to check it
+                                         └─► "Bins are full"  ─► sent to whoever has done the
+                                                                  fewest chores this period
 ```
 
-**Photo checks:** every chore needs a camera photo, and everyone in the house can see it. Housemates vote 👍 "Looks good" or 👎 "Not done". You can't vote on your own chore, and you can change your vote.
+**Bottom menu:** Home · Checks · Leaderboard · House · Settings
 
-```
-no votes yet       ─► ⏳ Waiting for a check   (still counts)
-more 👍 than 👎     ─► ✓ Verified               (counts; a tie also counts)
-more 👎 than 👍     ─► ✗ Rejected               (removed from your score)
-```
+- **Checks:** chore photos waiting for a check. **One** housemate verifies or rejects each one, and then it disappears. Rejected chores come off your score. If nobody checks a photo within 24 hours, it's auto-verified. Logic: `src/lib/review.ts`.
+- **Leaderboard:** resets every 2 months (Jan–Feb, Mar–Apr, …). "Who's done the fewest" uses the same 2-month count. Logic: `src/lib/period.ts`, `src/lib/assign.ts`.
+- **House:** house code to share, housemates, recent activity with photos.
+- **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.
 
-Photos are compressed and stored in Firestore, so no paid storage plan is needed. Logic: `src/lib/review.ts`.
-
-**Who gets picked?** Never the person who flagged it. Then fewest chores (overall or of that chore). Ties go to whoever has gone longest without doing anything. Logic: `src/lib/assign.ts`.
-
-**Privacy:** age, gender and university go in a private record that housemates can't read. Only you (the app owner) can export it (see below).
+**Privacy:** date of birth, gender and university go in a private record that housemates can't read. Only you (the app owner) can export it (see below).
 
 ## Tech
 
@@ -103,7 +96,7 @@ npx expo lint
 npm run test:rules
 ```
 
-- `npm test` checks who-gets-picked, photo voting and house codes.
+- `npm test` checks who-gets-picked, photo checks, 2-month periods, date of birth, chore lists and house codes.
 - `npm run typecheck` checks the TypeScript.
 - `npx expo lint` checks code style and common mistakes.
 - `npm run test:rules` checks the security rules against a local emulator and needs Java installed.
@@ -114,12 +107,12 @@ npm run test:rules
 src/app/          screens (each file = a screen)
   onboarding.tsx    sign-up questions
   house-setup.tsx   create / join house
-  (tabs)/home.tsx   main screen, leaderboard, "your turn"
-  (tabs)/activity.tsx, (tabs)/house.tsx
-  log.tsx           log a chore + take photo
-  request.tsx       flag a chore for someone else
-  photo/[logId].tsx full-size photo + voting
-src/lib/          logic + database (assign.ts, review.ts, photos.ts, db.ts, notifications.ts)
+  (tabs)/home.tsx   house name, "your turn", chore list
+  chore/[key].tsx   tap a chore: "done it" (photo) or "needs doing"
+  photo/[logId].tsx full-size photo
+  (tabs)/checks.tsx, leaderboard.tsx, house.tsx
+  (tabs)/settings/  personal details + admin pages
+src/lib/          logic + database (assign, review, period, dob, chores, photos, db, notifications)
 firestore.rules   who can read/write what
 scripts/          demographics export
 rules-tests/      security rule tests

@@ -1,0 +1,77 @@
+import { useState } from 'react';
+import { Text } from 'react-native';
+import { router } from 'expo-router';
+import { useApp } from '../../../context/AppContext';
+import { deleteAccount, leaveHouse } from '../../../lib/db';
+import { Button, Card, confirm, Label, Loading, notify, RowButton, Screen, Title } from '../../../components/ui';
+import { type } from '../../../components/theme';
+
+export default function SettingsIndex() {
+  const { user, house, members, isAdmin } = useApp();
+  const [busy, setBusy] = useState<'leave' | 'delete' | null>(null);
+  if (!user || !house) return <Loading />;
+  const admin = members.find((m) => m.uid === house.adminUid);
+
+  async function leave() {
+    const others = members.length > 1;
+    const ok = await confirm(
+      'Leave house?',
+      isAdmin && others
+        ? 'Your chore history here will be removed, and the person who has been in the house longest becomes admin.'
+        : 'Your chore history in this house will be removed.',
+      'Leave',
+    );
+    if (!ok) return;
+    setBusy('leave');
+    try {
+      await leaveHouse(user!.uid, house!, members);
+    } catch (e) {
+      notify('Could not leave', (e as Error).message);
+      setBusy(null);
+    }
+  }
+
+  async function del() {
+    const ok = await confirm(
+      'Delete your account?',
+      'This permanently deletes your details and removes you from your house. It cannot be undone.',
+      'Delete',
+    );
+    if (!ok) return;
+    setBusy('delete');
+    try {
+      await deleteAccount(user!.uid, house, members);
+    } catch (e) {
+      notify('Could not delete account', (e as Error).message);
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Screen>
+      <Title>Settings</Title>
+
+      <Label>You</Label>
+      <RowButton icon="person-outline" title="Personal details" subtitle="Username, date of birth, university" onPress={() => router.push('/settings/personal')} />
+
+      {isAdmin ? (
+        <>
+          <Label>House admin</Label>
+          <RowButton icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
+          <RowButton icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
+          <RowButton icon="image-outline" title="House details" subtitle="Name and wallpaper" onPress={() => router.push('/settings/house-details')} />
+        </>
+      ) : (
+        <Card>
+          <Text style={type.small}>
+            {admin ? `${admin.username} is the house admin` : 'Your house admin'} and manages the chores and housemates.
+          </Text>
+        </Card>
+      )}
+
+      <Label>Account</Label>
+      <Button title="Leave house" icon="exit-outline" variant="secondary" onPress={leave} loading={busy === 'leave'} disabled={!!busy} />
+      <Button title="Delete my account" icon="trash-outline" variant="danger" onPress={del} loading={busy === 'delete'} disabled={!!busy} />
+    </Screen>
+  );
+}

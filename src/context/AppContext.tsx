@@ -3,20 +3,28 @@ import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth'
 import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
-  setPushToken, watchHouse, watchMembers, watchOpenRequests, watchProfile, watchRecentLogs,
+  clearRemovedHouse, setPushToken, watchHouse, watchMembers, watchOpenRequests, watchProfile,
+  watchRecentLogs, watchWallpaper,
 } from '../lib/db';
 import { registerForPushNotifications } from '../lib/notifications';
+import { jpegUri } from '../lib/photos';
 import type { ChoreLog, ChoreRequest, House, Member, UserProfile } from '../lib/types';
 
 interface AppState {
   ready: boolean;
   error: string | null;
+  /** A one-off message, e.g. "You were removed from the house". */
+  notice: string | null;
+  clearNotice: () => void;
   user: User | null;
   profile: UserProfile | null;
   house: House | null;
+  isAdmin: boolean;
   members: Member[];
   openRequests: ChoreRequest[];
   logs: ChoreLog[];
+  /** House wallpaper as a data URI, if the admin set one. */
+  wallpaper: string | null;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -34,7 +42,10 @@ interface HouseData {
   members: Member[];
   openRequests: ChoreRequest[];
   logs: ChoreLog[];
+  wallpaper: string | null;
 }
+
+const MAX_RETRIES = 5;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -43,6 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [houseData, setHouseData] = useState<HouseData | null>(null);
   // Retry counter for loading house data, tagged with the house.
   const [retry, setRetry] = useState<{ houseId: string; n: number } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
     isFirebaseConfigured ? null : 'Firebase is not configured. Copy .env.example to .env.local and fill it in.',
   );
@@ -51,8 +63,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     return onAuthStateChanged(auth, (u) => {
-      if (u) setUser(u);
-      else signInAnonymously(auth).catch((e) => setError(`Sign-in failed: ${e.message}`));
+      setUser(u);
+      if (!u) signInAnonymously(auth).catch((e) => setError(`Sign-in failed: ${e.message}`));
     });
   }, []);
 
@@ -66,13 +78,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const profile = profileReady ? profileState!.profile : null;
   const houseId = profile?.houseId ?? null;
   const attempt = retry && retry.houseId === houseId ? retry.n : 0;
+  const uid = user?.uid ?? null;
 
   // 3. Everything about their house, live.
   useEffect(() => {
-    if (!houseId) return;
+    if (!houseId || !uid) return;
     const update = (patch: Partial<HouseData>) =>
       setHouseData((prev) => ({
-        ...(prev?.houseId === houseId ? prev : { houseId, house: null, members: [], openRequests: [], logs: [] }),
+        ...(prev?.houseId === houseId
+          ? prev
+          : { houseId, house: null, members: [], openRequests: [], logs: [], wallpaper: null }),
         ...patch,
       }));
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -80,12 +95,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const onError = (e: FirestoreError) => {
       if (failed) return;
       failed = true;
-      // Straight after joining, the server can briefly refuse reads until it
-      // sees our membership. Retry a few times before giving up.
-      if (e.code === 'permission-denied' && attempt < 5) {
+      if (e.code !== 'permission-denied') {
+        setError(`Couldn't load your house: ${e.message}`);
+      } else if (attempt < MAX_RETRIES) {
+        // Straight after joining, the server can briefly refuse reads until
+        // it sees our membership. Retry a few times before giving up.
         retryTimer = setTimeout(() => setRetry({ houseId, n: attempt + 1 }), 500 * (attempt + 1));
       } else {
-        setError(`Couldn't load your house: ${e.message}`);
+        // Still refused: the admin removed us from this house.
+        setNotice('You were removed from your house by its admin. You can join another house with a code.');
+        clearRemovedHouse(uid).catch((err) => setError(err.message));
       }
     };
     const unsubs = [
@@ -93,35 +112,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       watchMembers(houseId, (members) => update({ members }), onError),
       watchOpenRequests(houseId, (openRequests) => update({ openRequests }), onError),
       watchRecentLogs(houseId, (logs) => update({ logs }), onError),
+      watchWallpaper(houseId, (w) => update({ wallpaper: w ? jpegUri(w) : null }), onError),
     ];
     return () => {
       clearTimeout(retryTimer);
       unsubs.forEach((u) => u());
     };
-  }, [houseId, attempt]);
+  }, [houseId, uid, attempt]);
 
   // 4. Once in a house, register this phone for chore notifications.
   useEffect(() => {
-    if (!houseId || !user) return;
+    if (!houseId || !uid) return;
     let cancelled = false;
     registerForPushNotifications().then((token) => {
-      if (!cancelled && token) setPushToken(houseId, user.uid, token).catch(() => {});
+      if (!cancelled && token) setPushToken(houseId, uid, token).catch(() => {});
     });
     return () => {
       cancelled = true;
     };
-  }, [houseId, user]);
+  }, [houseId, uid]);
 
   const current = houseData && houseData.houseId === houseId ? houseData : null;
+  const house = current?.house ?? null;
   const value: AppState = {
     ready: profileReady,
     error,
+    notice,
+    clearNotice: () => setNotice(null),
     user,
     profile,
-    house: current?.house ?? null,
+    house,
+    isAdmin: !!house && !!uid && house.adminUid === uid,
     members: current?.members ?? [],
     openRequests: current?.openRequests ?? [],
     logs: current?.logs ?? [],
+    wallpaper: current?.wallpaper ?? null,
   };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

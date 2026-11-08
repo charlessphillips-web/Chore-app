@@ -5,14 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.choreboard.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#4C1D95",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -30,10 +30,12 @@
         "expo-image-picker",
         {
           "cameraPermission": "Choreboard uses your camera so you can photograph chores you have done for your housemates to check.",
-          "photosPermission": false
+          "photosPermission": "Choreboard uses your photos so a house admin can choose a wallpaper for the house."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
-    "scheme": "choreboard"
+    "scheme": "choreboard",
+    "backgroundColor": "#000000"
   }
 }

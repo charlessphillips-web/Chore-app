@@ -2,22 +2,16 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '../context/AppContext';
-import { colors } from '../components/theme';
+import { colors, darkHeader } from '../components/theme';
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={{ backgroundColor: colors.bg }}>
       <AppProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.bg },
-          }}
-        >
-          <Stack.Screen name="log" options={{ presentation: 'modal', headerShown: true, title: 'I did a chore' }} />
-          <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'Check photo' }} />
-          <Stack.Screen name="request" options={{ presentation: 'modal', headerShown: true, title: 'Needs doing' }} />
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false, ...darkHeader }}>
+          <Stack.Screen name="chore/[key]" options={{ presentation: 'modal', headerShown: true, title: '' }} />
+          <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'Photo' }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

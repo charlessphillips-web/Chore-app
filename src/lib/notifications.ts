@@ -49,17 +49,18 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
 /** Sends a push via Expo's push service. Returns true if Expo accepted it. */
 export async function sendPush(
-  to: string,
+  to: string[],
   msg: { title: string; body: string; data?: Record<string, unknown> },
 ): Promise<boolean> {
+  if (to.length === 0) return false;
   try {
     const res = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, sound: 'default', ...msg }),
+      body: JSON.stringify(to.map((t) => ({ to: t, sound: 'default', ...msg }))),
     });
     const json = await res.json();
-    return res.ok && json?.data?.status === 'ok';
+    return res.ok && Array.isArray(json?.data) && json.data.some((r: { status?: string }) => r.status === 'ok');
   } catch {
     return false;
   }

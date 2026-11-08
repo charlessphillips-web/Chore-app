@@ -3,9 +3,11 @@ import { Redirect } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { createHouse, joinHouse } from '../lib/db';
 import { Button, Card, Chip, ChipRow, ErrorText, Input, Label, Screen, Subtitle, Title } from '../components/ui';
+import { colors } from '../components/theme';
+import { Text } from 'react-native';
 
 export default function HouseSetup() {
-  const { user, profile } = useApp();
+  const { user, profile, notice, clearNotice } = useApp();
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -19,9 +21,10 @@ export default function HouseSetup() {
     if (!user || !profile) return;
     setError(null);
     setBusy(true);
+    clearNotice();
     try {
       if (mode === 'create') {
-        if (name.trim().length < 2) throw new Error('Give your house a name, e.g. "42 Hyde Park Rd".');
+        if (name.trim().length < 1) throw new Error('Give your house a name or number, e.g. "42".');
         await createHouse(user.uid, profile.username, name);
       } else {
         await joinHouse(user.uid, profile.username, code);
@@ -36,8 +39,14 @@ export default function HouseSetup() {
   return (
     <Screen>
       <Title>Your house</Title>
+      {notice && (
+        <Card style={{ borderColor: colors.warning }}>
+          <Text style={{ color: colors.text }}>{notice}</Text>
+        </Card>
+      )}
       <Subtitle>
-        First one in your house? Create it and share the code. Otherwise, ask a housemate for their code.
+        First one in your house? Create it, share the code, and you&apos;ll be the house admin. Otherwise, ask a
+        housemate for their code.
       </Subtitle>
 
       <ChipRow>
@@ -45,27 +54,25 @@ export default function HouseSetup() {
         <Chip label="Create a house" selected={mode === 'create'} onPress={() => setMode('create')} />
       </ChipRow>
 
-      <Card>
-        {mode === 'join' ? (
-          <>
-            <Label>House code</Label>
-            <Input
-              value={code}
-              onChangeText={setCode}
-              placeholder="e.g. K7MPQ2"
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={8}
-              style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center' }}
-            />
-          </>
-        ) : (
-          <>
-            <Label>House name</Label>
-            <Input value={name} onChangeText={setName} placeholder='e.g. "42 Hyde Park Rd"' maxLength={40} />
-          </>
-        )}
-      </Card>
+      {mode === 'join' ? (
+        <>
+          <Label>House code</Label>
+          <Input
+            value={code}
+            onChangeText={setCode}
+            placeholder="K7MPQ2"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={8}
+            style={{ fontSize: 26, letterSpacing: 6, textAlign: 'center', fontWeight: '600' }}
+          />
+        </>
+      ) : (
+        <>
+          <Label>House name or number</Label>
+          <Input value={name} onChangeText={setName} placeholder='e.g. "42" or "42 Hyde Park Rd"' maxLength={40} />
+        </>
+      )}
 
       <ErrorText>{error}</ErrorText>
       <Button title={mode === 'join' ? 'Join house' : 'Create house'} onPress={go} loading={busy} />

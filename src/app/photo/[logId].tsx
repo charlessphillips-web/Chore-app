@@ -4,11 +4,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { getChorePhoto } from '../../lib/db';
 import { jpegUri } from '../../lib/photos';
-import { StatusBadge, VoteButtons } from '../../components/ChoreLogCard';
-import { Card, ErrorText, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
+import { StatusBadge } from '../../components/StatusBadge';
+import { ErrorText, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
 import { colors, radius } from '../../components/theme';
 
-/** Full-size chore photo, for housemates to check. */
+/** Full-size chore photo. */
 export default function PhotoScreen() {
   const { logId } = useLocalSearchParams<{ logId: string }>();
   const { house, logs, user } = useApp();
@@ -24,26 +24,21 @@ export default function PhotoScreen() {
   }, [house, logId]);
 
   if (!log || !house || !user) {
-    return <Screen><Subtitle>This chore is no longer in the recent activity.</Subtitle></Screen>;
+    return <Screen edges={['left', 'right']}><Subtitle>This chore is no longer in the recent activity.</Subtitle></Screen>;
   }
-
   const src = full ?? log.photoThumb;
   return (
-    <Screen>
+    <Screen edges={['left', 'right']}>
       <Title>{log.choreName}</Title>
-      <Subtitle>{log.userId === user.uid ? 'You' : log.username} · {timeAgo(log.at)}</Subtitle>
-      <View style={{ borderRadius: radius, overflow: 'hidden', aspectRatio: 3 / 4, backgroundColor: colors.border }}>
+      <Text style={{ color: colors.muted }}>{log.userId === user.uid ? 'You' : log.username} · {timeAgo(log.at)}</Text>
+      <StatusBadge log={log} />
+      <View style={{ borderRadius: radius, overflow: 'hidden', aspectRatio: 3 / 4, backgroundColor: colors.card }}>
         {src && <Image source={{ uri: jpegUri(src) }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />}
         {!full && !error && (
-          <ActivityIndicator style={{ position: 'absolute', top: '50%', alignSelf: 'center' }} color={colors.primary} />
+          <ActivityIndicator style={{ position: 'absolute', top: '50%', alignSelf: 'center' }} color={colors.primaryBright} />
         )}
       </View>
       <ErrorText>{error}</ErrorText>
-      <Card>
-        <StatusBadge status={log.status} />
-        <Text style={{ color: colors.muted }}>Is this chore done properly?</Text>
-        <VoteButtons log={log} houseId={house.id} myUid={user.uid} />
-      </Card>
     </Screen>
   );
 }

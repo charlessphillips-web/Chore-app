@@ -51,3 +51,15 @@ export async function takeChorePhoto(): Promise<ChorePhoto | null> {
 }
 
 export const jpegUri = (base64: string) => `data:image/jpeg;base64,${base64}`;
+
+/** Admin picks a house wallpaper from their photos. Returns base64 JPEG, or null if cancelled. */
+export async function pickWallpaper(): Promise<string | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+  if (result.canceled || !result.assets?.[0]) return null;
+  const uri = result.assets[0].uri;
+  for (const [w, q] of [[900, 0.5], [700, 0.45], [500, 0.4]] as const) {
+    const data = await toJpegBase64(uri, w, q);
+    if (data.length <= MAX_FULL_BYTES) return data;
+  }
+  throw new Error('That photo is too large — try another.');
+}

@@ -1,15 +1,16 @@
 import {
-  collection, doc, getDoc, increment, onSnapshot, orderBy, query, runTransaction,
-  serverTimestamp, setDoc, updateDoc, where, limit, writeBatch, deleteDoc,
+  collection, deleteDoc, deleteField, doc, getDoc, increment, limit, onSnapshot, orderBy, query,
+  runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch,
   type DocumentData, type FirestoreError, type Timestamp,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { deleteUser } from 'firebase/auth';
+import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
-import { choreKey, cleanChoreName } from './chores';
-import { pickAssignee, type AssignMode } from './assign';
+import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
+import { pickAssignee } from './assign';
+import { periodKey } from './period';
 import { sendPush } from './notifications';
-import { applyVote, reviewStatus, scoreDelta, type ReviewStatus, type Vote } from './review';
-import type { ChoreLog, ChoreRequest, House, Member, UserProfile } from './types';
+import type { ChoreLog, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -21,18 +22,20 @@ const userRef = (uid: string) => doc(db, 'users', uid);
 const houseRef = (houseId: string) => doc(db, 'houses', houseId);
 const memberRef = (houseId: string, uid: string) => doc(db, 'houses', houseId, 'members', uid);
 const codeRef = (code: string) => doc(db, 'houseCodes', code);
+const wallpaperRef = (houseId: string) => doc(db, 'houses', houseId, 'wallpaper', 'current');
 
 // ---------- Profile ----------
 
-export async function saveProfile(
-  uid: string,
-  p: Omit<UserProfile, 'createdAt' | 'houseId'>,
-): Promise<void> {
-  await setDoc(
-    userRef(uid),
-    { ...p, houseId: null, createdAt: serverTimestamp() },
-    { merge: true },
-  );
+export async function createProfile(uid: string, p: ProfileDetails): Promise<void> {
+  await setDoc(userRef(uid), { ...p, houseId: null, createdAt: serverTimestamp() });
+}
+
+/** Edits your details. Your housemates see your new username straight away. */
+export async function updateProfile(uid: string, p: ProfileDetails, houseId: string | null): Promise<void> {
+  const batch = writeBatch(db);
+  batch.update(userRef(uid), { ...p, age: deleteField() });
+  if (houseId) batch.update(memberRef(houseId, uid), { username: p.username });
+  await batch.commit();
 }
 
 export function watchProfile(uid: string, cb: (p: UserProfile | null) => void) {
@@ -45,7 +48,15 @@ export function watchProfile(uid: string, cb: (p: UserProfile | null) => void) {
     if (snap.metadata.hasPendingWrites) return;
     if (!snap.exists()) return cb(null);
     const d = snap.data();
-    cb({ ...(d as UserProfile), createdAt: ms(d.createdAt) ?? Date.now() });
+    cb({
+      username: d.username,
+      dob: d.dob ?? null,
+      gender: d.gender,
+      isStudent: d.isStudent,
+      university: d.university ?? null,
+      houseId: d.houseId ?? null,
+      createdAt: ms(d.createdAt) ?? Date.now(),
+    });
   });
 }
 
@@ -56,22 +67,23 @@ function newMemberDoc(username: string, joinCode: string) {
   return {
     username,
     joinCode,
-    totalCompleted: 0,
-    choreCounts: {},
+    stats: {},
     lastCompletedAt: null,
     joinedAt: serverTimestamp(),
     pushToken: null,
   };
 }
 
-/** Creates a house with a fresh unique code and makes the user its first member. */
+/** Creates a house with a fresh unique code. The creator becomes its admin. */
 export async function createHouse(uid: string, username: string, name: string): Promise<string> {
   const houseDoc = doc(collection(db, 'houses'));
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateHouseCode();
     const ok = await runTransaction(db, async (tx) => {
       if ((await tx.get(codeRef(code))).exists()) return false; // code taken, try another
-      tx.set(houseDoc, { name: name.trim(), code, createdBy: uid, createdAt: serverTimestamp() });
+      tx.set(houseDoc, {
+        name: name.trim(), code, createdBy: uid, adminUid: uid, chores: DEFAULT_CHORES, createdAt: serverTimestamp(),
+      });
       tx.set(codeRef(code), { houseId: houseDoc.id });
       tx.set(memberRef(houseDoc.id, uid), newMemberDoc(username, code));
       tx.update(userRef(uid), { houseId: houseDoc.id });
@@ -86,22 +98,69 @@ export async function joinHouse(uid: string, username: string, rawCode: string):
   const code = normaliseHouseCode(rawCode);
   if (!code) throw new Error('House codes are 6 letters/numbers, e.g. K7MPQ2.');
   const codeSnap = await getDoc(codeRef(code));
-  if (!codeSnap.exists()) throw new Error("No house found with that code. Double-check it with your housemate.");
+  if (!codeSnap.exists()) throw new Error('No house found with that code. Double-check it with your housemate.');
   const houseId = codeSnap.data().houseId as string;
 
   const batch = writeBatch(db);
-  const existing = await getDoc(memberRef(houseId, uid)).catch(() => null);
-  if (!existing?.exists()) batch.set(memberRef(houseId, uid), newMemberDoc(username, code));
+  batch.set(memberRef(houseId, uid), newMemberDoc(username, code));
   batch.update(userRef(uid), { houseId });
   await batch.commit();
   return houseId;
 }
 
-export async function leaveHouse(uid: string, houseId: string): Promise<void> {
-  // Clear the profile first so the app routes away before the house data
+/** Who takes over as admin if `leavingUid` goes: whoever has been in the house longest. */
+export function nextAdmin(members: Member[], leavingUid: string): string | null {
+  const others = members.filter((m) => m.uid !== leavingUid).sort((a, b) => a.joinedAt - b.joinedAt);
+  return others[0]?.uid ?? null;
+}
+
+export async function leaveHouse(uid: string, house: House, members: Member[]): Promise<void> {
+  // Hand over admin first, while we're still allowed to.
+  if (house.adminUid === uid) {
+    const next = nextAdmin(members, uid);
+    if (next) await updateDoc(houseRef(house.id), { adminUid: next });
+  }
+  // Clear the profile next so the app routes away before the house data
   // becomes unreadable.
   await updateDoc(userRef(uid), { houseId: null });
+  await deleteDoc(memberRef(house.id, uid));
+}
+
+/** Deletes the user's profile and account completely. */
+export async function deleteAccount(uid: string, house: House | null, members: Member[]): Promise<void> {
+  if (house) await leaveHouse(uid, house, members);
+  await deleteDoc(userRef(uid));
+  if (auth.currentUser) await deleteUser(auth.currentUser);
+}
+
+/** Clears your house if you were removed from it (your profile still pointed there). */
+export async function clearRemovedHouse(uid: string): Promise<void> {
+  await updateDoc(userRef(uid), { houseId: null });
+}
+
+// --- Admin-only ---
+
+export async function removeMember(houseId: string, uid: string): Promise<void> {
   await deleteDoc(memberRef(houseId, uid));
+}
+
+export async function makeAdmin(houseId: string, uid: string): Promise<void> {
+  await updateDoc(houseRef(houseId), { adminUid: uid });
+}
+
+export async function updateHouse(houseId: string, patch: { name?: string; chores?: HouseChore[] }): Promise<void> {
+  await updateDoc(houseRef(houseId), patch);
+}
+
+export async function setWallpaper(houseId: string, uid: string, data: string | null): Promise<void> {
+  if (data) await setDoc(wallpaperRef(houseId), { data, updatedBy: uid, updatedAt: serverTimestamp() });
+  else await deleteDoc(wallpaperRef(houseId));
+}
+
+// --- Live data ---
+
+export function watchWallpaper(houseId: string, cb: (data: string | null) => void, onError?: OnError) {
+  return onSnapshot(wallpaperRef(houseId), (s) => cb(s.exists() ? (s.data().data as string) : null), onError);
 }
 
 export function watchHouse(houseId: string, cb: (h: House | null) => void, onError?: OnError) {
@@ -110,26 +169,42 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
     (snap) => {
       if (!snap.exists()) return cb(null);
       const d = snap.data();
-      cb({ id: snap.id, name: d.name, code: d.code, createdBy: d.createdBy, createdAt: ms(d.createdAt) ?? Date.now() });
+      cb({
+        id: snap.id,
+        name: d.name,
+        code: d.code,
+        createdBy: d.createdBy,
+        // Houses made before admins existed: the creator is admin.
+        adminUid: d.adminUid ?? d.createdBy,
+        chores: Array.isArray(d.chores) ? d.chores : DEFAULT_CHORES,
+        createdAt: ms(d.createdAt) ?? Date.now(),
+      });
     },
     onError,
   );
 }
 
-const toMember = (id: string, d: DocumentData): Member => ({
-  uid: id,
-  username: d.username,
-  totalCompleted: d.totalCompleted ?? 0,
-  choreCounts: d.choreCounts ?? {},
-  lastCompletedAt: ms(d.lastCompletedAt),
-  joinedAt: ms(d.joinedAt) ?? Date.now(),
-  pushToken: d.pushToken ?? null,
-});
+/** Turns a member doc into scores for the current 2-month period. */
+const toMember = (id: string, d: DocumentData, period: string): Member => {
+  const p = d.stats?.[period] ?? {};
+  return {
+    uid: id,
+    username: d.username,
+    totalCompleted: p.total ?? 0,
+    choreCounts: p.chores ?? {},
+    lastCompletedAt: ms(d.lastCompletedAt),
+    joinedAt: ms(d.joinedAt) ?? Date.now(),
+    pushToken: d.pushToken ?? null,
+  };
+};
 
 export function watchMembers(houseId: string, cb: (m: Member[]) => void, onError?: OnError) {
   return onSnapshot(
     collection(db, 'houses', houseId, 'members'),
-    (snap) => cb(snap.docs.map((s) => toMember(s.id, s.data()))),
+    (snap) => {
+      const period = periodKey();
+      cb(snap.docs.map((s) => toMember(s.id, s.data(), period)));
+    },
     onError,
   );
 }
@@ -140,18 +215,21 @@ export function watchOpenRequests(houseId: string, cb: (r: ChoreRequest[]) => vo
     where('status', '==', 'open'),
     orderBy('createdAt', 'desc'),
   );
-  return onSnapshot(q, (snap) =>
-    cb(
-      snap.docs.map((s) => {
-        const d = s.data();
-        return {
-          ...(d as ChoreRequest),
-          id: s.id,
-          createdAt: ms(d.createdAt) ?? Date.now(),
-          completedAt: ms(d.completedAt),
-        };
-      }),
-    ),
+  return onSnapshot(
+    q,
+    (snap) =>
+      cb(
+        snap.docs.map((s) => {
+          const d = s.data();
+          return {
+            ...(d as ChoreRequest),
+            id: s.id,
+            needs: d.needs ?? `${d.choreName} needs doing`,
+            createdAt: ms(d.createdAt) ?? Date.now(),
+            completedAt: ms(d.completedAt),
+          };
+        }),
+      ),
     onError,
   );
 }
@@ -165,13 +243,18 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
         snap.docs.map((s) => {
           const d = s.data();
           return {
-            ...(d as ChoreLog),
             id: s.id,
+            choreKey: d.choreKey,
+            choreName: d.choreName,
+            userId: d.userId,
+            username: d.username,
             at: ms(d.at) ?? Date.now(),
+            period: d.period ?? null,
+            requestId: d.requestId ?? null,
             photoThumb: d.photoThumb ?? null,
-            okVoters: d.okVoters ?? [],
-            notOkVoters: d.notOkVoters ?? [],
             status: d.status ?? 'pending',
+            reviewedBy: d.reviewedBy ?? null,
+            reviewedByName: d.reviewedByName ?? null,
           };
         }),
       ),
@@ -186,43 +269,56 @@ export async function setPushToken(houseId: string, uid: string, token: string |
 // ---------- Chores ----------
 
 /**
- * "I did a chore." Saves the photo, adds to the activity log and bumps the
- * user's own counters. If it fulfils an open request, that request is closed too.
+ * "Done it." Saves the photo, adds to the activity log and bumps the user's
+ * score for this 2-month period. Closes the request if it was one, and lets
+ * everyone else know there's a photo to check.
  */
 export async function logChore(opts: {
-  houseId: string;
+  house: House;
+  members: Member[];
   uid: string;
   username: string;
-  choreName: string;
+  chore: { key: string; name: string };
   photo: { thumb: string; full: string };
   requestId?: string | null;
 }): Promise<void> {
-  const { houseId, uid, username, photo } = opts;
+  const { house, uid, username, photo } = opts;
   const requestId = opts.requestId ?? null;
-  const name = cleanChoreName(opts.choreName);
-  const key = choreKey(name);
-  if (!key) throw new Error('Give the chore a name.');
+  const name = cleanChoreName(opts.chore.name);
+  const key = opts.chore.key || choreKey(name);
+  if (!key) throw new Error('Pick a chore.');
   if (!photo?.thumb || !photo?.full) throw new Error('Take a photo of the finished chore first.');
+  const period = periodKey();
 
   const batch = writeBatch(db);
-  const logRef = doc(collection(db, 'houses', houseId, 'logs'));
+  const logRef = doc(collection(db, 'houses', house.id, 'logs'));
   batch.set(logRef, {
-    choreKey: key, choreName: name, userId: uid, username, at: serverTimestamp(), requestId,
-    photoThumb: photo.thumb, okVoters: [], notOkVoters: [], status: 'pending',
+    choreKey: key, choreName: name, userId: uid, username, at: serverTimestamp(), period, requestId,
+    photoThumb: photo.thumb, status: 'pending', reviewedBy: null, reviewedByName: null,
   });
-  batch.set(doc(db, 'houses', houseId, 'photos', logRef.id), { userId: uid, data: photo.full });
-  // Dot-path so only this chore's counter changes (choreKey has no dots).
-  batch.update(memberRef(houseId, uid), {
-    totalCompleted: increment(1),
-    [`choreCounts.${key}`]: increment(1),
+  batch.set(doc(db, 'houses', house.id, 'photos', logRef.id), { userId: uid, data: photo.full });
+  // Dot-paths so only this period's / this chore's counters change.
+  batch.update(memberRef(house.id, uid), {
+    currentPeriod: period,
+    [`stats.${period}.total`]: increment(1),
+    [`stats.${period}.chores.${key}`]: increment(1),
     lastCompletedAt: serverTimestamp(),
   });
   if (requestId) {
-    batch.update(doc(db, 'houses', houseId, 'requests', requestId), {
+    batch.update(doc(db, 'houses', house.id, 'requests', requestId), {
       status: 'done', completedBy: uid, completedAt: serverTimestamp(),
     });
   }
   await batch.commit();
+
+  const others = opts.members.filter((m) => m.uid !== uid && m.pushToken).map((m) => m.pushToken!);
+  if (others.length) {
+    await sendPush(others, {
+      title: `${username} did: ${name}`,
+      body: 'Check the photo — one of you needs to verify it.',
+      data: { type: 'chore_check', houseId: house.id },
+    });
+  }
 }
 
 /** Loads the full-size photo for one chore. */
@@ -232,32 +328,33 @@ export async function getChorePhoto(houseId: string, logId: string): Promise<str
 }
 
 /**
- * A housemate votes on whether a chore photo is OK (or clears their vote
- * with null). If that tips the chore into or out of "rejected", the
- * chore-doer's score goes down or back up in the same write.
+ * One housemate checks a chore photo. Rejecting takes the chore off the
+ * chore-doer's score (in the same write, so the two can't get out of step).
  */
-export async function voteOnChore(houseId: string, logId: string, voterUid: string, vote: Vote | null) {
+export async function reviewChore(
+  houseId: string,
+  logId: string,
+  reviewer: { uid: string; username: string },
+  decision: 'verified' | 'rejected',
+) {
   const logRef = doc(db, 'houses', houseId, 'logs', logId);
   await runTransaction(db, async (tx) => {
+    // Transactions must do all reads before any writes.
     const snap = await tx.get(logRef);
     if (!snap.exists()) throw new Error('That chore no longer exists.');
     const log = snap.data();
-    if (log.userId === voterUid) throw new Error("You can't check your own chore.");
-
-    // Transactions must do all reads before any writes.
+    if (log.userId === reviewer.uid) throw new Error("You can't check your own chore.");
+    if (log.status !== 'pending') throw new Error('Someone has already checked this one.');
     const ownerRef = memberRef(houseId, log.userId);
     const ownerStillInHouse = (await tx.get(ownerRef)).exists();
 
-    const before: ReviewStatus = log.status ?? 'pending';
-    const votes = applyVote(log.okVoters ?? [], log.notOkVoters ?? [], voterUid, vote);
-    const after = reviewStatus(votes.okVoters, votes.notOkVoters);
-    tx.update(logRef, { ...votes, status: after });
-
-    const delta = scoreDelta(before, after);
-    if (delta !== 0 && ownerStillInHouse) {
+    tx.update(logRef, {
+      status: decision, reviewedBy: reviewer.uid, reviewedByName: reviewer.username, reviewedAt: serverTimestamp(),
+    });
+    if (decision === 'rejected' && ownerStillInHouse && log.period) {
       tx.update(ownerRef, {
-        totalCompleted: increment(delta),
-        [`choreCounts.${log.choreKey}`]: increment(delta),
+        [`stats.${log.period}.total`]: increment(-1),
+        [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
         lastReviewAdjust: logId,
       });
     }
@@ -265,28 +362,24 @@ export async function voteOnChore(houseId: string, logId: string, voterUid: stri
 }
 
 /**
- * "This needs doing, but not by me." Picks whoever has done the least,
+ * "Bins are full." Picks whoever has done the fewest chores this period,
  * records the request, and pings them.
  */
 export async function requestChore(opts: {
-  houseId: string;
-  houseName: string;
+  house: House;
   requester: { uid: string; username: string };
   members: Member[];
-  choreName: string;
-  mode: AssignMode;
+  chore: HouseChore;
 }): Promise<{ assignee: Member; notified: boolean }> {
-  const name = cleanChoreName(opts.choreName);
-  const key = choreKey(name);
-  if (!key) throw new Error('Give the chore a name.');
-
-  const assignee = pickAssignee(opts.members, opts.requester.uid, opts.mode, key) as Member | null;
+  const { house, chore } = opts;
+  const assignee = pickAssignee(opts.members, opts.requester.uid, 'overall', chore.key) as Member | null;
   if (!assignee) throw new Error("You're the only one in the house so far — share your house code first!");
 
-  await setDoc(doc(collection(db, 'houses', opts.houseId, 'requests')), {
-    choreKey: key,
-    choreName: name,
-    mode: opts.mode,
+  await setDoc(doc(collection(db, 'houses', house.id, 'requests')), {
+    choreKey: chore.key,
+    choreName: chore.name,
+    needs: chore.needs,
+    mode: 'overall',
     requestedBy: opts.requester.uid,
     requestedByName: opts.requester.username,
     assignedTo: assignee.uid,
@@ -299,13 +392,10 @@ export async function requestChore(opts: {
 
   let notified = false;
   if (assignee.pushToken) {
-    notified = await sendPush(assignee.pushToken, {
-      title: `${opts.houseName}: ${name} needs doing`,
-      body:
-        opts.mode === 'chore'
-          ? `You've done "${name}" the fewest times in the house — your turn!`
-          : `You've done the fewest chores in the house — your turn!`,
-      data: { type: 'chore_request', houseId: opts.houseId },
+    notified = await sendPush([assignee.pushToken], {
+      title: `${house.name}: ${chore.needs}`,
+      body: "You've done the fewest chores in the house — your turn!",
+      data: { type: 'chore_request', houseId: house.id },
     });
   }
   return { assignee, notified };
