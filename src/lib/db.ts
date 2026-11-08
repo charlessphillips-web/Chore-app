@@ -4,6 +4,9 @@ import {
   type DocumentData, type FirestoreError, type Timestamp,
 } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
+import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
@@ -399,4 +402,36 @@ export async function requestChore(opts: {
     });
   }
   return { assignee, notified };
+}
+
+// ---------- Bug reports ----------
+
+/**
+ * Sends a bug report to bugReports/{id}. Only the app owner can read these
+ * (via the Firebase console or scripts/export-bug-reports.mjs).
+ */
+export async function submitBugReport(opts: {
+  uid: string;
+  username: string | null;
+  houseId: string | null;
+  message: string;
+  screenshot: string | null;
+  screen?: string;
+}): Promise<void> {
+  const message = opts.message.trim();
+  if (message.length < 5) throw new Error('Tell us a bit more about what went wrong.');
+  await setDoc(doc(collection(db, 'bugReports')), {
+    userId: opts.uid,
+    username: opts.username,
+    houseId: opts.houseId,
+    message,
+    screenshot: opts.screenshot,
+    device: {
+      os: Platform.OS,
+      osVersion: String(Platform.Version ?? ''),
+      model: Device.modelName ?? null,
+      appVersion: Constants.expoConfig?.version ?? null,
+    },
+    createdAt: serverTimestamp(),
+  });
 }

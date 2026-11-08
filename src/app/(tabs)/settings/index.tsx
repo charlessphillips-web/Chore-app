@@ -69,6 +69,9 @@ export default function SettingsIndex() {
         </Card>
       )}
 
+      <Label>Help</Label>
+      <RowButton icon="bug-outline" title="Report a bug" subtitle="Something not working? Tell us" onPress={() => router.push('/settings/report-bug')} />
+
       <Label>Account</Label>
       <Button title="Leave house" icon="exit-outline" variant="secondary" onPress={leave} loading={busy === 'leave'} disabled={!!busy} />
       <Button title="Delete my account" icon="trash-outline" variant="danger" onPress={del} loading={busy === 'delete'} disabled={!!busy} />

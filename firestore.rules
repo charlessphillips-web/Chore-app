@@ -53,6 +53,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---- Bug reports. Anyone signed in can send one; nobody can read them
+    // back through the app (you read them in the Firebase console or with
+    // scripts/export-bug-reports.mjs).
+    match /bugReports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == me()
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 5
+        && request.resource.data.message.size() <= 2000
+        && (request.resource.data.screenshot == null
+            || (request.resource.data.screenshot is string && request.resource.data.screenshot.size() < 900000));
+      allow read, update, delete: if false;
+    }
+
     match /houses/{houseId} {
       allow read: if isMember(houseId);
       allow create: if signedIn()

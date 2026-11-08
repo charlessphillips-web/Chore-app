@@ -46,3 +46,4 @@ scripts/node_modules/
 demographics*.csv
 rules-tests/node_modules/
 *-debug.log
+bug-reports*

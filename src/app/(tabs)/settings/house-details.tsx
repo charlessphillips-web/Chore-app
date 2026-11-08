@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { setWallpaper, updateHouse } from '../../../lib/db';
-import { pickWallpaper } from '../../../lib/photos';
+import { pickFromLibrary } from '../../../lib/photos';
 import { Button, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { colors, radius } from '../../../components/theme';
 
@@ -33,7 +33,7 @@ export default function HouseDetails() {
     setError(null);
     setBusy('wall');
     try {
-      const data = remove ? null : await pickWallpaper();
+      const data = remove ? null : await pickFromLibrary();
       if (remove || data) await setWallpaper(house!.id, user!.uid, data);
     } catch (e) {
       setError((e as Error).message);

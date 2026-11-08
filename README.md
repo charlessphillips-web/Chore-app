@@ -25,6 +25,8 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 - **House:** house code to share, housemates, recent activity with photos.
 - **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.
 
+**Report a bug:** in Settings, anyone can describe a problem and attach a screenshot. Reports are saved in the database, and only you can read them (see "Bug reports" below).
+
 **Privacy:** date of birth, gender and university go in a private record that housemates can't read. Only you (the app owner) can export it (see below).
 
 ## Tech
@@ -80,6 +82,16 @@ To export every user's answers to a spreadsheet:
    ```
 
 This writes `demographics-YYYY-MM-DD.csv` and prints a summary: % students, gender split, top universities and age range.
+
+## Bug reports
+
+Reports appear in the Firebase console → Firestore Database → `bugReports`. To get them all as a spreadsheet, with screenshots saved as pictures (uses the same `service-account.json` as the demographics export):
+
+```bash
+cd scripts && npm install && npm run export-bug-reports
+```
+
+This creates `bug-reports-YYYY-MM-DD.csv` plus a folder of screenshots.
 
 ## Tests
 

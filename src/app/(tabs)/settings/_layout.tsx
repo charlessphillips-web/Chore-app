@@ -9,6 +9,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="chores" options={{ title: 'Chores' }} />
       <Stack.Screen name="housemates" options={{ title: 'Housemates' }} />
       <Stack.Screen name="house-details" options={{ title: 'House details' }} />
+      <Stack.Screen name="report-bug" options={{ title: 'Report a bug' }} />
     </Stack>
   );
 }
