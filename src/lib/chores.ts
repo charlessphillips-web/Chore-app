@@ -1,16 +1,14 @@
 export const PRESET_CHORES = [
-  'Washing up',
-  'Take out bins',
-  'Recycling',
-  'Hoover',
-  'Clean kitchen',
-  'Clean bathroom',
-  'Mop floors',
-  'Wipe surfaces',
-  'Empty dishwasher',
-  'Buy toilet roll',
-  'Buy washing-up liquid',
-  'Clean fridge',
+  'Bins',
+  'Cleaning kitchen surfaces',
+  'Hoovering',
+  'Tidying sitting room',
+  'Cleaning sink',
+  'Emptying dishwasher',
+  'Taking big bins out on bin days',
+  'Cleaning microwave',
+  'Cleaning oven',
+  'Cleaning stove',
 ] as const;
 
 /**
