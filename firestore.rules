@@ -1,0 +1,92 @@
+rules_version = '2';
+
+// Security rules: who can read/write what. Deploy with
+//   npx firebase-tools deploy --only firestore
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function memberPath(houseId, uid) { return /databases/$(database)/documents/houses/$(houseId)/members/$(uid); }
+    function isMember(houseId) { return signedIn() && exists(memberPath(houseId, me())); }
+
+    // ---- Private profile + demographics. Only the owner (and you, via the
+    // admin export script) can read it. Housemates never see age/gender/uni.
+    function validProfile(d) {
+      return d.username is string && d.username.size() >= 2 && d.username.size() <= 24
+        && d.age is int && d.age >= 13 && d.age <= 120
+        && d.gender in ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say']
+        && d.isStudent is bool
+        && (d.university == null || (d.university is string && d.university.size() <= 100));
+    }
+
+    match /users/{uid} {
+      allow read, delete: if signedIn() && me() == uid;
+      allow create: if signedIn() && me() == uid
+        && validProfile(request.resource.data)
+        && request.resource.data.houseId == null;
+      // houseId may only point at a house you are (or are becoming) a member of.
+      allow update: if signedIn() && me() == uid
+        && validProfile(request.resource.data)
+        && (request.resource.data.houseId == null
+            || existsAfter(memberPath(request.resource.data.houseId, uid)));
+    }
+
+    // ---- Code -> house lookup. You can look up one code, never list them all.
+    match /houseCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && getAfter(/databases/$(database)/documents/houses/$(request.resource.data.houseId)).data.code == code
+        && getAfter(/databases/$(database)/documents/houses/$(request.resource.data.houseId)).data.createdBy == me();
+      allow update, delete: if false;
+    }
+
+    match /houses/{houseId} {
+      allow read: if isMember(houseId);
+      allow create: if signedIn()
+        && request.resource.data.createdBy == me()
+        && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.code)).data.houseId == houseId;
+      allow update, delete: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(houseId);
+        // Joining: must be yourself, start from zero, and know the real code.
+        allow create: if signedIn() && me() == uid
+          && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.joinCode)).data.houseId == houseId
+          && request.resource.data.totalCompleted == 0
+          && request.resource.data.choreCounts == {};
+        // You can only change your own stats, and only by +1 at a time.
+        allow update: if signedIn() && me() == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['username', 'pushToken', 'totalCompleted', 'choreCounts', 'lastCompletedAt'])
+          && request.resource.data.totalCompleted >= resource.data.totalCompleted
+          && request.resource.data.totalCompleted <= resource.data.totalCompleted + 1;
+        allow delete: if signedIn() && me() == uid;
+      }
+
+      match /logs/{logId} {
+        allow read: if isMember(houseId);
+        allow create: if isMember(houseId) && request.resource.data.userId == me();
+        allow update, delete: if false;
+      }
+
+      match /requests/{requestId} {
+        allow read: if isMember(houseId);
+        allow create: if isMember(houseId)
+          && request.resource.data.requestedBy == me()
+          && request.resource.data.assignedTo != me()
+          && exists(memberPath(houseId, request.resource.data.assignedTo))
+          && request.resource.data.status == 'open';
+        // Anyone in the house can close a request by doing it themselves.
+        allow update: if isMember(houseId)
+          && resource.data.status == 'open'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'completedBy', 'completedAt'])
+          && request.resource.data.status == 'done'
+          && request.resource.data.completedBy == me();
+        allow delete: if false;
+      }
+    }
+  }
+}

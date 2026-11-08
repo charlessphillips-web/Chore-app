@@ -1,0 +1,11 @@
+{
+  "name": "choreboard-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export-demographics": "node export-demographics.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
