@@ -1,25 +1,51 @@
-import { useState } from 'react';
-import { parseDob, toDobString } from '../lib/dob';
-import { Input } from './ui';
+import { Text, View } from 'react-native';
+import { toDobString } from '../lib/dob';
+import { colors, radius, space } from './theme';
 
-/** Web version (used for testing in a browser): type DD/MM/YYYY. */
+/**
+ * Web version (the web link). Uses the browser's own date picker, which on
+ * an iPhone is the same scroll wheel as the app.
+ */
 export function DobPicker({ value, onChange }: { value: string; onChange: (dob: string) => void }) {
-  const initial = parseDob(value);
-  const [text, setText] = useState(
-    initial ? `${String(initial.getDate()).padStart(2, '0')}/${String(initial.getMonth() + 1).padStart(2, '0')}/${initial.getFullYear()}` : '',
-  );
+  const today = toDobString(new Date());
   return (
-    <Input
-      accessibilityLabel="Date of birth"
-      value={text}
-      placeholder="DD/MM/YYYY"
-      maxLength={10}
-      onChangeText={(t) => {
-        setText(t);
-        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t.trim());
-        const d = m ? parseDob(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`) : null;
-        onChange(d ? toDobString(d) : '');
+    <View
+      style={{
+        backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.border,
+        justifyContent: 'center', minHeight: 50,
       }}
-    />
+    >
+      {!value && (
+        <Text
+          style={{ position: 'absolute', left: space.md, fontSize: 16, color: colors.muted }}
+          pointerEvents="none"
+        >
+          Select your date of birth
+        </Text>
+      )}
+      <input
+        type="date"
+        aria-label="Date of birth"
+        value={value}
+        max={today}
+        min="1900-01-01"
+        onChange={(e) => onChange(e.currentTarget.value)}
+        style={{
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: value ? colors.text : 'transparent',
+          colorScheme: 'dark',
+          fontSize: 16,
+          fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+          padding: `14px ${space.md}px`,
+          width: '100%',
+          boxSizing: 'border-box',
+          minHeight: 50,
+        }}
+      />
+    </View>
   );
 }
