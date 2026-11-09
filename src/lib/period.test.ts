@@ -63,7 +63,7 @@ test('date of birth', () => {
   assert.equal(parseDob('2001-02-31'), null);
   assert.equal(ageOn('2004-11-09', new Date(2026, 10, 8)), 21); // birthday tomorrow
   assert.equal(ageOn('2004-11-08', new Date(2026, 10, 8)), 22); // birthday today
-  assert.equal(dobError('2015-01-01', new Date(2026, 10, 8)), 'You need to be 13 or over to use Choreboard.');
+  assert.equal(dobError('2015-01-01', new Date(2026, 10, 8)), 'You need to be 13 or over to use Rotawise.');
   assert.equal(dobError('2004-03-07', new Date(2026, 10, 8)), null);
   assert.equal(dobError('', new Date()), 'Enter your date of birth.');
 });

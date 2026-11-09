@@ -1,5 +1,5 @@
 /**
- * Choreboard look ("Graphite"): black background, soft grey cards and
+ * Rotawise look ("Graphite"): black background, soft grey cards and
  * tiles, white text and icons. Purple is only in the logo (and a tiny dot
  * marking "you"). Small labels use a mono font; numbers are big and bold.
  */

@@ -272,7 +272,7 @@ export function Loading() {
 
 /** Purple square with a white house-and-tick symbol (same as the app icon). The only big bit of colour. */
 export function Logo({ size = 40 }: { size?: number }) {
-  return <Image source={require('../../assets/logo.png')} style={{ width: size, height: size }} accessibilityLabel="Choreboard" />;
+  return <Image source={require('../../assets/logo.png')} style={{ width: size, height: size }} accessibilityLabel="Rotawise" />;
 }
 
 /** Yes/no question that works on phones and in a web browser. */

@@ -28,7 +28,7 @@ export function ageOn(dob: string, today: Date = new Date()): number | null {
 export function dobError(dob: string, today: Date = new Date()): string | null {
   const age = ageOn(dob, today);
   if (age === null) return 'Enter your date of birth.';
-  if (age < MIN_AGE) return `You need to be ${MIN_AGE} or over to use Choreboard.`;
+  if (age < MIN_AGE) return `You need to be ${MIN_AGE} or over to use Rotawise.`;
   if (age > 120) return 'Check your date of birth.';
   return null;
 }

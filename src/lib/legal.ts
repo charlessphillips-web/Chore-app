@@ -2,7 +2,10 @@
  * App name and privacy-policy details, in one place so a rename or a new
  * contact email is a one-line change.
  */
-export const APP_NAME = 'Choreboard';
+export const APP_NAME = 'Rotawise';
+
+/** The web address (also where the privacy policy lives: /privacy). */
+export const WEB_URL = 'https://rotawise.org';
 
 /** Who runs the app (shown in the privacy policy). Fill these in before launch. */
 export const OWNER_NAME = '';

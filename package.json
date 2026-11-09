@@ -42,7 +42,8 @@
     "test": "node --test src/lib/*.test.ts",
     "typecheck": "tsc --noEmit",
     "test:rules": "cd rules-tests && npm install && npm test",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "deploy:web": "expo export --platform web && npx firebase-tools deploy --only hosting --project choreboard-58094"
   },
   "private": true
 }

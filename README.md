@@ -1,4 +1,4 @@
-# Choreboard
+# Rotawise
 
 A chore app for uni houses. Log chores with a photo, flag chores that need doing, and the app asks whoever has done the least.
 
@@ -187,3 +187,15 @@ firestore.rules   who can read/write what
 scripts/          demographics export
 rules-tests/      security rule tests
 ```
+
+## Web version (Firebase Hosting)
+
+The web app is hosted on Firebase Hosting (free, same project). To publish an update:
+
+```bash
+npm run deploy:web
+```
+
+It's live at `https://choreboard-58094.web.app`, and at your own domain once connected
+(Firebase console → Hosting → Add custom domain, then paste the records it shows into your
+domain's DNS settings).

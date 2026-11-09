@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Choreboard",
+    "name": "Rotawise",
     "slug": "choreboard",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -26,8 +26,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "single",
-      "name": "Choreboard",
-      "shortName": "Choreboard",
+      "name": "Rotawise",
+      "shortName": "Rotawise",
       "backgroundColor": "#000000",
       "themeColor": "#000000"
     },
@@ -37,8 +37,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Choreboard uses your camera so you can photograph chores you have done for your housemates to check.",
-          "photosPermission": "Choreboard uses your photos for your profile picture, the house wallpaper and bug report screenshots."
+          "cameraPermission": "Rotawise uses your camera so you can photograph chores you have done for your housemates to check.",
+          "photosPermission": "Rotawise uses your photos for your profile picture, the house wallpaper and bug report screenshots."
         }
       ],
       "@react-native-community/datetimepicker",

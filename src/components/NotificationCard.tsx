@@ -37,7 +37,7 @@ export function NotificationCard() {
           <Text style={type.heading}>Turn on notifications</Text>
           <Text style={[type.small, { fontSize: 15, lineHeight: 21 }]}>
             {denied
-              ? 'Notifications are off for Choreboard. Turn them on in your phone’s settings so you know when it’s your turn.'
+              ? 'Notifications are off for Rotawise. Turn them on in your phone’s settings so you know when it’s your turn.'
               : 'Get told when it’s your turn to do a chore, or when a housemate’s photo needs checking.'}
           </Text>
         </View>

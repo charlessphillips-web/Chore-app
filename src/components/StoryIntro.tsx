@@ -24,7 +24,7 @@ const native = Platform.OS !== 'web';
 export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', showWelcome = true }: {
   onFinish: () => void;
   finishLabel?: string;
-  /** First screen is the Choreboard logo and name. */
+  /** First screen is the Rotawise logo and name. */
   showWelcome?: boolean;
 }) {
   const slides = (showWelcome ? 1 : 0) + STEPS.length;
@@ -89,7 +89,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
           ) : (
             <>
               <Logo size={96} />
-              <Text style={styles.title}>Choreboard</Text>
+              <Text style={styles.title}>Rotawise</Text>
               <Text style={styles.text}>Sharing chores fairly in your house.</Text>
             </>
           )}

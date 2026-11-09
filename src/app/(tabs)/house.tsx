@@ -1,6 +1,7 @@
 import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
+import { WEB_URL } from '../../lib/legal';
 import { jpegUri } from '../../lib/photos';
 import { Button, Card, Empty, HouseName, Icon, Label, Loading, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
@@ -13,7 +14,7 @@ export default function HouseTab() {
   if (!user || !house) return <Loading />;
 
   const share = () =>
-    Share.share({ message: `Join our house "${house.name}" on Choreboard with code: ${house.code}` });
+    Share.share({ message: `Join our house "${house.name}" on Rotawise with code: ${house.code}\n${WEB_URL}` });
   const sorted = [...members].sort((a, b) => a.joinedAt - b.joinedAt);
 
   return (

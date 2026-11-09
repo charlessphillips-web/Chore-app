@@ -20,7 +20,7 @@ const TEXT: Record<FeedbackType, { title: string; intro: string; label: string; 
     intro: 'Got an idea, or something you wish the app did? We read every suggestion.',
     label: 'Your idea',
     placeholder: 'e.g. It would be good to have a weekly bin reminder',
-    thanks: 'Your suggestion has been sent. Thanks for helping improve Choreboard.',
+    thanks: 'Your suggestion has been sent. Thanks for helping improve Rotawise.',
   },
 };
 

@@ -78,7 +78,7 @@ export default function OfferScreen() {
         {priceBox}
         <Text style={type.small}>
           You get the leaderboard point once it&apos;s been checked and you&apos;ve paid. You pay them directly —
-          Choreboard never holds money.
+          Rotawise never holds money.
         </Text>
         <ErrorText>{error}</ErrorText>
         <Button title="Send offer" onPress={send} loading={busy === 'send'} disabled={!price.trim()} />
@@ -207,7 +207,7 @@ export default function OfferScreen() {
                 <>
                   <Text style={type.small}>{offer.doerName} asked to be paid by {PAY_LABELS[offer.doerPay.method]}.</Text>
                   <Button title={`Pay ${price$} with ${PAY_LABELS[offer.doerPay.method]}`} icon="card-outline" variant="secondary"
-                    onPress={() => Linking.openURL(payUrl(offer.doerPay!.link!, amount, `Choreboard: ${offer.choreName}`))} />
+                    onPress={() => Linking.openURL(payUrl(offer.doerPay!.link!, amount, `Rotawise: ${offer.choreName}`))} />
                 </>
               ) : (
                 <Text style={type.small}>{offer.doerName} asked for cash. Pay them in person.</Text>

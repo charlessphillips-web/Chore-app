@@ -1,12 +1,12 @@
-# Choreboard Privacy Policy
+# Rotawise Privacy Policy
 
 _Last updated: [DATE]_
 
 > **Draft.** Fill in the parts in [square brackets] and read it through before publishing. This is a starting point, not legal advice.
 
-Choreboard ("the app") helps people who share a house split chores fairly. This policy explains what information the app collects, why, and what control you have over it.
+Rotawise ("the app") helps people who share a house split chores fairly. This policy explains what information the app collects, why, and what control you have over it.
 
-**Who runs Choreboard:** [YOUR NAME], [CITY], United Kingdom. Contact: [YOUR EMAIL]
+**Who runs Rotawise:** [YOUR NAME], [CITY], United Kingdom. Contact: [YOUR EMAIL]
 
 ## What we collect
 
@@ -39,7 +39,7 @@ You can ask to see, correct or delete your information at any time. You can edit
 
 ## Children
 
-You must be 13 or over to use Choreboard.
+You must be 13 or over to use Rotawise.
 
 ## Changes
 
