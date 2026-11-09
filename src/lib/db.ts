@@ -704,7 +704,7 @@ export async function remindPayer(houseId: string, offer: ChoreOffer, members: M
   await ping(
     members, [offer.fromUid], houseId,
     `Reminder: pay ${offer.doerName} ${formatPrice(offer.agreedPrice ?? offer.price)}`,
-    `for ${offer.choreName}. Open Choreboard → Money.`,
+    `for ${offer.choreName}. Open Choreboard → Pay.`,
   );
 }
 

@@ -11,7 +11,7 @@ import { type } from '../../components/theme';
  * Everything about paying housemates to do chores: deals that need you,
  * chores you could offer, ones up for grabs, and ones in progress.
  */
-export default function Money() {
+export default function Pay() {
   const { user, openRequests, offers, logs } = useApp();
   if (!user) return <Loading />;
   const uid = user.uid;
@@ -40,7 +40,7 @@ export default function Money() {
 
   return (
     <Screen>
-      <Title>Money</Title>
+      <Title>Pay</Title>
       <Subtitle>Pay a housemate to do your chore, or earn by doing theirs.</Subtitle>
 
       {answer.length + toPay.length + toDo.length > 0 && (

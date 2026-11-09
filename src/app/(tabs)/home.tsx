@@ -25,7 +25,7 @@ export default function Home() {
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
   const openOffer = (id: string) => router.push({ pathname: '/offer/[id]', params: { id } });
-  // Chores you agreed to do for someone (the rest of the money stuff is in the Money tab).
+  // Chores you agreed to do for someone (the rest is in the Pay tab).
   const toDo = offers.filter((o) => o.status === 'agreed' && o.doerUid === user.uid);
   const total = me?.totalCompleted ?? 0;
 

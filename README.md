@@ -26,7 +26,7 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 - **House:** house code to share, housemates, recent activity with photos.
 - **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.
 
-**Paying housemates (Money tab):** when it's your turn for a chore, you can offer it to housemates for money (£0.50–£50). Each housemate can accept or make one counter offer, and says how they want paying for that deal (Monzo link, PayPal link or cash). They do it with a photo as usual; once it's checked you pay them directly and tap "I've paid" — then the point is yours. After 2 days unpaid they can send you a reminder. The app never holds money.
+**Paying housemates (Pay tab):** when it's your turn for a chore, you can offer it to housemates for money (£0.50–£50). Each housemate can accept or make one counter offer, and says how they want paying for that deal (Monzo link, PayPal link or cash). They do it with a photo as usual; once it's checked you pay them directly and tap "I've paid" — then the point is yours. After 2 days unpaid they can send you a reminder. The app never holds money.
 
 **Profile pictures:** everyone picks their own in Settings: a photo (cropped in a circle) or a drawn character.
 
