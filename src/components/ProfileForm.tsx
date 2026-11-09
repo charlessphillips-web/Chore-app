@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 import { dobError } from '../lib/dob';
 import { GENDERS, type Gender, type ProfileDetails } from '../lib/types';
 import { DobPicker } from './DobPicker';
+import { UniversityInput } from './UniversityInput';
 import { Button, Chip, ChipRow, ErrorText, Input, Label } from './ui';
 import { colors } from './theme';
 
@@ -72,7 +73,7 @@ export function ProfileForm({
       {isStudent && (
         <>
           <Label>University</Label>
-          <Input value={university} onChangeText={setUniversity} placeholder="e.g. University of Leeds" autoCapitalize="words" />
+          <UniversityInput value={university} onChange={setUniversity} />
         </>
       )}
 
