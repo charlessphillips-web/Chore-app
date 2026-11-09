@@ -7,6 +7,7 @@ import { jpegUri } from '../../lib/photos';
 import { effectiveStatus, needsCheckBy, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
 import type { ChoreLog } from '../../lib/types';
 import { Button, Card, Chip, ChipRow, Empty, Input, Label, Loading, notify, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
+import { Tip } from '../../components/Tip';
 import { colors, radius, space, type } from '../../components/theme';
 
 /** Photos waiting for a check. One housemate's decision is enough; then it disappears. */
@@ -23,6 +24,7 @@ export default function Checks() {
       <Subtitle>
         Only one person needs to check each photo. Anything not checked within 24 hours is verified automatically.
       </Subtitle>
+      <Tip id="checks">Look at each photo: tap Verify if it&apos;s done properly, or Send back with a reason if it isn&apos;t. Sent-back chores don&apos;t count until they&apos;re redone.</Tip>
 
       {toCheck.length === 0 ? (
         <Card>

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { jpegUri } from '../../lib/photos';
 import { Button, Card, Empty, HouseName, Icon, Label, Loading, Screen, timeAgo } from '../../components/ui';
+import { Tip } from '../../components/Tip';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Avatar } from '../../components/Avatar';
 import { colors, fonts, space, type } from '../../components/theme';
@@ -18,6 +19,7 @@ export default function HouseTab() {
   return (
     <Screen>
       <HouseName name={house.name} />
+      <Tip id="house">Share the house code with your housemates so they can join. Tap any activity to see its photo.</Tip>
 
       <Card style={{ alignItems: 'center' }}>
         <Text style={type.label}>House code</Text>

@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
 import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
 import { BigNumber, Loading, Screen, Title } from '../../components/ui';
+import { Tip } from '../../components/Tip';
 import { Avatar } from '../../components/Avatar';
 import { colors, fonts, radius, space, type } from '../../components/theme';
 
@@ -32,6 +33,7 @@ export default function Leaderboard() {
   return (
     <Screen>
       <Title>Leaderboard</Title>
+      <Tip id="ranks">Every checked chore is a point. Whoever has the fewest gets the next &quot;needs doing&quot;, so staying near the top means fewer requests.</Tip>
 
       <View style={styles.period}>
         <View style={styles.periodTop}>

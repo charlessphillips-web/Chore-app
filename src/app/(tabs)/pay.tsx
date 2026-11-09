@@ -5,6 +5,7 @@ import { formatPrice, PAY_LABELS } from '../../lib/money';
 import { effectiveStatus } from '../../lib/review';
 import type { ChoreOffer } from '../../lib/types';
 import { Card, Label, ListGroup, ListRow, Loading, Screen, Subtitle, Title } from '../../components/ui';
+import { Tip } from '../../components/Tip';
 import { type } from '../../components/theme';
 
 /**
@@ -42,6 +43,7 @@ export default function Pay() {
     <Screen>
       <Title>Pay</Title>
       <Subtitle>Pay a housemate to do your chore, or earn by doing theirs.</Subtitle>
+      <Tip id="pay">When it&apos;s your turn, set a price here. Housemates accept or make one counter offer. Once it&apos;s done and checked, pay them by Monzo, PayPal or cash, and the point is yours.</Tip>
 
       {answer.length + toPay.length + toDo.length > 0 && (
         <>

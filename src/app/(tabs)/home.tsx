@@ -8,6 +8,7 @@ import { formatPrice } from '../../lib/money';
 import { periodLabel } from '../../lib/period';
 import { standing } from '../../lib/standing';
 import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
+import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
 import { colors, fonts, type } from '../../components/theme';
 
@@ -110,6 +111,7 @@ export default function Home() {
       )}
 
       <Label>Chores</Label>
+      <Tip id="home">Tap a chore to log it with a photo, or to say it needs doing. Whoever has done the fewest gets asked.</Tip>
       {chores.length > 0 ? (
         <View style={styles.grid}>
           {chores.map((c) => {
