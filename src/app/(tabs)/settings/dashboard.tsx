@@ -57,15 +57,21 @@ export default function Dashboard() {
   return (
     <Screen edges={['left', 'right']}>
       <Subtitle>Anonymous totals for the whole app. No names are shown.</Subtitle>
+      {data.partial && (
+        <Text style={[type.small, { color: colors.warning }]}>
+          Some numbers aren&apos;t ready yet: Firebase is still setting them up after an update. Check back in about 10
+          minutes and tap Refresh.
+        </Text>
+      )}
 
       <View style={styles.grid}>
         <Stat value={users.length} label="Users" sub={`+${countSince(users.map((u) => u.createdAt), 7 * DAY, now)} this week`} />
         <Stat value={houses.length} label="Houses" sub={`+${countSince(houses.map((h) => h.createdAt), 7 * DAY, now)} this week`} />
-        <Stat value={data.active1d} label="Active today" sub={`${data.active7d} this week`} />
-        <Stat value={data.chores} label="Chores logged" sub={`${data.chores7d} this week`} />
-        <Stat value={houses.length ? (data.members / houses.length).toFixed(1) : '–'} label="People per house" />
-        <Stat value={data.chores ? `${Math.round((data.sentBack / data.chores) * 100)}%` : '–'} label="Sent back" />
-        <Stat value={data.deals} label="Paid chore deals" sub={`${formatPrice(data.dealPence)} in total`} />
+        <Stat value={data.active1d ?? '–'} label="Active today" sub={`${data.active7d ?? '–'} this week`} />
+        <Stat value={data.chores ?? '–'} label="Chores logged" sub={`${data.chores7d ?? '–'} this week`} />
+        <Stat value={houses.length && data.members !== null ? (data.members / houses.length).toFixed(1) : '–'} label="People per house" />
+        <Stat value={data.chores && data.sentBack !== null ? `${Math.round((data.sentBack / data.chores) * 100)}%` : '–'} label="Sent back" />
+        <Stat value={data.deals ?? '–'} label="Paid chore deals" sub={data.dealPence !== null ? `${formatPrice(data.dealPence)} in total` : undefined} />
         <Stat value={users.length ? `${Math.round((students / users.length) * 100)}%` : '–'} label="Students" />
       </View>
 

@@ -756,14 +756,17 @@ export async function touchLastSeen(houseId: string, uid: string) {
 export interface DashboardData {
   users: { dob: string | null; gender: string | null; isStudent: boolean | null; university: string | null; createdAt: number | null; houseId: string | null; agreed: boolean }[];
   houses: { id: string; createdAt: number | null; area: HouseArea | null }[];
-  members: number;
-  active1d: number;
-  active7d: number;
-  chores: number;
-  chores7d: number;
-  sentBack: number;
-  deals: number;
-  dealPence: number;
+  /** null = not available yet (e.g. Firebase is still building an index). */
+  members: number | null;
+  active1d: number | null;
+  active7d: number | null;
+  chores: number | null;
+  chores7d: number | null;
+  sentBack: number | null;
+  deals: number | null;
+  dealPence: number | null;
+  /** Some numbers couldn't load yet. */
+  partial: boolean;
 }
 
 /**
@@ -773,7 +776,16 @@ export interface DashboardData {
  */
 export async function loadDashboard(): Promise<DashboardData> {
   const ago = (days: number) => Timestamp.fromMillis(Date.now() - days * 86_400_000);
-  const n = async (q: Parameters<typeof getCountFromServer>[0]) => (await getCountFromServer(q)).data().count;
+  let partial = false;
+  // One number not being ready (e.g. index still building) shouldn't hide the rest.
+  const n = async (q: Parameters<typeof getCountFromServer>[0]) => {
+    try {
+      return (await getCountFromServer(q)).data().count;
+    } catch {
+      partial = true;
+      return null;
+    }
+  };
   const members = collectionGroup(db, 'members');
   const logs = collectionGroup(db, 'logs');
   const [usersSnap, housesSnap, memberCount, active1d, active7d, chores, chores7d, sentBack, deals] = await Promise.all([
@@ -785,7 +797,12 @@ export async function loadDashboard(): Promise<DashboardData> {
     n(logs),
     n(query(logs, where('at', '>=', ago(7)))),
     n(query(logs, where('status', '==', 'rejected'))),
-    getAggregateFromServer(query(collectionGroup(db, 'offers'), where('paid', '==', true)), { deals: count(), pence: sum('agreedPrice') }),
+    getAggregateFromServer(query(collectionGroup(db, 'offers'), where('paid', '==', true)), { deals: count(), pence: sum('agreedPrice') })
+      .then((a) => a.data())
+      .catch(() => {
+        partial = true;
+        return null;
+      }),
   ]);
   return {
     users: usersSnap.docs.map((d) => {
@@ -802,7 +819,8 @@ export async function loadDashboard(): Promise<DashboardData> {
     chores,
     chores7d,
     sentBack,
-    deals: deals.data().deals,
-    dealPence: deals.data().pence ?? 0,
+    deals: deals?.deals ?? null,
+    dealPence: deals ? deals.pence ?? 0 : null,
+    partial,
   };
 }
