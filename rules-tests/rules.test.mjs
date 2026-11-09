@@ -77,19 +77,28 @@ async function logChore(uid, houseId, key, requestId = null) {
   return ref.id;
 }
 
-// Mirrors reviewChore() in db.ts.
-async function review(uid, houseId, logId, decision) {
+// Mirrors reviewChore() in db.ts: verify, or send back with a reason.
+async function review(uid, houseId, logId, decision, reason = 'Still dirty') {
   const f = db(uid);
   const logRef = doc(f, 'houses', houseId, 'logs', logId);
   await runTransaction(f, async (tx) => {
     const log = (await tx.get(logRef)).data();
     const ownerRef = doc(f, 'houses', houseId, 'members', log.userId);
-    const ownerExists = (await tx.get(ownerRef)).exists();
-    tx.update(logRef, { status: decision, reviewedBy: uid, reviewedByName: uid, reviewedAt: serverTimestamp() });
-    if (decision === 'rejected' && ownerExists) {
+    const owner = await tx.get(ownerRef);
+    const back = decision === 'rejected';
+    tx.update(logRef, {
+      status: decision, reviewedBy: uid, reviewedByName: uid, reviewedAt: serverTimestamp(),
+      rejectReason: back ? reason : null,
+    });
+    if (back && owner.exists()) {
       tx.update(ownerRef, {
         [`stats.${log.period}.total`]: increment(-1), [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
         lastReviewAdjust: logId,
+      });
+      tx.set(doc(collection(f, 'houses', houseId, 'requests')), {
+        kind: 'redo', reason, logId, choreKey: log.choreKey, choreName: log.choreName, needs: `Redo: ${log.choreName}`,
+        mode: 'overall', requestedBy: uid, requestedByName: uid, assignedTo: log.userId, assignedToName: owner.data().username,
+        status: 'open', createdAt: serverTimestamp(), completedBy: null, completedAt: null,
       });
     }
   });
@@ -304,4 +313,29 @@ test('feedback: anyone can send a bug or suggestion, nobody can read them back',
   await assertFails(setDoc(doc(collection(env.unauthenticatedContext().firestore(), 'feedback')), report('x')));
   await assertSucceeds(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { type: 'suggestion', message: 'Add a bin day reminder' })));
   await assertFails(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { type: 'spam' })));
+});
+
+test('sending back creates a redo for the chore-doer', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const id = await logChore('alice', 'h1', 'bins');
+  await assertSucceeds(review('sam', 'h1', id, 'rejected', 'Still dirty: lid open'));
+  const reqs = await getDocs(query(collection(db('alice'), 'houses', 'h1', 'requests'), where('status', '==', 'open')));
+  assert.equal(reqs.size, 1);
+  const r = reqs.docs[0].data();
+  assert.equal(r.kind, 'redo');
+  assert.equal(r.assignedTo, 'alice');
+  assert.equal(r.reason, 'Still dirty: lid open');
+  assert.equal((await getDoc(doc(db('alice'), 'houses', 'h1', 'logs', id))).data().rejectReason, 'Still dirty: lid open');
+});
+
+test('cannot fake a redo request for a chore you did not send back', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const id = await logChore('alice', 'h1', 'bins');
+  await assertFails(setDoc(doc(collection(db('sam'), 'houses', 'h1', 'requests')), {
+    kind: 'redo', reason: 'x', logId: id, choreKey: 'bins', choreName: 'bins', needs: 'Redo: bins', mode: 'overall',
+    requestedBy: 'sam', requestedByName: 'Sam', assignedTo: 'alice', assignedToName: 'Alex',
+    status: 'open', createdAt: serverTimestamp(), completedBy: null, completedAt: null,
+  }));
 });

@@ -121,10 +121,12 @@ service cloud.firestore {
           && resource.data.status == 'pending'
           && request.time < resource.data.at + duration.value(24, 'h')
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
+               .hasOnly(['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectReason'])
           && request.resource.data.reviewedBy == me()
           && request.resource.data.status in ['verified', 'rejected']
-          && (request.resource.data.status == 'verified' || scoreDropped(houseId, resource.data));
+          && (request.resource.data.status == 'verified' || scoreDropped(houseId, resource.data))
+          && (request.resource.data.get('rejectReason', null) == null
+              || (request.resource.data.rejectReason is string && request.resource.data.rejectReason.size() <= 140));
         allow delete: if false;
       }
 
@@ -150,9 +152,15 @@ service cloud.firestore {
 
       match /requests/{requestId} {
         allow read: if isMember(houseId);
+        // "Needs doing", or a checker sending a chore back to whoever did it.
         allow create: if isMember(houseId)
           && request.resource.data.requestedBy == me()
           && request.resource.data.assignedTo != me()
+          && (request.resource.data.get('kind', 'needs') == 'needs'
+              || (request.resource.data.kind == 'redo'
+                  && getAfter(logPath(houseId, request.resource.data.logId)).data.userId == request.resource.data.assignedTo
+                  && getAfter(logPath(houseId, request.resource.data.logId)).data.reviewedBy == me()
+                  && getAfter(logPath(houseId, request.resource.data.logId)).data.status == 'rejected'))
           && exists(memberPath(houseId, request.resource.data.assignedTo))
           && request.resource.data.status == 'open';
         // Anyone in the house can close a request by doing it themselves.

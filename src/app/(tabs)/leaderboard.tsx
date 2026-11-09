@@ -31,7 +31,7 @@ export default function Leaderboard() {
         ))}
       </Card>
       <Text style={type.small}>
-        Rejected chores don&apos;t count. Whoever has the fewest gets the next &quot;needs doing&quot; request.
+        Sent-back chores don&apos;t count until they&apos;re redone. Whoever has the fewest gets the next &quot;needs doing&quot; request.
       </Text>
     </Screen>
   );

@@ -113,6 +113,11 @@ export default function ChoreScreen() {
 
       {step === 'done' && (
         <>
+          {request?.kind === 'redo' && request.assignedTo === user.uid && (
+            <Card style={{ borderColor: colors.danger }}>
+              <Text style={type.body}>{request.requestedByName} sent this back: {request.reason}</Text>
+            </Card>
+          )}
           <Text style={type.small}>Take a photo of the finished chore. Everyone in the house will see it.</Text>
           {photo ? (
             <View style={styles.preview}>

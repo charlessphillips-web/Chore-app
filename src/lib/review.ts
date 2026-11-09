@@ -38,3 +38,12 @@ export function timeLeft(at: number, now: number = Date.now()): string {
   if (h >= 1) return `${h}h left`;
   return `${Math.max(1, Math.ceil(ms / 60_000))}m left`;
 }
+
+/** Reasons a checker can give for sending a chore back. */
+export const REDO_REASONS = ['Still dirty', 'Only half done', "Photo doesn't show it", 'Wrong chore'] as const;
+
+/** "Still dirty" + optional note -> "Still dirty: the hob is greasy" (max 140 chars). */
+export function redoReason(reason: string, note: string): string {
+  const n = note.trim().replace(/\s+/g, ' ');
+  return (n ? `${reason}: ${n}` : reason).slice(0, 140);
+}

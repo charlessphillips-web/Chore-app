@@ -21,7 +21,7 @@ const STEPS: { icon: React.ComponentProps<typeof Icon>['name']; title: string; b
   {
     icon: 'camera',
     title: 'Check each other',
-    body: 'One housemate verifies each photo. Rejected chores don’t count. Unchecked ones are verified after 24 hours.',
+    body: 'One housemate checks each photo. If it’s not done properly they send it back to redo. Unchecked ones are verified after 24 hours.',
   },
   {
     icon: 'trophy',

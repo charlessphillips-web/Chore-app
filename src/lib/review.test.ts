@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AUTO_VERIFY_MS, effectiveStatus, needsCheckBy, timeLeft } from './review.ts';
+import { AUTO_VERIFY_MS, effectiveStatus, needsCheckBy, redoReason, timeLeft } from './review.ts';
 
 const H = 3_600_000;
 
@@ -22,4 +22,10 @@ test('checks list: only other people\'s pending chores, within 24h', () => {
 test('time left label', () => {
   assert.equal(timeLeft(0, H), '23h left');
   assert.equal(timeLeft(0, 23.5 * H), '30m left');
+});
+
+test('redo reason text', () => {
+  assert.equal(redoReason('Still dirty', ''), 'Still dirty');
+  assert.equal(redoReason('Still dirty', '  the   hob is greasy '), 'Still dirty: the hob is greasy');
+  assert.equal(redoReason('Other', 'x'.repeat(300)).length, 140);
 });

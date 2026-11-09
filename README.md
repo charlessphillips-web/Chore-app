@@ -21,7 +21,7 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 
 **Bottom menu:** Home · Checks · Leaderboard · House · Settings
 
-- **Checks:** chore photos waiting for a check. **One** housemate verifies or rejects each one, and then it disappears. Rejected chores come off your score. If nobody checks a photo within 24 hours, it's auto-verified. Logic: `src/lib/review.ts`.
+- **Checks:** chore photos waiting for a check. **One** housemate verifies it, or **sends it back** with a reason (e.g. "Still dirty"), and then it disappears. A sent-back chore comes off your score and goes back on your "Your turn" list to redo. If nobody checks a photo within 24 hours, it's auto-verified. Logic: `src/lib/review.ts`.
 - **Leaderboard:** resets every 2 months (Jan–Feb, Mar–Apr, …). "Who's done the fewest" uses the same 2-month count. Logic: `src/lib/period.ts`, `src/lib/assign.ts`.
 - **House:** house code to share, housemates, recent activity with photos.
 - **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.

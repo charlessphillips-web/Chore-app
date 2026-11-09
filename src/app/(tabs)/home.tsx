@@ -34,9 +34,13 @@ export default function Home() {
           {mine.map((r) => (
             <RowButton
               key={r.id}
-              icon="alert-circle"
+              icon={r.kind === 'redo' ? 'arrow-undo' : 'alert-circle'}
               title={r.needs}
-              subtitle={`${r.requestedByName} flagged this · ${timeAgo(r.createdAt)}`}
+              subtitle={
+                r.kind === 'redo'
+                  ? `${r.requestedByName} sent it back: ${r.reason ?? ''}`
+                  : `${r.requestedByName} flagged this · ${timeAgo(r.createdAt)}`
+              }
               onPress={() => openChore(r.choreKey, r.id)}
             />
           ))}
@@ -50,7 +54,7 @@ export default function Home() {
           <RowButton
             key={c.key}
             title={c.name}
-            subtitle={waiting ? `Waiting on ${waiting.assignedToName}` : undefined}
+            subtitle={waiting ? `${waiting.kind === 'redo' ? 'Being redone by' : 'Waiting on'} ${waiting.assignedToName}` : undefined}
             onPress={() => openChore(c.key)}
           />
         );

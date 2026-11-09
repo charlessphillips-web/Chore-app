@@ -55,6 +55,8 @@ export interface ChoreLog {
   status: ReviewStatus;
   reviewedBy: string | null;
   reviewedByName: string | null;
+  /** Why it was sent back, e.g. "Still dirty: the hob is greasy". */
+  rejectReason: string | null;
 }
 
 /** houses/{houseId}/requests/{id} — "this needs doing". */
@@ -63,6 +65,10 @@ export interface ChoreRequest {
   choreKey: string;
   choreName: string;
   needs: string;
+  /** 'needs': someone flagged it. 'redo': a checker sent a chore back. */
+  kind: 'needs' | 'redo';
+  /** For redo: why it was sent back. */
+  reason: string | null;
   requestedBy: string;
   requestedByName: string;
   assignedTo: string;

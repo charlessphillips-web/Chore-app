@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
-import { reviewChore } from '../../lib/db';
+import { sendBackChore, verifyChore } from '../../lib/db';
 import { jpegUri } from '../../lib/photos';
-import { effectiveStatus, needsCheckBy, timeLeft } from '../../lib/review';
+import { effectiveStatus, needsCheckBy, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
 import type { ChoreLog } from '../../lib/types';
-import { Button, Card, Empty, Label, Loading, notify, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
+import { Button, Card, Chip, ChipRow, Empty, Input, Label, Loading, notify, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
 import { colors, radius, space, type } from '../../components/theme';
 
 /** Photos waiting for a check. One housemate's decision is enough; then it disappears. */
@@ -29,7 +29,7 @@ export default function Checks() {
           <Empty icon="checkmark-done-outline">Nothing to check right now.</Empty>
         </Card>
       ) : (
-        toCheck.map((l) => <CheckCard key={l.id} log={l} houseId={house.id} reviewer={{ uid: user.uid, username: profile.username }} />)
+        toCheck.map((l) => <CheckCard key={l.id} log={l} reviewer={{ uid: user.uid, username: profile.username }} />)
       )}
 
       {minePending.length > 0 && (
@@ -49,17 +49,33 @@ export default function Checks() {
   );
 }
 
-function CheckCard({ log, houseId, reviewer }: { log: ChoreLog; houseId: string; reviewer: { uid: string; username: string } }) {
-  const [busy, setBusy] = useState<'verified' | 'rejected' | null>(null);
-  async function decide(d: 'verified' | 'rejected') {
-    setBusy(d);
+function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; username: string } }) {
+  const { house, members } = useApp();
+  const [busy, setBusy] = useState<'verify' | 'back' | null>(null);
+  const [sendingBack, setSendingBack] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+
+  async function verify() {
+    setBusy('verify');
     try {
-      await reviewChore(houseId, log.id, reviewer, d);
+      await verifyChore(house!.id, log.id, reviewer);
     } catch (e) {
       notify('Could not save', (e as Error).message);
       setBusy(null);
     }
   }
+  async function sendBack() {
+    if (!reason) return;
+    setBusy('back');
+    try {
+      await sendBackChore(house!, log.id, reviewer, redoReason(reason, note), members);
+    } catch (e) {
+      notify('Could not send back', (e as Error).message);
+      setBusy(null);
+    }
+  }
+
   return (
     <Card style={{ padding: 0, overflow: 'hidden' }}>
       <Pressable
@@ -78,10 +94,30 @@ function CheckCard({ log, houseId, reviewer }: { log: ChoreLog; houseId: string;
         <Text style={type.small}>
           {log.username} · {timeAgo(log.at)} · {timeLeft(log.at)} to check · tap photo to enlarge
         </Text>
-        <View style={{ flexDirection: 'row', gap: space.sm }}>
-          <Button title="Reject" icon="close" variant="danger" style={{ flex: 1 }} onPress={() => decide('rejected')} loading={busy === 'rejected'} disabled={!!busy} />
-          <Button title="Verify" icon="checkmark" style={{ flex: 1 }} onPress={() => decide('verified')} loading={busy === 'verified'} disabled={!!busy} />
-        </View>
+
+        {!sendingBack ? (
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <Button title="Send back" icon="arrow-undo" variant="danger" style={{ flex: 1 }} onPress={() => setSendingBack(true)} disabled={!!busy} />
+            <Button title="Verify" icon="checkmark" style={{ flex: 1 }} onPress={verify} loading={busy === 'verify'} disabled={!!busy} />
+          </View>
+        ) : (
+          <View style={{ gap: space.sm }}>
+            <Text style={type.body}>Why does it need redoing?</Text>
+            <ChipRow>
+              {REDO_REASONS.map((r) => (
+                <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />
+              ))}
+            </ChipRow>
+            <Input value={note} onChangeText={setNote} placeholder="Add a note (optional)" maxLength={100} />
+            <Text style={type.small}>
+              It won&apos;t count, and goes back to {log.username} to redo.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: space.sm }}>
+              <Button title="Cancel" variant="ghost" style={{ flex: 1 }} onPress={() => setSendingBack(false)} disabled={!!busy} />
+              <Button title="Send back" variant="danger" style={{ flex: 1 }} onPress={sendBack} loading={busy === 'back'} disabled={!reason || !!busy} />
+            </View>
+          </View>
+        )}
       </View>
     </Card>
   );

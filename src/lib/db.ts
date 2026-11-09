@@ -228,6 +228,8 @@ export function watchOpenRequests(houseId: string, cb: (r: ChoreRequest[]) => vo
             ...(d as ChoreRequest),
             id: s.id,
             needs: d.needs ?? `${d.choreName} needs doing`,
+            kind: d.kind === 'redo' ? 'redo' : 'needs',
+            reason: d.reason ?? null,
             createdAt: ms(d.createdAt) ?? Date.now(),
             completedAt: ms(d.completedAt),
           };
@@ -258,6 +260,7 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             status: d.status ?? 'pending',
             reviewedBy: d.reviewedBy ?? null,
             reviewedByName: d.reviewedByName ?? null,
+            rejectReason: d.rejectReason ?? null,
           };
         }),
       ),
@@ -330,18 +333,43 @@ export async function getChorePhoto(houseId: string, logId: string): Promise<str
   return snap.exists() ? (snap.data().data as string) : null;
 }
 
+/** One housemate verifies a chore photo. */
+export async function verifyChore(houseId: string, logId: string, reviewer: { uid: string; username: string }) {
+  await reviewChore(houseId, logId, reviewer, null);
+}
+
 /**
- * One housemate checks a chore photo. Rejecting takes the chore off the
- * chore-doer's score (in the same write, so the two can't get out of step).
+ * One housemate sends a chore back: it comes off the chore-doer's score
+ * (in the same write, so the two can't get out of step) and goes back to
+ * them as "Redo" in their "Your turn" list.
  */
-export async function reviewChore(
+export async function sendBackChore(
+  house: House,
+  logId: string,
+  reviewer: { uid: string; username: string },
+  reason: string,
+  members: Member[],
+) {
+  const log = await reviewChore(house.id, logId, reviewer, reason);
+  const owner = members.find((m) => m.uid === log.userId);
+  if (owner?.pushToken) {
+    await sendPush([owner.pushToken], {
+      title: `Redo: ${log.choreName}`,
+      body: `${reviewer.username} sent it back — ${reason}`,
+      data: { type: 'chore_redo', houseId: house.id },
+    });
+  }
+}
+
+/** reason null = verify; a reason = send back. Returns the chore. */
+async function reviewChore(
   houseId: string,
   logId: string,
   reviewer: { uid: string; username: string },
-  decision: 'verified' | 'rejected',
-) {
+  reason: string | null,
+): Promise<{ userId: string; choreName: string }> {
   const logRef = doc(db, 'houses', houseId, 'logs', logId);
-  await runTransaction(db, async (tx) => {
+  return runTransaction(db, async (tx) => {
     // Transactions must do all reads before any writes.
     const snap = await tx.get(logRef);
     if (!snap.exists()) throw new Error('That chore no longer exists.');
@@ -349,18 +377,43 @@ export async function reviewChore(
     if (log.userId === reviewer.uid) throw new Error("You can't check your own chore.");
     if (log.status !== 'pending') throw new Error('Someone has already checked this one.');
     const ownerRef = memberRef(houseId, log.userId);
-    const ownerStillInHouse = (await tx.get(ownerRef)).exists();
+    const owner = await tx.get(ownerRef);
 
     tx.update(logRef, {
-      status: decision, reviewedBy: reviewer.uid, reviewedByName: reviewer.username, reviewedAt: serverTimestamp(),
+      status: reason ? 'rejected' : 'verified',
+      reviewedBy: reviewer.uid,
+      reviewedByName: reviewer.username,
+      reviewedAt: serverTimestamp(),
+      rejectReason: reason,
     });
-    if (decision === 'rejected' && ownerStillInHouse && log.period) {
-      tx.update(ownerRef, {
-        [`stats.${log.period}.total`]: increment(-1),
-        [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
-        lastReviewAdjust: logId,
+    if (reason && owner.exists()) {
+      if (log.period) {
+        tx.update(ownerRef, {
+          [`stats.${log.period}.total`]: increment(-1),
+          [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
+          lastReviewAdjust: logId,
+        });
+      }
+      // Back on their list to redo.
+      tx.set(doc(collection(db, 'houses', houseId, 'requests')), {
+        kind: 'redo',
+        reason,
+        logId,
+        choreKey: log.choreKey,
+        choreName: log.choreName,
+        needs: `Redo: ${log.choreName}`,
+        mode: 'overall',
+        requestedBy: reviewer.uid,
+        requestedByName: reviewer.username,
+        assignedTo: log.userId,
+        assignedToName: owner.data().username ?? log.username,
+        status: 'open',
+        createdAt: serverTimestamp(),
+        completedBy: null,
+        completedAt: null,
       });
     }
+    return { userId: log.userId as string, choreName: log.choreName as string };
   });
 }
 
@@ -382,6 +435,8 @@ export async function requestChore(opts: {
     choreKey: chore.key,
     choreName: chore.name,
     needs: chore.needs,
+    kind: 'needs',
+    reason: null,
     mode: 'overall',
     requestedBy: opts.requester.uid,
     requestedByName: opts.requester.username,
