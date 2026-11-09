@@ -15,7 +15,7 @@ import { colors, fonts, type } from '../../components/theme';
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
 export default function Home() {
-  const { user, profile, house, members, openRequests, offers, wallpaper } = useApp();
+  const { user, profile, house, members, openRequests, offers, wallpaper, isAdmin } = useApp();
   if (!user || !house) return <Loading />;
 
   const mine = openRequests.filter((r) => r.assignedTo === user.uid);
@@ -112,7 +112,7 @@ export default function Home() {
 
       <Label>Chores</Label>
       <Tip id="home">Tap a chore to log it with a photo, or to say it needs doing. Whoever has done the fewest gets asked.</Tip>
-      {chores.length > 0 ? (
+      {chores.length > 0 || isAdmin ? (
         <View style={styles.grid}>
           {chores.map((c) => {
             const waiting = others.find((r) => r.choreKey === c.key);
@@ -139,6 +139,20 @@ export default function Home() {
               </Pressable>
             );
           })}
+          {isAdmin && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add a chore"
+              onPress={() => {
+                haptics.tap();
+                router.push('/add-chore');
+              }}
+              style={({ pressed }) => [styles.tile, styles.addTile, pressed && { backgroundColor: colors.card }]}
+            >
+              <Icon name="add" size={24} color={colors.muted} />
+              <Text style={[styles.tileText, { color: colors.muted }]}>Add a chore</Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         <Text style={type.small}>No chores switched on. The house admin can add some in Settings.</Text>
@@ -167,4 +181,5 @@ const styles = StyleSheet.create({
   },
   tileText: { fontSize: 15, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
   tileSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  addTile: { backgroundColor: 'transparent', borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.line },
 });

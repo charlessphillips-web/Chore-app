@@ -18,6 +18,7 @@ export default function RootLayout() {
           <Stack.Screen name="how-it-works" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'PHOTO' }} />
           <Stack.Screen name="offer/[id]" options={{ presentation: 'modal', headerShown: true, title: 'CHORE OFFER' }} />
+          <Stack.Screen name="add-chore" options={{ presentation: 'modal', headerShown: true, title: '' }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

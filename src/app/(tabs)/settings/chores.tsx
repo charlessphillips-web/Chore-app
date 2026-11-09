@@ -62,8 +62,9 @@ export default function ChoresSettings() {
               accessibilityLabel={`${c.name} on or off`}
               value={c.active}
               onValueChange={(v) => toggle(c.key, v)}
-              trackColor={{ true: colors.primaryBright, false: colors.border }}
-              thumbColor={colors.text}
+              trackColor={{ true: colors.text, false: colors.line }}
+              thumbColor={c.active ? colors.inverse : colors.muted}
+              {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
             />
           </View>
         ))}
