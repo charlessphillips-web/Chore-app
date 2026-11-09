@@ -342,6 +342,16 @@ test('feedback inbox: only owners can read reports and tick them off', async () 
   }));
 });
 
+test('only the admin can change how often the leaderboard resets', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 3 }));
+  await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 1 }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 5 }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: '2' }));
+  await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1'), { resetMonths: 6 }));
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

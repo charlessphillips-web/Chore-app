@@ -4,9 +4,10 @@ import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth'
 import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
-  clearRemovedHouse, setPushToken, watchHouse, watchMembers, watchOpenRequests, watchProfile,
-  watchRecentLogs, watchWallpaper,
+  clearRemovedHouse, setPushToken, toMember, watchHouse, watchMembers, watchOpenRequests, watchProfile,
+  watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
+import { periodKey } from '../lib/period';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
 import type { ChoreLog, ChoreRequest, House, Member, UserProfile } from '../lib/types';
@@ -44,7 +45,7 @@ export function useApp(): AppState {
 interface HouseData {
   houseId: string;
   house: House | null;
-  members: Member[];
+  members: MemberDoc[];
   openRequests: ChoreRequest[];
   logs: ChoreLog[];
   wallpaper: string | null;
@@ -161,6 +162,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
+  // Scores for the current period, using the house's reset setting.
+  const period = periodKey(new Date(), house?.resetMonths);
+  const members: Member[] = (current?.members ?? []).map((m) => toMember(m.id, m.data, period));
   const value: AppState = {
     ready: profileReady,
     error,
@@ -170,7 +174,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     profile,
     house,
     isAdmin: !!house && !!uid && house.adminUid === uid,
-    members: current?.members ?? [],
+    members,
     openRequests: current?.openRequests ?? [],
     logs: current?.logs ?? [],
     wallpaper: current?.wallpaper ?? null,

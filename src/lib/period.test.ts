@@ -1,8 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { periodEnd, periodKey, periodLabel } from './period.ts';
+import { periodEnd, periodKey, periodLabel, resetLabel, toResetMonths } from './period.ts';
 import { ageOn, dobError, parseDob, toDobString } from './dob.ts';
 import { addChore, DEFAULT_CHORES, makeChore } from './chores.ts';
+
+test('other reset lengths', () => {
+  const nov = new Date(2026, 10, 8);
+  assert.equal(periodKey(nov, 1), 'p2026_11_m1');
+  assert.equal(periodKey(nov, 3), 'p2026_10_m3');
+  assert.equal(periodKey(nov, 6), 'p2026_07_m6');
+  assert.equal(periodLabel(nov, 1), 'Nov 2026');
+  assert.equal(periodLabel(nov, 3), 'Oct – Dec 2026');
+  assert.equal(periodLabel(new Date(2026, 1, 3), 6), 'Jan – Jun 2026');
+  assert.deepEqual(periodEnd(nov, 1), new Date(2026, 11, 1));
+  assert.deepEqual(periodEnd(nov, 3), new Date(2027, 0, 1));
+  assert.deepEqual(periodEnd(new Date(2026, 1, 3), 6), new Date(2026, 6, 1));
+  assert.equal(toResetMonths(undefined), 2);
+  assert.equal(toResetMonths(5), 2);
+  assert.equal(toResetMonths(3), 3);
+  assert.equal(resetLabel(1), 'every month');
+  assert.equal(resetLabel(6), 'every 6 months');
+});
 
 test('2-month periods', () => {
   assert.equal(periodKey(new Date(2026, 0, 1)), 'p2026_01');

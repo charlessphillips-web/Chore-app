@@ -3,14 +3,15 @@ import { Image, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { setWallpaper, updateHouse } from '../../../lib/db';
 import { pickFromLibrary } from '../../../lib/photos';
-import { Button, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
+import { DEFAULT_RESET_MONTHS, periodEnd, RESET_OPTIONS, resetLabel, type ResetMonths } from '../../../lib/period';
+import { Button, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { colors, radius } from '../../../components/theme';
 
-/** Admin: house name and wallpaper. */
+/** Admin: house name, leaderboard reset and wallpaper. */
 export default function HouseDetails() {
   const { user, house, isAdmin, wallpaper } = useApp();
   const [name, setName] = useState(house?.name ?? '');
-  const [busy, setBusy] = useState<'name' | 'wall' | null>(null);
+  const [busy, setBusy] = useState<'name' | 'wall' | 'reset' | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!house || !user) return <Loading />;
   if (!isAdmin) return <Screen edges={['left', 'right']}><Subtitle>Only the house admin can change these.</Subtitle></Screen>;
@@ -22,6 +23,26 @@ export default function HouseDetails() {
     try {
       await updateHouse(house!.id, { name: name.trim() });
       notify('Saved', 'House name updated.');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function changeReset(months: ResetMonths) {
+    if (months === house!.resetMonths) return;
+    const next = periodEnd(new Date(), months).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    const ok = await confirm(
+      `Reset ${resetLabel(months)}?`,
+      `This starts a fresh leaderboard for everyone straight away. Scores so far this period won't carry over. The next reset after that is ${next}.`,
+      'Change',
+    );
+    if (!ok) return;
+    setError(null);
+    setBusy('reset');
+    try {
+      await updateHouse(house!.id, { resetMonths: months });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -47,6 +68,21 @@ export default function HouseDetails() {
       <Label>House name or number</Label>
       <Input value={name} onChangeText={setName} maxLength={40} />
       <Button title="Save name" onPress={saveName} loading={busy === 'name'} disabled={!!busy || name.trim() === house.name} />
+
+      <Label>Leaderboard resets</Label>
+      <Subtitle>
+        By default the leaderboard resets every 2 months. Changing it starts a fresh leaderboard for everyone.
+      </Subtitle>
+      <ChipRow>
+        {RESET_OPTIONS.map((m) => (
+          <Chip
+            key={m}
+            label={`${m === 1 ? 'Every month' : `Every ${m} months`}${m === DEFAULT_RESET_MONTHS ? ' (default)' : ''}`}
+            selected={house.resetMonths === m}
+            onPress={() => !busy && changeReset(m)}
+          />
+        ))}
+      </ChipRow>
 
       <Label>Wallpaper</Label>
       <Subtitle>Shown faintly behind everyone&apos;s Home screen.</Subtitle>

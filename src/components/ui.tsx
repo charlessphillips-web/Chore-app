@@ -169,7 +169,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.primaryBright }]}
+      style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.outline }]}
     >
       <Text style={[styles.chipText, selected && { color: colors.text }]}>{label}</Text>
     </Pressable>
@@ -236,21 +236,21 @@ export function timeAgo(ms: number): string {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1 },
-  screenInner: { padding: space.md, gap: space.md, paddingBottom: 160 },
+  screenInner: { paddingHorizontal: 12, paddingTop: space.md, gap: 12, paddingBottom: 160 },
   card: {
     backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm,
     borderWidth: 1, borderColor: colors.border,
   },
   button: {
     borderRadius: radius, paddingVertical: 14, paddingHorizontal: space.md, alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.border,
   },
   buttonInner: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   buttonText: { fontSize: 16, fontWeight: '600' },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
-    borderWidth: 1.5, borderColor: colors.primaryBright, borderRadius: radius,
-    paddingVertical: 16, paddingHorizontal: space.md, backgroundColor: 'rgba(17,17,20,0.85)',
+    borderWidth: 1, borderColor: colors.outline, borderRadius: radius,
+    paddingVertical: 14, paddingHorizontal: space.md, backgroundColor: 'rgba(17,17,20,0.85)',
   },
   rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   input: {

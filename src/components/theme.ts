@@ -6,10 +6,12 @@ export const colors = {
   border: '#26262D',
   text: '#FFFFFF',
   muted: '#9C9CA8',
-  /** Dark purple: logo, filled buttons. */
-  primary: '#4C1D95',
-  /** Brighter purple: outlines and highlights (readable on black). */
-  primaryBright: '#7C3AED',
+  /** Deep purple: logo, filled buttons, the Home card. */
+  primary: '#3A1C71',
+  /** Soft violet: icons and small highlights (readable on black). */
+  primaryBright: '#9381F2',
+  /** Muted purple for thin outlines on buttons and tiles. */
+  outline: '#3B3358',
   primaryText: '#FFFFFF',
   success: '#22C55E',
   danger: '#F04444',

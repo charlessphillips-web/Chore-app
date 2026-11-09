@@ -26,7 +26,7 @@ const STEPS: { icon: React.ComponentProps<typeof Icon>['name']; title: string; b
   {
     icon: 'trophy',
     title: 'Leaderboard',
-    body: 'Scores reset every 2 months, so everyone gets a fresh start.',
+    body: 'Scores reset every 2 months, so everyone gets a fresh start. The house admin can change how often.',
   },
 ];
 

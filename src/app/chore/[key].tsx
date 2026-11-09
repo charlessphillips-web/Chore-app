@@ -184,7 +184,7 @@ function Choice(p: { icon: React.ComponentProps<typeof Icon>['name']; title: str
 const styles = StyleSheet.create({
   choice: {
     flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg,
-    borderWidth: 1.5, borderColor: colors.primaryBright, borderRadius: radius, backgroundColor: colors.card,
+    borderWidth: 1, borderColor: colors.outline, borderRadius: radius, backgroundColor: colors.card,
   },
   preview: { borderRadius: radius, overflow: 'hidden', aspectRatio: 4 / 3, backgroundColor: colors.card },
   empty: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, gap: space.sm },

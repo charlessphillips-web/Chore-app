@@ -76,7 +76,7 @@ export default function SettingsIndex() {
           <Label>House admin</Label>
           <RowButton icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
           <RowButton icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
-          <RowButton icon="image-outline" title="House details" subtitle="Name and wallpaper" onPress={() => router.push('/settings/house-details')} />
+          <RowButton icon="image-outline" title="House details" subtitle="Name, leaderboard reset, wallpaper" onPress={() => router.push('/settings/house-details')} />
         </>
       ) : (
         <Card>

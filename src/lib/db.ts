@@ -11,7 +11,7 @@ import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
-import { periodKey } from './period';
+import { DEFAULT_RESET_MONTHS, periodKey, toResetMonths, type ResetMonths } from './period';
 import { sendPush } from './notifications';
 import type { ChoreLog, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
 
@@ -85,7 +85,7 @@ export async function createHouse(uid: string, username: string, name: string): 
     const ok = await runTransaction(db, async (tx) => {
       if ((await tx.get(codeRef(code))).exists()) return false; // code taken, try another
       tx.set(houseDoc, {
-        name: name.trim(), code, createdBy: uid, adminUid: uid, chores: DEFAULT_CHORES, createdAt: serverTimestamp(),
+        name: name.trim(), code, createdBy: uid, adminUid: uid, chores: DEFAULT_CHORES, resetMonths: DEFAULT_RESET_MONTHS, createdAt: serverTimestamp(),
       });
       tx.set(codeRef(code), { houseId: houseDoc.id });
       tx.set(memberRef(houseDoc.id, uid), newMemberDoc(username, code));
@@ -151,7 +151,10 @@ export async function makeAdmin(houseId: string, uid: string): Promise<void> {
   await updateDoc(houseRef(houseId), { adminUid: uid });
 }
 
-export async function updateHouse(houseId: string, patch: { name?: string; chores?: HouseChore[] }): Promise<void> {
+export async function updateHouse(
+  houseId: string,
+  patch: { name?: string; chores?: HouseChore[]; resetMonths?: ResetMonths },
+): Promise<void> {
   await updateDoc(houseRef(houseId), patch);
 }
 
@@ -180,6 +183,7 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
         // Houses made before admins existed: the creator is admin.
         adminUid: d.adminUid ?? d.createdBy,
         chores: Array.isArray(d.chores) ? d.chores : DEFAULT_CHORES,
+        resetMonths: toResetMonths(d.resetMonths),
         createdAt: ms(d.createdAt) ?? Date.now(),
       });
     },
@@ -187,8 +191,8 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
   );
 }
 
-/** Turns a member doc into scores for the current 2-month period. */
-const toMember = (id: string, d: DocumentData, period: string): Member => {
+/** Turns a member doc into scores for the given period (see periodKey). */
+export const toMember = (id: string, d: DocumentData, period: string): Member => {
   const p = d.stats?.[period] ?? {};
   return {
     uid: id,
@@ -201,13 +205,16 @@ const toMember = (id: string, d: DocumentData, period: string): Member => {
   };
 };
 
-export function watchMembers(houseId: string, cb: (m: Member[]) => void, onError?: OnError) {
+/** Raw member docs; turn them into scores with toMember (the period depends on the house's reset setting). */
+export interface MemberDoc {
+  id: string;
+  data: DocumentData;
+}
+
+export function watchMembers(houseId: string, cb: (m: MemberDoc[]) => void, onError?: OnError) {
   return onSnapshot(
     collection(db, 'houses', houseId, 'members'),
-    (snap) => {
-      const period = periodKey();
-      cb(snap.docs.map((s) => toMember(s.id, s.data(), period)));
-    },
+    (snap) => cb(snap.docs.map((s) => ({ id: s.id, data: s.data() }))),
     onError,
   );
 }
@@ -294,7 +301,7 @@ export async function logChore(opts: {
   const key = opts.chore.key || choreKey(name);
   if (!key) throw new Error('Pick a chore.');
   if (!photo?.thumb || !photo?.full) throw new Error('Take a photo of the finished chore first.');
-  const period = periodKey();
+  const period = periodKey(new Date(), house.resetMonths);
 
   const batch = writeBatch(db);
   const logRef = doc(collection(db, 'houses', house.id, 'logs'));

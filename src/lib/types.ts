@@ -1,6 +1,7 @@
 import type { MemberStats } from './assign';
 import type { HouseChore } from './chores';
 import type { ReviewStatus } from './review';
+import type { ResetMonths } from './period';
 
 export type Gender = 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
 export const GENDERS: Gender[] = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'];
@@ -28,6 +29,8 @@ export interface House {
   /** The house admin: first person in, or whoever it was handed to. */
   adminUid: string;
   chores: HouseChore[];
+  /** How often the leaderboard resets, in months. Default 2. */
+  resetMonths: ResetMonths;
   createdAt: number;
 }
 
