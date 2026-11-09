@@ -68,6 +68,10 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
     }),
   );
 
+  const signIn = () => {
+    haptics.tap();
+    router.push('/sign-in');
+  };
   const stepIndex = showWelcome ? i - 1 : i;
   const step = stepIndex >= 0 ? STEPS[stepIndex] : null;
   const slideIn = anim.interpolate({ inputRange: [0, 1], outputRange: [28 * dir, 0] });
@@ -75,11 +79,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
   return (
     <SafeAreaView style={[styles.root, noSelect]}>
       <View style={styles.topRow}>
-        {showWelcome ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Sign in" onPress={() => { haptics.tap(); router.push('/sign-in'); }} hitSlop={12}>
-            <Text style={styles.skip}>Sign in</Text>
-          </Pressable>
-        ) : <View />}
+        <View />
         {!last ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={() => { haptics.tap(); if (showWelcome) track('intro_skip'); setDir(1); setI(slides - 1); }} hitSlop={12}>
             <Text style={styles.skip}>Skip</Text>
@@ -113,11 +113,20 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
         ))}
       </View>
       {last ? (
-        <HoldButton label={finishLabel} onDone={() => { if (showWelcome) track('intro_finish'); onFinish(); }} />
+        <>
+          <HoldButton label={finishLabel} onDone={() => { if (showWelcome) track('intro_finish'); onFinish(); }} />
+          {showWelcome && (
+            <Pressable accessibilityRole="button" accessibilityLabel="Already have an account? Sign in" onPress={signIn} hitSlop={10} style={styles.signInLink}>
+              <Text style={styles.backText}>Already have an account? <Text style={styles.signInText}>Sign in</Text></Text>
+            </Pressable>
+          )}
+        </>
       ) : (
         <View style={styles.footer}>
           <Button title="Next" onPress={() => go(1)} />
-          {i > 0 ? (
+          {i === 0 && showWelcome ? (
+            <Button title="I already have an account" variant="secondary" onPress={signIn} />
+          ) : i > 0 ? (
             <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => go(-1)} hitSlop={10} style={styles.back}>
               <Text style={styles.backText}>Back</Text>
             </Pressable>
@@ -211,6 +220,8 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: space.lg, paddingBottom: space.md, gap: space.sm },
   back: { alignSelf: 'center', paddingVertical: 10, minHeight: 40 },
   backText: { fontSize: 15, color: colors.muted },
+  signInLink: { alignSelf: 'center', paddingBottom: space.lg, paddingTop: 4 },
+  signInText: { color: colors.text, fontWeight: '600', textDecorationLine: 'underline' },
   holdWrap: { alignItems: 'center', justifyContent: 'center', paddingBottom: space.lg, paddingTop: space.xs },
   fill: { position: 'absolute', width: SIZE, height: SIZE, borderRadius: SIZE / 2, backgroundColor: colors.text, top: space.xs, alignSelf: 'center' },
   hold: {
