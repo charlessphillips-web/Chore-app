@@ -19,6 +19,7 @@ import { formatPrice, type PayChoice } from './money';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
 import { PRIVACY_VERSION } from './legal';
+import { track } from './analytics';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -39,6 +40,7 @@ export async function createProfile(uid: string, p: ProfileDetails): Promise<voi
     ...p, houseId: null, createdAt: serverTimestamp(),
     privacyVersion: PRIVACY_VERSION, privacyAcceptedAt: serverTimestamp(),
   });
+  track('signup');
 }
 
 /** Records that you agreed to the current privacy policy. */
@@ -106,7 +108,10 @@ export async function createHouse(uid: string, username: string, name: string, a
       tx.update(userRef(uid), { houseId: houseDoc.id });
       return true;
     });
-    if (ok) return houseDoc.id;
+    if (ok) {
+      track('house_create');
+      return houseDoc.id;
+    }
   }
   throw new Error('Could not create a unique house code — please try again.');
 }
@@ -122,6 +127,7 @@ export async function joinHouse(uid: string, username: string, rawCode: string):
   batch.set(memberRef(houseId, uid), newMemberDoc(username, code));
   batch.update(userRef(uid), { houseId });
   await batch.commit();
+  track('house_join');
   return houseId;
 }
 
@@ -312,6 +318,7 @@ export async function setPushToken(houseId: string, uid: string, token: string |
 /** Your profile picture (only you can change yours). null = back to your initial. */
 export async function setAvatar(houseId: string, uid: string, avatar: Avatar | null) {
   await updateDoc(memberRef(houseId, uid), { avatar });
+  if (avatar) track('avatar_set');
 }
 
 // ---------- Chores ----------
@@ -367,6 +374,8 @@ export async function logChore(opts: {
     });
   }
   await batch.commit();
+  track('chore_log');
+  if (!offer && !opts.members.find((m) => m.uid === uid)?.lastCompletedAt) track('first_chore');
 
   const others = opts.members.filter((m) => m.uid !== uid && m.pushToken).map((m) => m.pushToken!);
   if (others.length) {
@@ -387,6 +396,7 @@ export async function getChorePhoto(houseId: string, logId: string): Promise<str
 /** One housemate verifies a chore photo. */
 export async function verifyChore(houseId: string, logId: string, reviewer: { uid: string; username: string }) {
   await reviewChore(houseId, logId, reviewer, null);
+  track('chore_verify');
 }
 
 /**
@@ -402,6 +412,7 @@ export async function sendBackChore(
   members: Member[],
 ) {
   const log = await reviewChore(house.id, logId, reviewer, reason);
+  track('chore_sendback');
   const owner = members.find((m) => m.uid === log.userId);
   if (owner?.pushToken) {
     await sendPush([owner.pushToken], {
@@ -500,6 +511,7 @@ export async function requestChore(opts: {
     completedBy: null,
     completedAt: null,
   });
+  track('chore_flag');
 
   let notified = false;
   if (assignee.pushToken) {
@@ -545,6 +557,7 @@ export async function submitFeedback(opts: {
     },
     createdAt: serverTimestamp(),
   });
+  track('feedback_sent');
 }
 
 // ---------- Feedback inbox (app owners only) ----------
@@ -673,6 +686,7 @@ export async function createOffer(opts: {
     closed: false,
     createdAt: serverTimestamp(),
   });
+  track('offer_create');
   const others = opts.members.filter((m) => m.uid !== from.uid).map((m) => m.uid);
   await ping(opts.members, others, house.id, `${from.username} will pay ${formatPrice(price)}`, `for someone to do: ${request.choreName}. Tap to accept or make an offer.`);
 }
@@ -684,6 +698,7 @@ export async function acceptOffer(
   await updateDoc(offerRef(houseId, offer.id), {
     status: 'agreed', doerUid: me.uid, doerName: me.username, agreedPrice: offer.price, doerPay: pay, agreedAt: serverTimestamp(),
   });
+  track('offer_accept');
   await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName}`, `for ${formatPrice(offer.price)}. You'll pay once it's been checked.`);
 }
 
@@ -693,6 +708,7 @@ export async function counterOffer(
 ) {
   if (offer.counters[me.uid]) throw new Error('You can only make one counter offer.');
   await updateDoc(offerRef(houseId, offer.id), { [`counters.${me.uid}`]: { name: me.username, price, pay } });
+  track('offer_counter');
   await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName} for ${formatPrice(price)}`, 'Tap to accept or decline.');
 }
 
@@ -708,6 +724,7 @@ export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: str
   await updateDoc(offerRef(houseId, offer.id), {
     status: 'agreed', doerUid: uid, doerName: c.name, agreedPrice: c.price, doerPay: c.pay ?? null, agreedAt: serverTimestamp(),
   });
+  track('offer_accept');
   await ping(members, [uid], houseId, `${offer.fromName} accepted your ${formatPrice(c.price)}`, `You're doing: ${offer.choreName}.`);
 }
 
@@ -741,6 +758,7 @@ export async function markOfferPaid(house: House, offer: ChoreOffer, members: Me
     lastCompletedAt: serverTimestamp(),
   });
   await batch.commit();
+  track('offer_paid');
   if (offer.doerUid && offer.agreedPrice) {
     await ping(members, [offer.doerUid], house.id, `${offer.fromName} paid you ${formatPrice(offer.agreedPrice)}`, `for ${offer.choreName}. Check your bank app.`);
   }
@@ -765,6 +783,8 @@ export interface DashboardData {
   sentBack: number | null;
   deals: number | null;
   dealPence: number | null;
+  /** Anonymous usage counters for the last 30 days. */
+  usage: { day: string; event: string; n: number }[];
   /** Some numbers couldn't load yet. */
   partial: boolean;
 }
@@ -788,6 +808,12 @@ export async function loadDashboard(): Promise<DashboardData> {
   };
   const members = collectionGroup(db, 'members');
   const logs = collectionGroup(db, 'logs');
+  const since = new Date(Date.now() - 30 * 86_400_000);
+  const sinceDay = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, '0')}-${String(since.getDate()).padStart(2, '0')}`;
+  const usageSnap = await getDocs(query(collection(db, 'analytics'), where('day', '>=', sinceDay))).catch(() => {
+    partial = true;
+    return null;
+  });
   const [usersSnap, housesSnap, memberCount, active1d, active7d, chores, chores7d, sentBack, deals] = await Promise.all([
     getDocs(collection(db, 'users')),
     getDocs(collection(db, 'houses')),
@@ -821,6 +847,7 @@ export async function loadDashboard(): Promise<DashboardData> {
     sentBack,
     deals: deals?.deals ?? null,
     dealPence: deals ? deals.pence ?? 0 : null,
+    usage: usageSnap ? usageSnap.docs.map((d) => d.data() as { day: string; event: string; n: number }) : [],
     partial,
   };
 }

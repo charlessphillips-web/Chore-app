@@ -102,3 +102,42 @@ export function usersCsv(users: (UserRow & { area: string | null })[], today = n
   ].map(esc).join(','));
   return [head.join(','), ...rows].join('\n');
 }
+
+// ---------- Usage analytics (anonymous daily counters) ----------
+
+export interface Counter {
+  day: string;
+  event: string;
+  n: number;
+}
+
+/** "YYYY-MM-DD" for `daysAgo` days before `now` (local time). */
+export function dayString(daysAgo: number, now = new Date()): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Total per event over the last `days` days (including today). */
+export function eventTotals(rows: Counter[], days: number, now = new Date()): Record<string, number> {
+  const from = dayString(days - 1, now);
+  const out: Record<string, number> = {};
+  for (const r of rows) if (r.day >= from) out[r.event] = (out[r.event] ?? 0) + r.n;
+  return out;
+}
+
+/** One event per day for the last `days` days, oldest first. */
+export function daily(rows: Counter[], event: string, days: number, now = new Date()): Bar[] {
+  const counts = Array.from({ length: days }, (_, i) => {
+    const day = dayString(days - 1 - i, now);
+    return { day, count: rows.filter((r) => r.day === day && r.event === event).reduce((n, r) => n + r.n, 0) };
+  });
+  const most = Math.max(1, ...counts.map((c) => c.count));
+  return counts.map((c) => ({ label: `${Number(c.day.slice(8))}/${Number(c.day.slice(5, 7))}`, count: c.count, share: c.count / most }));
+}
+
+/** Sign-up funnel: each step as a share of the first step. */
+export function funnel(totals: Record<string, number>, steps: [string, string[]][]): Bar[] {
+  const counts = steps.map(([label, events]) => ({ label, count: events.reduce((n, e) => n + (totals[e] ?? 0), 0) }));
+  const first = Math.max(1, counts[0]?.count ?? 0);
+  return counts.map((c) => ({ ...c, share: Math.min(1, c.count / first) }));
+}

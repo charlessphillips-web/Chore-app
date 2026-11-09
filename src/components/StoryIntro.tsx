@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { haptics } from '../lib/haptics';
+import { track } from '../lib/analytics';
 import { Button, Icon, Logo } from './ui';
 import { colors, space } from './theme';
 
@@ -32,6 +33,10 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
   const [dir, setDir] = useState(1);
   const [anim] = useState(() => new Animated.Value(1));
   const last = i === slides - 1;
+  // Count new visitors starting the intro (not people re-reading it from Settings).
+  useEffect(() => {
+    if (showWelcome) track('intro_start');
+  }, [showWelcome]);
 
   useEffect(() => {
     anim.setValue(0);
@@ -70,7 +75,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
     <SafeAreaView style={[styles.root, noSelect]}>
       <View style={styles.topRow}>
         {!last ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={() => { haptics.tap(); setDir(1); setI(slides - 1); }} hitSlop={12}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={() => { haptics.tap(); if (showWelcome) track('intro_skip'); setDir(1); setI(slides - 1); }} hitSlop={12}>
             <Text style={styles.skip}>Skip</Text>
           </Pressable>
         ) : <View />}
@@ -102,7 +107,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
         ))}
       </View>
       {last ? (
-        <HoldButton label={finishLabel} onDone={onFinish} />
+        <HoldButton label={finishLabel} onDone={() => { if (showWelcome) track('intro_finish'); onFinish(); }} />
       ) : (
         <View style={styles.footer}>
           <Button title="Next" onPress={() => go(1)} />

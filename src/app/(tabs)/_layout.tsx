@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext';
 import { needsCheckBy } from '../../lib/review';
 import { colors } from '../../components/theme';
 import { haptics } from '../../lib/haptics';
+import { track, type EventName } from '../../lib/analytics';
 import { PRIVACY_VERSION } from '../../lib/legal';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -54,7 +55,12 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontWeight: '500', marginTop: 4 },
         sceneStyle: { backgroundColor: colors.bg },
       }}
-      screenListeners={{ tabPress: () => haptics.select() }}
+      screenListeners={({ route }) => ({
+        tabPress: () => {
+          haptics.select();
+          track(`tab_${route.name}` as EventName);
+        },
+      })}
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: icon('home-outline', 'home') }} />
       <Tabs.Screen

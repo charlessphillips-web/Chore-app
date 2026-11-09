@@ -56,6 +56,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---- Anonymous usage counts: one counter per event per day, +1 at a time.
+    // Only the owner can read them (dashboard). Event names: lib/analytics.ts.
+    match /analytics/{id} {
+      allow read: if isOwner();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['day', 'event', 'n'])
+        && request.resource.data.day is string && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.event in ['app_open', 'intro_start', 'intro_skip', 'intro_finish', 'signup', 'house_create', 'house_join', 'first_chore', 'chore_log', 'chore_flag', 'chore_verify', 'chore_sendback', 'offer_create', 'offer_counter', 'offer_accept', 'offer_paid', 'avatar_set', 'feedback_sent', 'tab_home', 'tab_checks', 'tab_leaderboard', 'tab_pay', 'tab_house', 'tab_settings']
+        && id == request.resource.data.day + '_' + request.resource.data.event
+        && request.resource.data.n == 1;
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n'])
+        && request.resource.data.n == resource.data.n + 1;
+      allow delete: if false;
+    }
+
     // ---- App owners (you). Add yourself in the Firebase console: a doc in
     // "owners" whose ID is your Account ID (shown at the bottom of Settings).
     // Owners can read feedback in the app's Feedback inbox.

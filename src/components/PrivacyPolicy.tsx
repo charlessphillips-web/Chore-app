@@ -15,6 +15,7 @@ const ROWS: [string, string, string][] = [
   ['Push notification token', 'To send you notifications', 'Nobody'],
   ['Bug reports and suggestions (with any screenshot), phone model, app version', 'To fix problems and improve the app', 'Only the app owner'],
   ['When you last opened the app', 'Statistics on how many people use the app', 'Only the app owner'],
+  ['Anonymous usage counts (e.g. "12 chores logged today")', 'To see which features are used and improve the app. Not linked to you', 'Only the app owner'],
 ];
 
 function P({ children }: { children: React.ReactNode }) {

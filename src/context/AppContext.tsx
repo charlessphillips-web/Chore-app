@@ -8,6 +8,7 @@ import {
   watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
 import { periodKey } from '../lib/period';
+import { track } from '../lib/analytics';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, UserProfile } from '../lib/types';
@@ -130,6 +131,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       unsubs.forEach((u) => u());
     };
   }, [houseId, uid, attempt]);
+
+  // 3a. Count app opens (anonymous).
+  useEffect(() => {
+    if (uid) track('app_open');
+  }, [uid]);
 
   // 3b. Once per app open: mark yourself active (for the owner's dashboard).
   useEffect(() => {

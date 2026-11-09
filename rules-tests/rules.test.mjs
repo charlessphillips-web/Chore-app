@@ -527,6 +527,20 @@ test('profile can record which privacy policy was agreed', async () => {
   await assertSucceeds(updateDoc(doc(db('a'), 'users', 'a'), { privacyVersion: '2026-12-01', privacyAcceptedAt: serverTimestamp() }));
 });
 
+test('analytics: anonymous +1 counters, only owners read', async () => {
+  const ref = (uid, id) => doc(db(uid), 'analytics', id);
+  await assertSucceeds(setDoc(ref('sam', '2026-11-09_chore_log'), { day: '2026-11-09', event: 'chore_log', n: increment(1) }, { merge: true }));
+  await assertSucceeds(setDoc(ref('alice', '2026-11-09_chore_log'), { day: '2026-11-09', event: 'chore_log', n: increment(1) }, { merge: true }));
+  await assertFails(setDoc(ref('sam', '2026-11-09_chore_log'), { n: 500 }, { merge: true }));
+  await assertFails(setDoc(ref('sam', '2026-11-09_hacked'), { day: '2026-11-09', event: 'hacked', n: 1 }));
+  await assertFails(setDoc(ref('sam', '2026-11-09_signup'), { day: '2026-11-09', event: 'chore_log', n: 1 }));
+  await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'analytics', '2026-11-09_signup'), { day: '2026-11-09', event: 'signup', n: 1 }));
+  await assertFails(getDocs(collection(db('sam'), 'analytics')));
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'owners', 'charlie'), { name: 'Charlie' }));
+  const snap = await getDocs(query(collection(db('charlie'), 'analytics'), where('day', '>=', '2026-11-01')));
+  assert.equal(snap.docs[0].data().n, 2);
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

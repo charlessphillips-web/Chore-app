@@ -33,3 +33,21 @@ test('csv has no names or ids', () => {
   assert.equal(csv.split('\n')[0], 'signed_up,age,age_band,gender,student,university,house_area');
   assert.ok(csv.includes('"22","21–23","Male","yes","Leeds, ""Uni""","LS6 · Leeds"'));
 });
+
+test('usage counters, daily chart and funnel', async () => {
+  const { eventTotals, daily, funnel, dayString } = await import('./stats.ts');
+  const now = new Date(2026, 10, 9, 15);
+  assert.equal(dayString(0, now), '2026-11-09');
+  assert.equal(dayString(9, now), '2026-10-31');
+  const rows = [
+    { day: '2026-11-09', event: 'chore_log', n: 5 },
+    { day: '2026-11-08', event: 'chore_log', n: 3 },
+    { day: '2026-10-20', event: 'chore_log', n: 99 },
+    { day: '2026-11-09', event: 'app_open', n: 10 },
+    { day: '2026-11-07', event: 'app_open', n: 4 },
+  ];
+  assert.deepEqual(eventTotals(rows, 7, now), { chore_log: 8, app_open: 14 });
+  assert.deepEqual(daily(rows, 'app_open', 3, now).map((b) => [b.label, b.count]), [['7/11', 4], ['8/11', 0], ['9/11', 10]]);
+  const f = funnel({ intro_start: 10, signup: 6, house_create: 2, house_join: 2 }, [['Opened', ['intro_start']], ['Signed up', ['signup']], ['In a house', ['house_create', 'house_join']]]);
+  assert.deepEqual(f.map((b) => [b.count, b.share]), [[10, 1], [6, 0.6], [4, 0.4]]);
+});

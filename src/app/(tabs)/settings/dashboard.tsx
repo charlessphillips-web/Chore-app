@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { loadDashboard, type DashboardData } from '../../../lib/db';
-import { ageBars, countSince, signupsByWeek, tally, usersCsv, type Bar } from '../../../lib/stats';
+import { ageBars, countSince, daily, eventTotals, funnel, signupsByWeek, tally, usersCsv, type Bar } from '../../../lib/stats';
+import { EVENTS } from '../../../lib/analytics';
 import { formatPrice } from '../../../lib/money';
 import { Button, ErrorText, Label, Loading, Screen, Subtitle } from '../../../components/ui';
 import { colors, fonts, type } from '../../../components/theme';
@@ -75,6 +76,22 @@ export default function Dashboard() {
         <Stat value={users.length ? `${Math.round((students / users.length) * 100)}%` : '–'} label="Students" />
       </View>
 
+      <Label>App opens per day (last 14 days)</Label>
+      <Columns bars={daily(data.usage, 'app_open', 14, today)} />
+
+      <Label>Sign-up funnel (last 30 days)</Label>
+      <Text style={type.small}>How many people make it to each step. A big drop shows where people give up.</Text>
+      <Bars bars={funnel(eventTotals(data.usage, 30, today), [
+        ['Opened the intro', ['intro_start']],
+        ['Finished the intro', ['intro_finish', 'intro_skip']],
+        ['Signed up', ['signup']],
+        ['Created or joined a house', ['house_create', 'house_join']],
+        ['Logged their first chore', ['first_chore']],
+      ])} />
+
+      <Label>What people use (last 7 days)</Label>
+      <Bars bars={usageBars(eventTotals(data.usage, 7, today))} percent={false} />
+
       <Label>Sign-ups per week</Label>
       <Columns bars={signupsByWeek(users, 8, now)} />
 
@@ -111,8 +128,17 @@ function Stat({ value, label, sub }: { value: number | string; label: string; su
   );
 }
 
+/** Every tracked action in the last week, most used first (app opens left out: they're charted above). */
+function usageBars(totals: Record<string, number>): Bar[] {
+  const rows = Object.entries(totals).filter(([e]) => e !== 'app_open' && e in EVENTS);
+  const most = Math.max(1, ...rows.map(([, n]) => n));
+  return rows
+    .sort((a, b) => b[1] - a[1])
+    .map(([e, n]) => ({ label: EVENTS[e as keyof typeof EVENTS], count: n, share: n / most }));
+}
+
 /** Horizontal bars with counts and percentages. */
-function Bars({ bars }: { bars: Bar[] }) {
+function Bars({ bars, percent = true }: { bars: Bar[]; percent?: boolean }) {
   if (bars.every((b) => b.count === 0)) return <Text style={type.small}>No data yet.</Text>;
   return (
     <View style={styles.card}>
@@ -120,7 +146,7 @@ function Bars({ bars }: { bars: Bar[] }) {
         <View key={b.label} style={{ gap: 4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={[type.body, { fontSize: 14 }]} numberOfLines={1}>{b.label}</Text>
-            <Text style={styles.num}>{b.count} · {Math.round(b.share * 100)}%</Text>
+            <Text style={styles.num}>{percent ? `${b.count} · ${Math.round(b.share * 100)}%` : b.count}</Text>
           </View>
           <View style={styles.track}><View style={[styles.fill, { width: `${Math.max(2, b.share * 100)}%` }]} /></View>
         </View>
