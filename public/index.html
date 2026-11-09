@@ -15,10 +15,18 @@
     <style id="expo-reset">
       html, body { height: 100%; background-color: #000000; }
       body { overflow: hidden; }
+      /* Feel like an app, not a web page: pressing and holding mustn't select
+         text or pop up "Copy" (it would cancel "Hold to get started"). Text
+         boxes and anything marked selectable (e.g. Account ID) still work. */
+      body {
+        -webkit-user-select: none; user-select: none;
+        -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+      }
+      input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
       #root { display: flex; height: 100%; flex: 1; }
     </style>
   </head>
-  <body>
+  <body oncontextmenu="return false;">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>

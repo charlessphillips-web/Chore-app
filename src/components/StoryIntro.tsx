@@ -51,7 +51,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
   const step = stepIndex >= 0 ? STEPS[stepIndex] : null;
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={[styles.root, noSelect]}>
       <View style={styles.bars}>
         {Array.from({ length: slides }, (_, n) => (
           <View key={n} style={[styles.bar, n <= i && styles.barOn]} />
@@ -100,6 +100,10 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
 }
 
 const HOLD_MS = 1300;
+/** On the web: no text selection or "Copy" pop-up when holding. */
+const noSelect = (Platform.OS === 'web'
+  ? { userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'none' }
+  : {}) as object;
 const SIZE = 132;
 
 /** Press and hold: a white circle grows from the button until it fills the screen. */
@@ -154,9 +158,11 @@ function HoldButton({ label, onDone }: { label: string; onDone: () => void }) {
         accessibilityHint="Press and hold"
         onPressIn={start}
         onPressOut={cancel}
-        style={styles.hold}
+        // Never treat the hold as a long-press (that would cancel it).
+        delayLongPress={60_000}
+        style={[styles.hold, noSelect]}
       >
-        <Animated.Text style={[styles.holdText, { color: textColor }]}>{label}</Animated.Text>
+        <Animated.Text selectable={false} style={[styles.holdText, noSelect, { color: textColor }]}>{label}</Animated.Text>
       </Pressable>
     </View>
   );
