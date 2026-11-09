@@ -89,14 +89,16 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.createdBy == me()
         && request.resource.data.adminUid == me()
+        && validArea(request.resource.data.get('area', null))
         && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.code)).data.houseId == houseId;
       // Admin can rename, change chores, set when the leaderboard resets
       // (every 1/2/3/6 months, or 0 = custom dates), and hand admin to a
       // housemate.
       allow update: if isAdmin(houseId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd'])
+             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd', 'area'])
         && validReset(request.resource.data)
+        && validArea(request.resource.data.get('area', null))
         && request.resource.data.name is string && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 40
         && (!('chores' in request.resource.data) || request.resource.data.chores.size() <= 60)
@@ -219,6 +221,16 @@ service cloud.firestore {
           && request.resource.data.completedBy == me();
         allow delete: if false;
       }
+    }
+
+    // Rough house location from the postcode: area only, never the full postcode.
+    function validArea(a) {
+      return a == null
+        || (a is map && a.keys().hasOnly(['outcode', 'district', 'region', 'country'])
+            && a.outcode is string && a.outcode.matches('^[A-Z]{1,2}[0-9][A-Z0-9]?$')
+            && a.district is string && a.district.size() <= 60
+            && a.region is string && a.region.size() <= 60
+            && a.country is string && a.country.size() <= 30);
     }
 
     // resetMonths: 1, 2, 3 or 6, or 0 with customStart/customEnd dates.

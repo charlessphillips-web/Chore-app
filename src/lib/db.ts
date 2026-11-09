@@ -16,6 +16,7 @@ import { sendPush } from './notifications';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
 import { formatPrice, type PayChoice } from './money';
 import { toAvatar, type Avatar } from './avatar';
+import type { HouseArea } from './postcode';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -80,14 +81,14 @@ function newMemberDoc(username: string, joinCode: string) {
 }
 
 /** Creates a house with a fresh unique code. The creator becomes its admin. */
-export async function createHouse(uid: string, username: string, name: string): Promise<string> {
+export async function createHouse(uid: string, username: string, name: string, area: HouseArea | null = null): Promise<string> {
   const houseDoc = doc(collection(db, 'houses'));
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateHouseCode();
     const ok = await runTransaction(db, async (tx) => {
       if ((await tx.get(codeRef(code))).exists()) return false; // code taken, try another
       tx.set(houseDoc, {
-        name: name.trim(), code, createdBy: uid, adminUid: uid, chores: DEFAULT_CHORES, resetMonths: DEFAULT_RESET_MONTHS, createdAt: serverTimestamp(),
+        name: name.trim(), code, createdBy: uid, adminUid: uid, chores: DEFAULT_CHORES, resetMonths: DEFAULT_RESET_MONTHS, area, createdAt: serverTimestamp(),
       });
       tx.set(codeRef(code), { houseId: houseDoc.id });
       tx.set(memberRef(houseDoc.id, uid), newMemberDoc(username, code));
@@ -155,7 +156,7 @@ export async function makeAdmin(houseId: string, uid: string): Promise<void> {
 
 export async function updateHouse(
   houseId: string,
-  patch: { name?: string; chores?: HouseChore[] },
+  patch: { name?: string; chores?: HouseChore[]; area?: HouseArea | null },
 ): Promise<void> {
   await updateDoc(houseRef(houseId), patch);
 }
@@ -196,6 +197,7 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
         adminUid: d.adminUid ?? d.createdBy,
         chores: Array.isArray(d.chores) ? d.chores : DEFAULT_CHORES,
         reset: toResetRule(d.resetMonths, d.customStart, d.customEnd),
+        area: d.area && typeof d.area.outcode === 'string' ? (d.area as HouseArea) : null,
         createdAt: ms(d.createdAt) ?? Date.now(),
       });
     },

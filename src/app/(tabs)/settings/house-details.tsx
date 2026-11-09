@@ -6,6 +6,8 @@ import { pickFromLibrary } from '../../../lib/photos';
 import { customError, DEFAULT_RESET_MONTHS, periodEnd, RESET_OPTIONS, resetLabel, type ResetRule } from '../../../lib/period';
 import { toDobString } from '../../../lib/dob';
 import { DateField } from '../../../components/DobPicker';
+import { PostcodeField } from '../../../components/PostcodeField';
+import type { HouseArea } from '../../../lib/postcode';
 import { Button, Card, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { colors, radius, type } from '../../../components/theme';
 
@@ -86,6 +88,18 @@ export default function HouseDetails() {
       <Label>House name or number</Label>
       <Input value={name} onChangeText={setName} maxLength={40} />
       <Button title="Save name" onPress={saveName} loading={busy === 'name'} disabled={!!busy || name.trim() === house.name} />
+
+      <Label>Location</Label>
+      <PostcodeField
+        value={house.area}
+        onChange={async (a: HouseArea) => {
+          try {
+            await updateHouse(house.id, { area: a });
+          } catch (e) {
+            setError((e as Error).message);
+          }
+        }}
+      />
 
       <Label>Leaderboard resets</Label>
       <Subtitle>

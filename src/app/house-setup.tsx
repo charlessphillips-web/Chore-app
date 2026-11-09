@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Redirect } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { createHouse, joinHouse } from '../lib/db';
+import type { HouseArea } from '../lib/postcode';
+import { PostcodeField } from '../components/PostcodeField';
 import { Button, Card, Chip, ChipRow, ErrorText, Input, Label, Screen, Subtitle, Title } from '../components/ui';
 import { colors } from '../components/theme';
 import { Text } from 'react-native';
@@ -11,6 +13,8 @@ export default function HouseSetup() {
   const [mode, setMode] = useState<'join' | 'create'>('join');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  const [area, setArea] = useState<HouseArea | null>(null);
+  const [lookupDown, setLookupDown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -25,7 +29,8 @@ export default function HouseSetup() {
     try {
       if (mode === 'create') {
         if (name.trim().length < 1) throw new Error('Give your house a name or number, e.g. "42".');
-        await createHouse(user.uid, profile.username, name);
+        if (!area && !lookupDown) throw new Error('Add your postcode and tap Find.');
+        await createHouse(user.uid, profile.username, name, area);
       } else {
         await joinHouse(user.uid, profile.username, code);
       }
@@ -71,6 +76,8 @@ export default function HouseSetup() {
         <>
           <Label>House name or number</Label>
           <Input value={name} onChangeText={setName} placeholder='e.g. "42" or "42 Hyde Park Rd"' maxLength={40} />
+          <Label>Postcode</Label>
+          <PostcodeField value={area} onChange={setArea} onUnavailable={() => setLookupDown(true)} />
         </>
       )}
 

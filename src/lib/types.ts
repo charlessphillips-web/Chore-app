@@ -4,6 +4,7 @@ import type { ReviewStatus } from './review';
 import type { ResetRule } from './period';
 import type { PayChoice } from './money';
 import type { Avatar } from './avatar';
+import type { HouseArea } from './postcode';
 
 export type Gender = 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
 export const GENDERS: Gender[] = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'];
@@ -33,6 +34,8 @@ export interface House {
   chores: HouseChore[];
   /** When the leaderboard resets: every N months (default 2) or custom dates. */
   reset: ResetRule;
+  /** Rough location from the postcode (area only, never the address). */
+  area: HouseArea | null;
   createdAt: number;
 }
 

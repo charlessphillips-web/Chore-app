@@ -487,6 +487,17 @@ test('profile pictures: your own only, photo or valid character', async () => {
   await assertFails(updateDoc(me('alice', 'sam'), { avatar: ch }));
 });
 
+test('house area: postcode area only, admin can change it', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const house = (uid) => doc(db(uid), 'houses', 'h1');
+  const area = { outcode: 'LS6', district: 'Leeds', region: 'Yorkshire and The Humber', country: 'England' };
+  await assertSucceeds(updateDoc(house('alice'), { area }));
+  await assertFails(updateDoc(house('alice'), { area: { ...area, outcode: 'LS6 1AB' } }));
+  await assertFails(updateDoc(house('alice'), { area: { ...area, street: '42 Hyde Park Rd' } }));
+  await assertFails(updateDoc(house('sam'), { area }));
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');
