@@ -40,6 +40,8 @@ export interface House {
  */
 export interface Member extends MemberStats {
   pushToken: string | null;
+  /** Their monzo.me / paypal.me link, so housemates can pay them for chores. */
+  payLink: string | null;
 }
 
 /** houses/{houseId}/logs/{id} — a completed chore. */
@@ -60,6 +62,10 @@ export interface ChoreLog {
   reviewedByName: string | null;
   /** Why it was sent back, e.g. "Still dirty: the hob is greasy". */
   rejectReason: string | null;
+  /** Done for someone else, who paid for it (see ChoreOffer): they get the point, not the doer. */
+  offerId: string | null;
+  creditTo: string | null;
+  creditToName: string | null;
 }
 
 /** houses/{houseId}/requests/{id} — "this needs doing". */
@@ -80,4 +86,34 @@ export interface ChoreRequest {
   createdAt: number;
   completedBy: string | null;
   completedAt: number | null;
+  /** A redo of a chore someone was paid to do. */
+  offerId: string | null;
+}
+
+/**
+ * houses/{houseId}/offers/{requestId} — "I'll pay £3 for someone to do my
+ * chore". Each housemate can accept the price or make one counter offer;
+ * the offerer accepts or declines counters. Whoever pays gets the point,
+ * once they mark it as paid. The app never holds money.
+ */
+export interface ChoreOffer {
+  id: string;
+  requestId: string;
+  choreKey: string;
+  choreName: string;
+  fromUid: string;
+  fromName: string;
+  /** Pence. */
+  price: number;
+  /** open → agreed (someone's doing it) → done (photo logged) → paid. Or cancelled. */
+  status: 'open' | 'agreed' | 'done' | 'cancelled';
+  counters: Record<string, { name: string; price: number }>;
+  /** uids whose counter offers were declined. */
+  declined: string[];
+  doerUid: string | null;
+  doerName: string | null;
+  agreedPrice: number | null;
+  logId: string | null;
+  paid: boolean;
+  createdAt: number;
 }

@@ -42,7 +42,7 @@ export default function Leaderboard() {
         </View>
         <Text style={type.small}>
           {typeof rule === 'object'
-            ? `Custom dates set by the house admin · resets ${resets}, then repeats every ${totalDays} days`
+            ? `Custom dates set by the house admin · ends ${new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, then a new ${totalDays}-day leaderboard starts`
             : `Resets ${resetLabel(rule)}${rule === DEFAULT_RESET_MONTHS ? ' (the default)' : ', set by the house admin'} · next reset ${resets}`}
         </Text>
       </View>

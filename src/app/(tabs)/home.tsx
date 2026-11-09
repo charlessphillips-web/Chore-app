@@ -3,6 +3,8 @@ import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
 import { choreIcon } from '../../lib/chores';
+import { formatPrice } from '../../lib/money';
+import { effectiveStatus } from '../../lib/review';
 import { periodLabel } from '../../lib/period';
 import { standing } from '../../lib/standing';
 import { Card, Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
@@ -12,7 +14,7 @@ type IconName = React.ComponentProps<typeof Icon>['name'];
 const LILAC = '#D9CCF5';
 
 export default function Home() {
-  const { user, profile, house, members, openRequests, wallpaper } = useApp();
+  const { user, profile, house, members, openRequests, offers, logs, wallpaper } = useApp();
   if (!user || !house) return <Loading />;
 
   const mine = openRequests.filter((r) => r.assignedTo === user.uid);
@@ -21,6 +23,19 @@ export default function Home() {
   const me = standing(members, user.uid);
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
+  const openOffer = (id: string) => router.push({ pathname: '/offer/[id]', params: { id } });
+  const offerFor = (requestId: string) => offers.find((o) => o.id === requestId);
+
+  // Offers: ones you agreed to do, ones you need to pay for, and ones up for grabs.
+  const toDo = offers.filter((o) => o.status === 'agreed' && o.doerUid === user.uid);
+  const toPay = offers.filter((o) => o.status === 'done' && o.fromUid === user.uid);
+  const upForGrabs = offers.filter((o) => o.status === 'open' && o.fromUid !== user.uid);
+  const logState = (logId: string | null) => {
+    const l = logs.find((x) => x.id === logId);
+    return l ? effectiveStatus(l) : null;
+  };
+  const checked = (logId: string | null) => ['verified', 'auto_verified'].includes(logState(logId) ?? '');
+  const needsDoing = mine.length + toDo.length + toPay.length > 0;
 
   return (
     <Screen background={wallpaper}>
@@ -44,22 +59,89 @@ export default function Home() {
 
       <NotificationCard />
 
-      {mine.length > 0 && (
+      {needsDoing && (
         <>
           <Label>Needs doing now</Label>
-          {mine.map((r) => (
+          {mine.map((r) => {
+            const o = offerFor(r.id);
+            if (o) {
+              const counters = Object.keys(o.counters).filter((u) => !o.declined.includes(u)).length;
+              return (
+                <RowButton
+                  key={r.id}
+                  icon="cash-outline"
+                  title={r.needs}
+                  subtitle={
+                    o.status === 'open'
+                      ? `You offered ${formatPrice(o.price)} · ${counters ? `${counters} counter offer${counters > 1 ? 's' : ''}` : 'waiting for a taker'}`
+                      : `${o.doerName} is doing it for ${formatPrice(o.agreedPrice ?? o.price)}`
+                  }
+                  onPress={() => openOffer(o.id)}
+                />
+              );
+            }
+            return (
+              <RowButton
+                key={r.id}
+                icon={r.kind === 'redo' ? 'arrow-undo' : 'alert-circle'}
+                title={r.needs}
+                subtitle={
+                  r.kind === 'redo'
+                    ? `${r.requestedByName} sent it back: ${r.reason ?? ''}`
+                    : `${r.requestedByName} flagged this · ${timeAgo(r.createdAt)}`
+                }
+                onPress={() => openChore(r.choreKey, r.id)}
+              />
+            );
+          })}
+          {toDo.map((o) => (
             <RowButton
-              key={r.id}
-              icon={r.kind === 'redo' ? 'arrow-undo' : 'alert-circle'}
-              title={r.needs}
-              subtitle={
-                r.kind === 'redo'
-                  ? `${r.requestedByName} sent it back: ${r.reason ?? ''}`
-                  : `${r.requestedByName} flagged this · ${timeAgo(r.createdAt)}`
-              }
-              onPress={() => openChore(r.choreKey, r.id)}
+              key={o.id}
+              icon="cash-outline"
+              title={`${o.choreName} for ${o.fromName}`}
+              subtitle={`You agreed to do it for ${formatPrice(o.agreedPrice ?? o.price)}`}
+              onPress={() => openChore(o.choreKey, o.requestId)}
             />
           ))}
+          {toPay.map((o) => (
+            <RowButton
+              key={o.id}
+              icon="card-outline"
+              title={checked(o.logId) ? `Pay ${o.doerName} ${formatPrice(o.agreedPrice ?? o.price)}` : `${o.doerName} did ${o.choreName} for you`}
+              subtitle={
+                checked(o.logId)
+                  ? `for ${o.choreName} · you get the point once paid`
+                  : logState(o.logId) === 'rejected'
+                    ? `Sent back · ${o.doerName} is redoing it`
+                    : 'Waiting for the photo to be checked'
+              }
+              onPress={() => openOffer(o.id)}
+            />
+          ))}
+        </>
+      )}
+
+      {upForGrabs.length > 0 && (
+        <>
+          <Label>Up for grabs</Label>
+          {upForGrabs.map((o) => {
+            const c = o.counters[user.uid];
+            return (
+              <RowButton
+                key={o.id}
+                icon="cash-outline"
+                title={`${o.choreName} · ${formatPrice(o.price)}`}
+                subtitle={
+                  c
+                    ? o.declined.includes(user.uid)
+                      ? `${o.fromName} declined your ${formatPrice(c.price)}`
+                      : `You offered ${formatPrice(c.price)} · waiting for ${o.fromName}`
+                    : `${o.fromName} will pay · tap to accept or counter`
+                }
+                onPress={() => openOffer(o.id)}
+              />
+            );
+          })}
         </>
       )}
 

@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { logChore, requestChore } from '../../lib/db';
 import { pickAssignee } from '../../lib/assign';
 import { takeChorePhoto, type ChorePhoto } from '../../lib/photos';
+import { formatPrice } from '../../lib/money';
 import { Button, Card, ErrorText, Icon, Loading, notify, Screen, Title } from '../../components/ui';
 import { colors, radius, space, type } from '../../components/theme';
 
@@ -13,7 +14,7 @@ type Step = 'choose' | 'done' | 'needs';
 /** Tap a chore on Home → "I've done it" (photo) or "Bins are full" (ask whoever's done least). */
 export default function ChoreScreen() {
   const { key, requestId } = useLocalSearchParams<{ key: string; requestId?: string }>();
-  const { user, profile, house, members, openRequests } = useApp();
+  const { user, profile, house, members, openRequests, offers } = useApp();
   const [step, setStep] = useState<Step>(requestId ? 'done' : 'choose');
   const [photo, setPhoto] = useState<ChorePhoto | null>(null);
   const [busy, setBusy] = useState<'photo' | 'save' | null>(null);
@@ -33,6 +34,12 @@ export default function ChoreScreen() {
     openRequests.find((r) => r.id === requestId) ??
     openRequests.find((r) => r.choreKey === chore.key && r.assignedTo === user.uid) ??
     openRequests.find((r) => r.choreKey === chore.key);
+  // An agreed offer: either you're doing it for someone, or someone's doing yours.
+  const offer = offers.find((o) => o.status !== 'open' && (o.id === request?.id || o.id === request?.offerId));
+  const doingForSomeone = offer && offer.doerUid === user.uid ? offer : null;
+  const someoneDoingMine = offer && offer.fromUid === user.uid && offer.status === 'agreed' ? offer : null;
+  const openOfferForMine = offers.find((o) => o.id === request?.id && o.status === 'open' && o.fromUid === user.uid);
+  const canOffer = request && request.assignedTo === user.uid && request.kind === 'needs' && !offers.some((o) => o.id === request.id);
 
   async function snap() {
     setError(null);
@@ -54,7 +61,7 @@ export default function ChoreScreen() {
     try {
       await logChore({
         house: house!, members, uid: user!.uid, username: profile!.username,
-        chore: chore!, photo, requestId: request?.id ?? null,
+        chore: chore!, photo, requestId: request?.id ?? null, offer: doingForSomeone,
       });
       router.back();
     } catch (e) {
@@ -111,8 +118,28 @@ export default function ChoreScreen() {
         </>
       )}
 
-      {step === 'done' && (
+      {step === 'done' && (someoneDoingMine || openOfferForMine) && (
         <>
+          <Card>
+            <Text style={type.body}>
+              {someoneDoingMine
+                ? `${someoneDoingMine.doerName} is doing this for you for ${formatPrice(someoneDoingMine.agreedPrice ?? someoneDoingMine.price)}.`
+                : 'You’ve offered this chore to your housemates.'}
+            </Text>
+          </Card>
+          <Button title="See offer" variant="secondary" onPress={() => router.replace({ pathname: '/offer/[id]', params: { id: (someoneDoingMine ?? openOfferForMine)!.id } })} />
+        </>
+      )}
+
+      {step === 'done' && !someoneDoingMine && !openOfferForMine && (
+        <>
+          {doingForSomeone && (
+            <Card>
+              <Text style={type.body}>
+                You&apos;re doing this for {doingForSomeone.fromName} for {formatPrice(doingForSomeone.agreedPrice ?? doingForSomeone.price)}. They get the point; you get paid once it&apos;s checked.
+              </Text>
+            </Card>
+          )}
           {request?.kind === 'redo' && request.assignedTo === user.uid && (
             <Card style={{ borderColor: colors.danger }}>
               <Text style={type.body}>{request.requestedByName} sent this back: {request.reason}</Text>
@@ -139,6 +166,14 @@ export default function ChoreScreen() {
           />
           <ErrorText>{error}</ErrorText>
           <Button title="Log chore" onPress={saveDone} loading={busy === 'save'} disabled={!photo || busy === 'photo'} />
+          {canOffer && (
+            <Button
+              title="Pay a housemate to do it"
+              icon="cash-outline"
+              variant="ghost"
+              onPress={() => router.replace({ pathname: '/offer/[id]', params: { id: request!.id } })}
+            />
+          )}
           {!requestId && <Button title="Back" variant="ghost" onPress={() => setStep('choose')} />}
         </>
       )}

@@ -13,6 +13,7 @@ export default function RootLayout() {
           <Stack.Screen name="chore/[key]" options={{ presentation: 'modal', headerShown: true, title: '' }} />
           <Stack.Screen name="how-it-works" options={{ presentation: 'modal', headerShown: true, title: 'How Choreboard works' }} />
           <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'Photo' }} />
+          <Stack.Screen name="offer/[id]" options={{ presentation: 'modal', headerShown: true, title: 'Chore offer' }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

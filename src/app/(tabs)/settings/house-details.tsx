@@ -39,10 +39,14 @@ export default function HouseDetails() {
   }
 
   async function changeReset(rule: ResetRule) {
-    const next = periodEnd(new Date(), rule).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    const end = periodEnd(new Date(), rule);
+    const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    const when = typeof rule === 'object'
+      ? `This leaderboard ends on ${fmt(new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1))}.`
+      : `The next reset is ${fmt(end)}.`;
     const ok = await confirm(
       typeof rule === 'object' ? 'Use these dates?' : `Reset ${resetLabel(rule)}?`,
-      `This starts a fresh leaderboard for everyone straight away. Scores so far this period won't carry over. The next reset is ${next}.`,
+      `This starts a fresh leaderboard for everyone straight away. Scores so far this period won't carry over. ${when}`,
       'Change',
     );
     if (!ok) return;

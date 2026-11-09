@@ -10,6 +10,7 @@ service cloud.firestore {
     function housePath(houseId) { return /databases/$(database)/documents/houses/$(houseId); }
     function memberPath(houseId, uid) { return /databases/$(database)/documents/houses/$(houseId)/members/$(uid); }
     function logPath(houseId, logId) { return /databases/$(database)/documents/houses/$(houseId)/logs/$(logId); }
+    function offerPath(houseId, offerId) { return /databases/$(database)/documents/houses/$(houseId)/offers/$(offerId); }
     function isMember(houseId) { return signedIn() && exists(memberPath(houseId, me())); }
     function isAdmin(houseId) {
       let h = get(housePath(houseId)).data;
@@ -111,11 +112,14 @@ service cloud.firestore {
         allow create: if signedIn() && me() == uid
           && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.joinCode)).data.houseId == houseId
           && request.resource.data.stats == {};
-        // Your own doc: name, push token, and your score up by at most 1.
+        // Your own doc: name, push token, payment link, and your score up by at most 1.
         allow update: if signedIn() && me() == uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod'])
-          && ownStatsOk();
+               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'payLink'])
+          && ownStatsOk()
+          && (request.resource.data.get('payLink', null) == null
+              || (request.resource.data.payLink is string
+                  && request.resource.data.payLink.matches('^https://(monzo[.]me|paypal[.]me)/[A-Za-z0-9._-]{1,40}$')));
         // A housemate rejecting your chore takes exactly 1 off that chore.
         allow update: if isMember(houseId) && me() != uid && isRejectAdjustment(houseId, uid);
         // Leave yourself, or be removed by the admin.
@@ -132,7 +136,8 @@ service cloud.firestore {
           && request.resource.data.period is string
           && request.resource.data.photoThumb is string
           && request.resource.data.photoThumb.size() < 100000
-          && existsAfter(/databases/$(database)/documents/houses/$(houseId)/photos/$(logId));
+          && existsAfter(/databases/$(database)/documents/houses/$(houseId)/photos/$(logId))
+          && creditOk(houseId, logId, request.resource.data);
         // One housemate (not the chore-doer) checks it, within 24 hours.
         // Rejecting must take it off the chore-doer's score in the same write.
         allow update: if isMember(houseId)
@@ -143,7 +148,9 @@ service cloud.firestore {
                .hasOnly(['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectReason'])
           && request.resource.data.reviewedBy == me()
           && request.resource.data.status in ['verified', 'rejected']
-          && (request.resource.data.status == 'verified' || scoreDropped(houseId, resource.data))
+          && (request.resource.data.status == 'verified'
+              || resource.data.get('creditTo', null) != null
+              || scoreDropped(houseId, resource.data))
           && (request.resource.data.get('rejectReason', null) == null
               || (request.resource.data.rejectReason is string && request.resource.data.rejectReason.size() <= 140));
         allow delete: if false;
@@ -167,6 +174,28 @@ service cloud.firestore {
           && request.resource.data.data is string
           && request.resource.data.data.size() < 900000;
         allow delete: if isAdmin(houseId);
+      }
+
+      // "I'll pay £3 for someone to do my chore." ID = the request's ID.
+      // The app never holds money; people pay each other directly.
+      match /offers/{offerId} {
+        allow read: if isMember(houseId);
+        allow create: if isMember(houseId)
+          && request.resource.data.fromUid == me()
+          && request.resource.data.requestId == offerId
+          && get(/databases/$(database)/documents/houses/$(houseId)/requests/$(offerId)).data.assignedTo == me()
+          && get(/databases/$(database)/documents/houses/$(houseId)/requests/$(offerId)).data.status == 'open'
+          && get(/databases/$(database)/documents/houses/$(houseId)/requests/$(offerId)).data.get('kind', 'needs') == 'needs'
+          && validPrice(request.resource.data.price)
+          && request.resource.data.status == 'open'
+          && request.resource.data.counters == {}
+          && request.resource.data.declined == []
+          && request.resource.data.doerUid == null
+          && request.resource.data.logId == null
+          && request.resource.data.paid == false
+          && request.resource.data.closed == false;
+        allow update: if isMember(houseId) && offerUpdateOk(resource.data, request.resource.data, houseId, offerId);
+        allow delete: if false;
       }
 
       match /requests/{requestId} {
@@ -201,6 +230,51 @@ service cloud.firestore {
             && h.get('customStart', null) is string && h.customStart.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
             && h.get('customEnd', null) is string && h.customEnd.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
             && h.customEnd > h.customStart);
+    }
+
+    // ---- Chore offers ----
+
+    function validPrice(p) { return p is int && p >= 50 && p <= 5000; }
+
+    function offerUpdateOk(o, n, houseId, offerId) {
+      let keys = n.diff(o).affectedKeys();
+      let agreeKeys = ['status', 'doerUid', 'doerName', 'agreedPrice', 'agreedAt'];
+      return
+        // A housemate accepts the asking price.
+        (me() != o.fromUid && o.status == 'open' && keys.hasOnly(agreeKeys)
+          && n.status == 'agreed' && n.doerUid == me() && n.agreedPrice == o.price)
+        // A housemate makes their one counter offer.
+        || (me() != o.fromUid && o.status == 'open' && keys.hasOnly(['counters'])
+          && n.counters.diff(o.counters).affectedKeys().hasOnly([me()])
+          && !(me() in o.counters)
+          && validPrice(n.counters[me()].price) && n.counters[me()].name is string)
+        // The offerer declines a counter offer.
+        || (me() == o.fromUid && o.status == 'open' && keys.hasOnly(['declined'])
+          && n.declined.hasAll(o.declined) && n.declined.size() == o.declined.size() + 1)
+        // The offerer accepts a counter offer.
+        || (me() == o.fromUid && o.status == 'open' && keys.hasOnly(agreeKeys)
+          && n.status == 'agreed' && n.doerUid in o.counters && !(n.doerUid in o.declined)
+          && n.agreedPrice == o.counters[n.doerUid].price)
+        // The offerer withdraws it before anyone agrees.
+        || (me() == o.fromUid && o.status == 'open' && keys.hasOnly(['status', 'closed'])
+          && n.status == 'cancelled' && n.closed == true)
+        // The doer logs the chore (or a redo of it) with a photo.
+        || (me() == o.doerUid && o.status in ['agreed', 'done'] && keys.hasOnly(['status', 'logId'])
+          && n.status == 'done'
+          && getAfter(logPath(houseId, n.logId)).data.userId == me()
+          && getAfter(logPath(houseId, n.logId)).data.offerId == offerId)
+        // The offerer has paid.
+        || (me() == o.fromUid && o.status == 'done' && keys.hasOnly(['paid', 'paidAt', 'closed'])
+          && n.paid == true && n.closed == true);
+    }
+
+    // A chore logged for someone else must match an offer agreed with you.
+    function creditOk(houseId, logId, log) {
+      return log.get('creditTo', null) == null
+        || (log.offerId is string
+            && getAfter(offerPath(houseId, log.offerId)).data.doerUid == me()
+            && getAfter(offerPath(houseId, log.offerId)).data.fromUid == log.creditTo
+            && getAfter(offerPath(houseId, log.offerId)).data.logId == logId);
     }
 
     // ---- Score rules ----

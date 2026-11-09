@@ -92,7 +92,7 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
       <View style={{ padding: space.md, gap: space.sm }}>
         <Text style={type.heading}>{log.choreName}</Text>
         <Text style={type.small}>
-          {log.username} · {timeAgo(log.at)} · {timeLeft(log.at)} to check · tap photo to enlarge
+          {log.username}{log.creditToName ? ` (paid by ${log.creditToName})` : ''} · {timeAgo(log.at)} · {timeLeft(log.at)} to check · tap photo to enlarge
         </Text>
 
         {!sendingBack ? (

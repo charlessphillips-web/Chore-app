@@ -5,12 +5,12 @@ import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
   clearRemovedHouse, setPushToken, toMember, watchHouse, watchMembers, watchOpenRequests, watchProfile,
-  watchRecentLogs, watchWallpaper, type MemberDoc,
+  watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
 import { periodKey } from '../lib/period';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
-import type { ChoreLog, ChoreRequest, House, Member, UserProfile } from '../lib/types';
+import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, UserProfile } from '../lib/types';
 
 interface AppState {
   ready: boolean;
@@ -25,6 +25,8 @@ interface AppState {
   members: Member[];
   openRequests: ChoreRequest[];
   logs: ChoreLog[];
+  /** Chore offers still in progress. */
+  offers: ChoreOffer[];
   /** House wallpaper as a data URI, if the admin set one. */
   wallpaper: string | null;
   /** Whether this phone has notifications on. */
@@ -48,6 +50,7 @@ interface HouseData {
   members: MemberDoc[];
   openRequests: ChoreRequest[];
   logs: ChoreLog[];
+  offers: ChoreOffer[];
   wallpaper: string | null;
 }
 
@@ -94,7 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setHouseData((prev) => ({
         ...(prev?.houseId === houseId
           ? prev
-          : { houseId, house: null, members: [], openRequests: [], logs: [], wallpaper: null }),
+          : { houseId, house: null, members: [], openRequests: [], logs: [], offers: [], wallpaper: null }),
         ...patch,
       }));
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -119,6 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       watchMembers(houseId, (members) => update({ members }), onError),
       watchOpenRequests(houseId, (openRequests) => update({ openRequests }), onError),
       watchRecentLogs(houseId, (logs) => update({ logs }), onError),
+      watchOffers(houseId, (offers) => update({ offers }), onError),
       watchWallpaper(houseId, (w) => update({ wallpaper: w ? jpegUri(w) : null }), onError),
     ];
     return () => {
@@ -177,6 +181,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     members,
     openRequests: current?.openRequests ?? [],
     logs: current?.logs ?? [],
+    offers: current?.offers ?? [],
     wallpaper: current?.wallpaper ?? null,
     notifStatus,
     enableNotifications,

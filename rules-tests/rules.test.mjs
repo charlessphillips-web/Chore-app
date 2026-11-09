@@ -359,6 +359,114 @@ test('only the admin can change how often the leaderboard resets', async () => {
   await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 0 }));
 });
 
+// ---- Chore offers ----
+async function needsRequest(by, to, id) {
+  await setDoc(doc(db(by), 'houses', 'h1', 'requests', id), {
+    choreKey: 'bins', choreName: 'Bins', needs: 'Bins are full', kind: 'needs', reason: null, mode: 'overall',
+    requestedBy: by, requestedByName: by, assignedTo: to, assignedToName: to, status: 'open',
+    createdAt: serverTimestamp(), completedBy: null, completedAt: null,
+  });
+}
+const offerData = (from, id, price = 300) => ({
+  requestId: id, choreKey: 'bins', choreName: 'Bins', fromUid: from, fromName: from, price, status: 'open',
+  counters: {}, declined: [], doerUid: null, doerName: null, agreedPrice: null, logId: null, paid: false, closed: false,
+  createdAt: serverTimestamp(),
+});
+const offerRef = (uid, id) => doc(db(uid), 'houses', 'h1', 'offers', id);
+// Mirrors logChore() with an agreed offer: no score for the doer, offer -> done.
+async function logForOffer(uid, offerId, creditTo, requestId = null) {
+  const f = db(uid);
+  const ref = doc(collection(f, 'houses', 'h1', 'logs'));
+  const b = writeBatch(f);
+  b.set(ref, { ...logData(uid, 'bins', requestId), offerId, creditTo, creditToName: creditTo });
+  b.set(doc(f, 'houses', 'h1', 'photos', ref.id), { userId: uid, data: 'fullphotodata' });
+  b.update(doc(f, 'houses', 'h1', 'offers', offerId), { status: 'done', logId: ref.id });
+  if (requestId) b.update(doc(f, 'houses', 'h1', 'requests', requestId), { status: 'done', completedBy: uid, completedAt: serverTimestamp() });
+  await b.commit();
+  return ref.id;
+}
+
+test('offers: offer, counters, accept, do it for someone, pay', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await joinHouse('jo');
+  await needsRequest('sam', 'alice', 'r1');
+
+  // Only the person whose turn it is can offer it, at a sensible price.
+  await assertFails(setDoc(offerRef('jo', 'r1'), offerData('jo', 'r1')));
+  await assertFails(setDoc(offerRef('alice', 'r1'), offerData('alice', 'r1', 10)));
+  await assertSucceeds(setDoc(offerRef('alice', 'r1'), offerData('alice', 'r1')));
+
+  // One counter offer each; the offerer can't counter their own.
+  await assertSucceeds(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 400 } }));
+  await assertFails(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 350 } }));
+  await assertFails(updateDoc(offerRef('alice', 'r1'), { 'counters.alice': { name: 'Alice', price: 100 } }));
+  await assertFails(updateDoc(offerRef('jo', 'r1'), { 'counters.sam': { name: 'Sam', price: 9999 } }));
+
+  // Alice declines Sam, then can't accept him; Jo counters and Alice accepts Jo.
+  await assertFails(updateDoc(offerRef('sam', 'r1'), { declined: ['sam'] }));
+  await assertSucceeds(updateDoc(offerRef('alice', 'r1'), { declined: ['sam'] }));
+  const agree = (uid, price) => ({ status: 'agreed', doerUid: uid, doerName: uid, agreedPrice: price, agreedAt: serverTimestamp() });
+  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('sam', 400)));
+  await assertSucceeds(updateDoc(offerRef('jo', 'r1'), { 'counters.jo': { name: 'Jo', price: 350 } }));
+  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('jo', 100)));
+  await assertSucceeds(updateDoc(offerRef('alice', 'r1'), agree('jo', 350)));
+  // Too late for anyone else.
+  await assertFails(updateDoc(offerRef('sam', 'r1'), agree('sam', 300)));
+
+  // Only Jo can log it for Alice; it doesn't add to Jo's score.
+  await assertFails(logForOffer('sam', 'r1', 'alice', 'r1'));
+  const logId = await logForOffer('jo', 'r1', 'alice', 'r1');
+  assert.equal((await getDoc(offerRef('jo', 'r1'))).data().status, 'done');
+
+  // Sending it back doesn't need to take anything off anyone's score; the redo goes to Jo.
+  const f = db('sam');
+  const b = writeBatch(f);
+  b.update(doc(f, 'houses', 'h1', 'logs', logId), {
+    status: 'rejected', reviewedBy: 'sam', reviewedByName: 'Sam', reviewedAt: serverTimestamp(), rejectReason: 'Still dirty',
+  });
+  b.set(doc(f, 'houses', 'h1', 'requests', 'redo1'), {
+    kind: 'redo', reason: 'Still dirty', logId, choreKey: 'bins', choreName: 'Bins', needs: 'Redo: Bins', mode: 'overall',
+    requestedBy: 'sam', requestedByName: 'Sam', assignedTo: 'jo', assignedToName: 'Jo', status: 'open',
+    createdAt: serverTimestamp(), completedBy: null, completedAt: null, offerId: 'r1',
+  });
+  await assertSucceeds(b.commit());
+  await assertSucceeds(logForOffer('jo', 'r1', 'alice', 'redo1'));
+
+  // Paying: only Alice, and she gets the point.
+  await assertFails(updateDoc(offerRef('jo', 'r1'), { paid: true, paidAt: serverTimestamp(), closed: true }));
+  const fa = db('alice');
+  const pay = writeBatch(fa);
+  pay.update(doc(fa, 'houses', 'h1', 'offers', 'r1'), { paid: true, paidAt: serverTimestamp(), closed: true });
+  pay.update(doc(fa, 'houses', 'h1', 'members', 'alice'), {
+    currentPeriod: P, [`stats.${P}.total`]: increment(1), [`stats.${P}.chores.bins`]: increment(1), lastCompletedAt: serverTimestamp(),
+  });
+  await assertSucceeds(pay.commit());
+  assert.equal((await stats('alice')).total, 1);
+});
+
+test('offers: withdraw, accept the asking price, payment links', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await needsRequest('sam', 'alice', 'r2');
+  await assertSucceeds(setDoc(offerRef('alice', 'r2'), offerData('alice', 'r2')));
+  await assertFails(updateDoc(offerRef('sam', 'r2'), { status: 'cancelled', closed: true }));
+  await assertSucceeds(updateDoc(offerRef('alice', 'r2'), { status: 'cancelled', closed: true }));
+  await assertFails(updateDoc(offerRef('sam', 'r2'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 300, agreedAt: serverTimestamp() }));
+
+  await needsRequest('sam', 'alice', 'r3');
+  await assertSucceeds(setDoc(offerRef('alice', 'r3'), offerData('alice', 'r3', 250)));
+  await assertFails(updateDoc(offerRef('sam', 'r3'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 100, agreedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(offerRef('sam', 'r3'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 250, agreedAt: serverTimestamp() }));
+
+  const me = (uid) => doc(db(uid), 'houses', 'h1', 'members', uid);
+  await assertSucceeds(updateDoc(me('sam'), { payLink: 'https://monzo.me/sam' }));
+  await assertSucceeds(updateDoc(me('sam'), { payLink: 'https://paypal.me/sam.99' }));
+  await assertSucceeds(updateDoc(me('sam'), { payLink: null }));
+  await assertFails(updateDoc(me('sam'), { payLink: 'https://evil.com/pay' }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1', 'members', 'sam'), { payLink: 'https://monzo.me/alice' }));
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

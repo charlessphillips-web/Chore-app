@@ -26,6 +26,10 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 - **House:** house code to share, housemates, recent activity with photos.
 - **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.
 
+**Paying housemates:** when it's your turn for a chore, you can offer it to housemates for money (£0.50–£50). Each housemate can accept or make one counter offer. They do it with a photo as usual; once it's checked you pay them directly (their Monzo/PayPal link, bank transfer or cash) and tap "I've paid" — then the point is yours. The app never holds money.
+
+**Leaderboard resets:** every 2 months by default. The house admin can choose 1, 3 or 6 months, or custom dates (e.g. a uni term), in Settings → House details.
+
 **Feedback:** in Settings, anyone can **report a bug** or **make a suggestion**, optionally with a screenshot. These are saved in the database, and only you can read them, in the app's Feedback inbox (see "Feedback" below).
 
 **Privacy:** date of birth, gender and university go in a private record that housemates can't read. Only you (the app owner) can export it (see below).

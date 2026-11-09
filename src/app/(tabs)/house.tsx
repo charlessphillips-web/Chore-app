@@ -59,7 +59,7 @@ export default function HouseTab() {
               )}
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={type.body}>
-                  <Text style={{ fontWeight: '700' }}>{l.userId === user.uid ? 'You' : l.username}</Text> · {l.choreName}
+                  <Text style={{ fontWeight: '700' }}>{l.userId === user.uid ? 'You' : l.username}</Text> · {l.choreName}{l.creditToName ? ` for ${l.creditTo === user.uid ? 'you' : l.creditToName}` : ''}
                 </Text>
                 <Text style={type.small}>{timeAgo(l.at)}</Text>
                 <StatusBadge log={l} />

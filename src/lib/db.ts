@@ -13,7 +13,8 @@ import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './cho
 import { pickAssignee } from './assign';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
-import type { ChoreLog, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
+import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
+import { formatPrice } from './money';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -212,6 +213,7 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     lastCompletedAt: ms(d.lastCompletedAt),
     joinedAt: ms(d.joinedAt) ?? Date.now(),
     pushToken: d.pushToken ?? null,
+    payLink: typeof d.payLink === 'string' ? d.payLink : null,
   };
 };
 
@@ -247,6 +249,7 @@ export function watchOpenRequests(houseId: string, cb: (r: ChoreRequest[]) => vo
             needs: d.needs ?? `${d.choreName} needs doing`,
             kind: d.kind === 'redo' ? 'redo' : 'needs',
             reason: d.reason ?? null,
+            offerId: d.offerId ?? null,
             createdAt: ms(d.createdAt) ?? Date.now(),
             completedAt: ms(d.completedAt),
           };
@@ -278,6 +281,9 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             reviewedBy: d.reviewedBy ?? null,
             reviewedByName: d.reviewedByName ?? null,
             rejectReason: d.rejectReason ?? null,
+            offerId: d.offerId ?? null,
+            creditTo: d.creditTo ?? null,
+            creditToName: d.creditToName ?? null,
           };
         }),
       ),
@@ -287,6 +293,11 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
 
 export async function setPushToken(houseId: string, uid: string, token: string | null) {
   await updateDoc(memberRef(houseId, uid), { pushToken: token });
+}
+
+/** Your monzo.me / paypal.me link (already normalised), or null to remove it. */
+export async function setPayLink(houseId: string, uid: string, link: string | null) {
+  await updateDoc(memberRef(houseId, uid), { payLink: link });
 }
 
 // ---------- Chores ----------
@@ -304,8 +315,11 @@ export async function logChore(opts: {
   chore: { key: string; name: string };
   photo: { thumb: string; full: string };
   requestId?: string | null;
+  /** Doing it for someone who's paying (an agreed offer): they get the point. */
+  offer?: ChoreOffer | null;
 }): Promise<void> {
   const { house, uid, username, photo } = opts;
+  const offer = opts.offer && opts.offer.doerUid === uid ? opts.offer : null;
   const requestId = opts.requestId ?? null;
   const name = cleanChoreName(opts.chore.name);
   const key = opts.chore.key || choreKey(name);
@@ -318,15 +332,21 @@ export async function logChore(opts: {
   batch.set(logRef, {
     choreKey: key, choreName: name, userId: uid, username, at: serverTimestamp(), period, requestId,
     photoThumb: photo.thumb, status: 'pending', reviewedBy: null, reviewedByName: null,
+    offerId: offer?.id ?? null, creditTo: offer?.fromUid ?? null, creditToName: offer?.fromName ?? null,
   });
   batch.set(doc(db, 'houses', house.id, 'photos', logRef.id), { userId: uid, data: photo.full });
-  // Dot-paths so only this period's / this chore's counters change.
-  batch.update(memberRef(house.id, uid), {
-    currentPeriod: period,
-    [`stats.${period}.total`]: increment(1),
-    [`stats.${period}.chores.${key}`]: increment(1),
-    lastCompletedAt: serverTimestamp(),
-  });
+  if (offer) {
+    // The payer gets the point when they mark it as paid, not now.
+    batch.update(doc(db, 'houses', house.id, 'offers', offer.id), { status: 'done', logId: logRef.id });
+  } else {
+    // Dot-paths so only this period's / this chore's counters change.
+    batch.update(memberRef(house.id, uid), {
+      currentPeriod: period,
+      [`stats.${period}.total`]: increment(1),
+      [`stats.${period}.chores.${key}`]: increment(1),
+      lastCompletedAt: serverTimestamp(),
+    });
+  }
   if (requestId) {
     batch.update(doc(db, 'houses', house.id, 'requests', requestId), {
       status: 'done', completedBy: uid, completedAt: serverTimestamp(),
@@ -337,7 +357,7 @@ export async function logChore(opts: {
   const others = opts.members.filter((m) => m.uid !== uid && m.pushToken).map((m) => m.pushToken!);
   if (others.length) {
     await sendPush(others, {
-      title: `${username} did: ${name}`,
+      title: offer ? `${username} did: ${name} (for ${offer.fromName})` : `${username} did: ${name}`,
       body: 'Check the photo — one of you needs to verify it.',
       data: { type: 'chore_check', houseId: house.id },
     });
@@ -404,7 +424,8 @@ async function reviewChore(
       rejectReason: reason,
     });
     if (reason && owner.exists()) {
-      if (log.period) {
+      // Paid-for chores never added to the doer's score, so nothing to take off.
+      if (log.period && !log.creditTo) {
         tx.update(ownerRef, {
           [`stats.${log.period}.total`]: increment(-1),
           [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
@@ -428,6 +449,7 @@ async function reviewChore(
         createdAt: serverTimestamp(),
         completedBy: null,
         completedAt: null,
+        offerId: log.offerId ?? null,
       });
     }
     return { userId: log.userId as string, choreName: log.choreName as string };
@@ -559,4 +581,136 @@ export function watchFeedback(cb: (items: FeedbackItem[]) => void, onError: (e: 
 
 export async function setFeedbackDone(id: string, done: boolean): Promise<void> {
   await updateDoc(doc(db, 'feedback', id), { done });
+}
+
+// ---------- Chore offers ("I'll pay £3 for someone to do this") ----------
+
+const offerRef = (houseId: string, id: string) => doc(db, 'houses', houseId, 'offers', id);
+
+/** Offers still in progress (not cancelled or paid). */
+export function watchOffers(houseId: string, cb: (o: ChoreOffer[]) => void, onError?: OnError) {
+  return onSnapshot(
+    query(collection(db, 'houses', houseId, 'offers'), where('closed', '==', false)),
+    (snap) =>
+      cb(
+        snap.docs
+          .map((s) => {
+            const d = s.data();
+            return {
+              id: s.id,
+              requestId: d.requestId,
+              choreKey: d.choreKey,
+              choreName: d.choreName,
+              fromUid: d.fromUid,
+              fromName: d.fromName,
+              price: d.price,
+              status: d.status,
+              counters: d.counters ?? {},
+              declined: d.declined ?? [],
+              doerUid: d.doerUid ?? null,
+              doerName: d.doerName ?? null,
+              agreedPrice: d.agreedPrice ?? null,
+              logId: d.logId ?? null,
+              paid: d.paid === true,
+              createdAt: ms(d.createdAt) ?? Date.now(),
+            } as ChoreOffer;
+          })
+          .sort((a, b) => b.createdAt - a.createdAt),
+      ),
+    onError,
+  );
+}
+
+const tokensOf = (members: Member[], uids: string[]) =>
+  members.filter((m) => uids.includes(m.uid) && m.pushToken).map((m) => m.pushToken!);
+
+async function ping(members: Member[], uids: string[], houseId: string, title: string, body: string) {
+  const to = tokensOf(members, uids);
+  if (to.length) await sendPush(to, { title, body, data: { type: 'chore_offer', houseId } }).catch(() => false);
+}
+
+/** Offer your chore (a "needs doing" assigned to you) to housemates for a price. */
+export async function createOffer(opts: {
+  house: House;
+  members: Member[];
+  request: ChoreRequest;
+  from: { uid: string; username: string };
+  price: number;
+}) {
+  const { house, request, from, price } = opts;
+  await setDoc(offerRef(house.id, request.id), {
+    requestId: request.id,
+    choreKey: request.choreKey,
+    choreName: request.choreName,
+    fromUid: from.uid,
+    fromName: from.username,
+    price,
+    status: 'open',
+    counters: {},
+    declined: [],
+    doerUid: null,
+    doerName: null,
+    agreedPrice: null,
+    logId: null,
+    paid: false,
+    closed: false,
+    createdAt: serverTimestamp(),
+  });
+  const others = opts.members.filter((m) => m.uid !== from.uid).map((m) => m.uid);
+  await ping(opts.members, others, house.id, `${from.username} will pay ${formatPrice(price)}`, `for someone to do: ${request.choreName}. Tap to accept or make an offer.`);
+}
+
+/** A housemate takes the offer at its price. */
+export async function acceptOffer(houseId: string, offer: ChoreOffer, me: { uid: string; username: string }, members: Member[]) {
+  await updateDoc(offerRef(houseId, offer.id), {
+    status: 'agreed', doerUid: me.uid, doerName: me.username, agreedPrice: offer.price, agreedAt: serverTimestamp(),
+  });
+  await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName}`, `for ${formatPrice(offer.price)}. You'll pay once it's been checked.`);
+}
+
+/** A housemate's one counter offer. */
+export async function counterOffer(houseId: string, offer: ChoreOffer, me: { uid: string; username: string }, price: number, members: Member[]) {
+  if (offer.counters[me.uid]) throw new Error('You can only make one counter offer.');
+  await updateDoc(offerRef(houseId, offer.id), { [`counters.${me.uid}`]: { name: me.username, price } });
+  await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName} for ${formatPrice(price)}`, 'Tap to accept or decline.');
+}
+
+export async function declineCounter(houseId: string, offer: ChoreOffer, uid: string, members: Member[]) {
+  await updateDoc(offerRef(houseId, offer.id), { declined: [...offer.declined, uid] });
+  const c = offer.counters[uid];
+  if (c) await ping(members, [uid], houseId, `${offer.fromName} declined your ${formatPrice(c.price)}`, `for ${offer.choreName}.`);
+}
+
+export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: string, members: Member[]) {
+  const c = offer.counters[uid];
+  if (!c) throw new Error('That counter offer no longer exists.');
+  await updateDoc(offerRef(houseId, offer.id), {
+    status: 'agreed', doerUid: uid, doerName: c.name, agreedPrice: c.price, agreedAt: serverTimestamp(),
+  });
+  await ping(members, [uid], houseId, `${offer.fromName} accepted your ${formatPrice(c.price)}`, `You're doing: ${offer.choreName}.`);
+}
+
+/** The offerer withdraws (only before anyone's agreed). */
+export async function cancelOffer(houseId: string, offer: ChoreOffer) {
+  await updateDoc(offerRef(houseId, offer.id), { status: 'cancelled', closed: true });
+}
+
+/**
+ * The offerer has paid the doer (outside the app). Closes the offer and
+ * gives the offerer the point for this chore.
+ */
+export async function markOfferPaid(house: House, offer: ChoreOffer, members: Member[]) {
+  const period = periodKey(new Date(), house.reset);
+  const batch = writeBatch(db);
+  batch.update(offerRef(house.id, offer.id), { paid: true, paidAt: serverTimestamp(), closed: true });
+  batch.update(memberRef(house.id, offer.fromUid), {
+    currentPeriod: period,
+    [`stats.${period}.total`]: increment(1),
+    [`stats.${period}.chores.${offer.choreKey}`]: increment(1),
+    lastCompletedAt: serverTimestamp(),
+  });
+  await batch.commit();
+  if (offer.doerUid && offer.agreedPrice) {
+    await ping(members, [offer.doerUid], house.id, `${offer.fromName} paid you ${formatPrice(offer.agreedPrice)}`, `for ${offer.choreName}. Check your bank app.`);
+  }
 }
