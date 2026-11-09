@@ -14,7 +14,8 @@ import { pickAssignee } from './assign';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
-import { formatPrice } from './money';
+import { formatPrice, type PayChoice } from './money';
+import { toAvatar, type Avatar } from './avatar';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -213,7 +214,7 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     lastCompletedAt: ms(d.lastCompletedAt),
     joinedAt: ms(d.joinedAt) ?? Date.now(),
     pushToken: d.pushToken ?? null,
-    payLink: typeof d.payLink === 'string' ? d.payLink : null,
+    avatar: toAvatar(d.avatar),
   };
 };
 
@@ -295,9 +296,9 @@ export async function setPushToken(houseId: string, uid: string, token: string |
   await updateDoc(memberRef(houseId, uid), { pushToken: token });
 }
 
-/** Your monzo.me / paypal.me link (already normalised), or null to remove it. */
-export async function setPayLink(houseId: string, uid: string, link: string | null) {
-  await updateDoc(memberRef(houseId, uid), { payLink: link });
+/** Your profile picture (only you can change yours). null = back to your initial. */
+export async function setAvatar(houseId: string, uid: string, avatar: Avatar | null) {
+  await updateDoc(memberRef(houseId, uid), { avatar });
 }
 
 // ---------- Chores ----------
@@ -610,6 +611,8 @@ export function watchOffers(houseId: string, cb: (o: ChoreOffer[]) => void, onEr
               doerUid: d.doerUid ?? null,
               doerName: d.doerName ?? null,
               agreedPrice: d.agreedPrice ?? null,
+              doerPay: d.doerPay ?? null,
+              remindedAt: ms(d.remindedAt),
               logId: d.logId ?? null,
               paid: d.paid === true,
               createdAt: ms(d.createdAt) ?? Date.now(),
@@ -651,6 +654,7 @@ export async function createOffer(opts: {
     doerUid: null,
     doerName: null,
     agreedPrice: null,
+    doerPay: null,
     logId: null,
     paid: false,
     closed: false,
@@ -661,17 +665,21 @@ export async function createOffer(opts: {
 }
 
 /** A housemate takes the offer at its price. */
-export async function acceptOffer(houseId: string, offer: ChoreOffer, me: { uid: string; username: string }, members: Member[]) {
+export async function acceptOffer(
+  houseId: string, offer: ChoreOffer, me: { uid: string; username: string }, pay: PayChoice, members: Member[],
+) {
   await updateDoc(offerRef(houseId, offer.id), {
-    status: 'agreed', doerUid: me.uid, doerName: me.username, agreedPrice: offer.price, agreedAt: serverTimestamp(),
+    status: 'agreed', doerUid: me.uid, doerName: me.username, agreedPrice: offer.price, doerPay: pay, agreedAt: serverTimestamp(),
   });
   await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName}`, `for ${formatPrice(offer.price)}. You'll pay once it's been checked.`);
 }
 
 /** A housemate's one counter offer. */
-export async function counterOffer(houseId: string, offer: ChoreOffer, me: { uid: string; username: string }, price: number, members: Member[]) {
+export async function counterOffer(
+  houseId: string, offer: ChoreOffer, me: { uid: string; username: string }, price: number, pay: PayChoice, members: Member[],
+) {
   if (offer.counters[me.uid]) throw new Error('You can only make one counter offer.');
-  await updateDoc(offerRef(houseId, offer.id), { [`counters.${me.uid}`]: { name: me.username, price } });
+  await updateDoc(offerRef(houseId, offer.id), { [`counters.${me.uid}`]: { name: me.username, price, pay } });
   await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName} for ${formatPrice(price)}`, 'Tap to accept or decline.');
 }
 
@@ -685,9 +693,19 @@ export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: str
   const c = offer.counters[uid];
   if (!c) throw new Error('That counter offer no longer exists.');
   await updateDoc(offerRef(houseId, offer.id), {
-    status: 'agreed', doerUid: uid, doerName: c.name, agreedPrice: c.price, agreedAt: serverTimestamp(),
+    status: 'agreed', doerUid: uid, doerName: c.name, agreedPrice: c.price, doerPay: c.pay ?? null, agreedAt: serverTimestamp(),
   });
   await ping(members, [uid], houseId, `${offer.fromName} accepted your ${formatPrice(c.price)}`, `You're doing: ${offer.choreName}.`);
+}
+
+/** The doer nudges the payer (at most once a day). */
+export async function remindPayer(houseId: string, offer: ChoreOffer, members: Member[]) {
+  await updateDoc(offerRef(houseId, offer.id), { remindedAt: serverTimestamp() });
+  await ping(
+    members, [offer.fromUid], houseId,
+    `Reminder: pay ${offer.doerName} ${formatPrice(offer.agreedPrice ?? offer.price)}`,
+    `for ${offer.choreName}. Open Choreboard → Money.`,
+  );
 }
 
 /** The offerer withdraws (only before anyone's agreed). */

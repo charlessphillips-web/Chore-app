@@ -9,6 +9,8 @@ export interface Standing {
   hint: string;
   /** 0–1 for the progress bar, or null to hide it (no one to race). */
   progress: number | null;
+  /** e.g. "2nd", "joint 1st", or null if alone / nobody has scored. */
+  place: string | null;
 }
 
 interface Scored {
@@ -41,12 +43,13 @@ export function standing(members: Scored[], uid: string): Standing {
       headline: `You've done ${chores(mine)} this period`,
       hint: 'Share the house code to get your housemates on the board',
       progress: null,
+      place: null,
     };
   }
 
   const best = Math.max(mine, ...others.map((m) => m.totalCompleted));
   if (best === 0) {
-    return { headline: 'Nobody’s on the board yet', hint: 'Log a chore to take the lead', progress: 0 };
+    return { headline: 'Nobody’s on the board yet', hint: 'Log a chore to take the lead', progress: 0, place: null };
   }
 
   const ahead = others.filter((m) => m.totalCompleted > mine);
@@ -55,7 +58,7 @@ export function standing(members: Scored[], uid: string): Standing {
   if (rank === 1) {
     const tied = others.filter((m) => m.totalCompleted === mine);
     if (tied.length > 0) {
-      return { headline: `You're joint 1st with ${chores(mine)}`, hint: `1 more to beat ${names(tied)}`, progress: 1 };
+      return { headline: `You're joint 1st with ${chores(mine)}`, hint: `1 more to beat ${names(tied)}`, progress: 1, place: 'joint 1st' };
     }
     const second = Math.max(...others.map((m) => m.totalCompleted));
     const runnersUp = others.filter((m) => m.totalCompleted === second);
@@ -63,6 +66,7 @@ export function standing(members: Scored[], uid: string): Standing {
       headline: `You're top with ${chores(mine)}`,
       hint: `${mine - second} ahead of ${names(runnersUp)}`,
       progress: 1,
+      place: '1st',
     };
   }
 
@@ -76,5 +80,6 @@ export function standing(members: Scored[], uid: string): Standing {
       : `You're ${tiedWithMe ? 'joint ' : ''}${ordinal(rank)} with ${chores(mine)}`,
     hint: `${target - mine + 1} more to overtake ${names(targets)}`,
     progress: mine / best,
+    place: `${tiedWithMe ? 'joint ' : ''}${ordinal(rank)}`,
   };
 }

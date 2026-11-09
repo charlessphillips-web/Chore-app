@@ -3,12 +3,18 @@ import { Linking, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import {
-  acceptCounter, acceptOffer, cancelOffer, counterOffer, createOffer, declineCounter, markOfferPaid,
+  acceptCounter, acceptOffer, cancelOffer, counterOffer, createOffer, declineCounter, markOfferPaid, remindPayer,
 } from '../../lib/db';
-import { formatPrice, parsePrice, payUrl, priceError } from '../../lib/money';
+import { formatPrice, PAY_LABELS, parsePrice, payUrl, priceError, type PayChoice } from '../../lib/money';
 import { effectiveStatus } from '../../lib/review';
-import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Title } from '../../components/ui';
-import { colors, space, type } from '../../components/theme';
+import { haptics } from '../../lib/haptics';
+import { PayChoicePicker, usePayChoice } from '../../components/PayChoicePicker';
+import {
+  Button, Card, confirm, DotNumber, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Title,
+} from '../../components/ui';
+import { colors, fonts, space, type } from '../../components/theme';
+
+const DAY = 24 * 60 * 60 * 1000;
 
 /**
  * One chore offer (ID = the "needs doing" request's ID). What you see
@@ -20,6 +26,7 @@ export default function OfferScreen() {
   const [price, setPrice] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pay = usePayChoice();
 
   if (!user || !profile || !house) return <Loading />;
   const me = { uid: user.uid, username: profile.username };
@@ -31,13 +38,21 @@ export default function OfferScreen() {
     setBusy(label);
     try {
       await fn();
+      haptics.success();
       after?.();
     } catch (e) {
+      haptics.warning();
       setError((e as Error).message);
     } finally {
       setBusy(null);
     }
   }
+  const withPay = (fn: (p: PayChoice) => Promise<unknown>) => () => {
+    const c = pay.check();
+    if ('error' in c) return setError(c.error);
+    return fn(c);
+  };
+  const priceBox = <PriceInput value={price} onChange={(v) => { setPrice(v); setError(null); }} />;
 
   // ---- No offer yet: the person whose turn it is sets a price ----
   if (!offer) {
@@ -54,21 +69,19 @@ export default function OfferScreen() {
     };
     return (
       <Screen edges={['left', 'right']}>
-        <Stack.Screen options={{ title: 'Pay someone to do it' }} />
+        <Stack.Screen options={{ title: 'PAY SOMEONE TO DO IT' }} />
         <Title>{request.choreName}</Title>
         <Subtitle>
           Offer your housemates money to do this for you. They can accept your price or make one counter offer each.
         </Subtitle>
-        <Card>
-          <Text style={type.small}>
-            You still get the leaderboard point, once it&apos;s been checked and you&apos;ve paid. You pay them directly
-            (bank transfer, Monzo, PayPal or cash). Choreboard never holds money.
-          </Text>
-        </Card>
         <Label>Your price</Label>
-        <PriceInput value={price} onChange={(v) => { setPrice(v); setError(null); }} />
+        {priceBox}
+        <Text style={type.small}>
+          You get the leaderboard point once it&apos;s been checked and you&apos;ve paid. You pay them directly —
+          Choreboard never holds money.
+        </Text>
         <ErrorText>{error}</ErrorText>
-        <Button title="Send offer" icon="send" onPress={send} loading={busy === 'send'} disabled={!price.trim()} />
+        <Button title="Send offer" onPress={send} loading={busy === 'send'} disabled={!price.trim()} />
       </Screen>
     );
   }
@@ -79,21 +92,23 @@ export default function OfferScreen() {
   const pending = Object.entries(offer.counters).filter(([uid]) => !offer.declined.includes(uid));
   const log = logs.find((l) => l.id === offer.logId);
   const logStatus = log ? effectiveStatus(log) : null;
-  const doer = members.find((m) => m.uid === offer.doerUid);
-  const price$ = formatPrice(offer.agreedPrice ?? offer.price);
+  const checked = logStatus === 'verified' || logStatus === 'auto_verified';
+  const amount = offer.agreedPrice ?? offer.price;
+  const price$ = formatPrice(amount);
+  const now = new Date().getTime();
+  const canRemind = amIDoer && checked && !!log && now - log.at > 2 * DAY
+    && (!offer.remindedAt || now - offer.remindedAt > DAY);
 
   return (
     <Screen edges={['left', 'right']}>
-      <Stack.Screen options={{ title: 'Chore offer' }} />
-      <Title>{offer.choreName}</Title>
-      <View style={styles.priceRow}>
-        <Text style={styles.price}>{price$}</Text>
-        <Text style={type.small}>
-          {offer.status === 'open'
-            ? mine ? 'Your offer' : `${offer.fromName} will pay`
-            : mine ? `You're paying ${offer.doerName}` : amIDoer ? `${offer.fromName} is paying you` : `${offer.fromName} → ${offer.doerName}`}
-        </Text>
-      </View>
+      <Stack.Screen options={{ title: 'CHORE OFFER' }} />
+      <Text style={type.label}>{offer.choreName}</Text>
+      <DotNumber value={price$} size={64} />
+      <Text style={type.small}>
+        {offer.status === 'open'
+          ? mine ? 'Your offer' : `${offer.fromName} will pay`
+          : mine ? `You're paying ${offer.doerName}` : amIDoer ? `${offer.fromName} is paying you` : `${offer.fromName} → ${offer.doerName}`}
+      </Text>
 
       {/* ---- Open: waiting for someone to take it ---- */}
       {offer.status === 'open' && mine && (
@@ -104,6 +119,7 @@ export default function OfferScreen() {
             <Card key={uid}>
               <Text style={type.body}>
                 {c.name} will do it for <Text style={{ fontWeight: '700' }}>{formatPrice(c.price)}</Text>
+                <Text style={type.small}>{c.pay ? `  · wants ${PAY_LABELS[c.pay.method]}` : ''}</Text>
               </Text>
               <View style={styles.pair}>
                 <Button title="Decline" variant="secondary" style={{ flex: 1 }} loading={busy === `no${uid}`} disabled={!!busy}
@@ -129,9 +145,13 @@ export default function OfferScreen() {
 
       {offer.status === 'open' && !mine && (
         <>
-          <Subtitle>{offer.fromName} will pay {formatPrice(offer.price)} for someone to do this. You&apos;ll be paid once it&apos;s been checked.</Subtitle>
-          <Button title={`Do it for ${formatPrice(offer.price)}`} icon="checkmark" loading={busy === 'accept'} disabled={!!busy}
-            onPress={() => run('accept', () => acceptOffer(house.id, offer, me, members))} />
+          <Subtitle>
+            {offer.fromName} will pay {formatPrice(offer.price)} for someone to do this. You get paid once it&apos;s been
+            checked; {offer.fromName} keeps the leaderboard point.
+          </Subtitle>
+          <PayChoicePicker state={pay} />
+          <Button title={`Do it for ${formatPrice(offer.price)}`} loading={busy === 'accept'} disabled={!!busy}
+            onPress={withPay((p) => run('accept', () => acceptOffer(house.id, offer, me, p, members)))} />
           <Label>Or make a counter offer</Label>
           {myCounter ? (
             <Card>
@@ -144,13 +164,13 @@ export default function OfferScreen() {
           ) : (
             <>
               <Text style={type.small}>You can only make one counter offer, so make it count.</Text>
-              <PriceInput value={price} onChange={(v) => { setPrice(v); setError(null); }} />
+              {priceBox}
               <Button title="Send counter offer" variant="secondary" loading={busy === 'counter'} disabled={!!busy || !price.trim()}
-                onPress={() => {
+                onPress={withPay((p) => {
                   const err = priceError(price);
-                  if (err) return setError(err);
-                  run('counter', () => counterOffer(house.id, offer, me, parsePrice(price)!, members), () => setPrice(''));
-                }} />
+                  if (err) return Promise.resolve(setError(err));
+                  return run('counter', () => counterOffer(house.id, offer, me, parsePrice(price)!, p, members), () => setPrice(''));
+                })} />
             </>
           )}
         </>
@@ -175,25 +195,26 @@ export default function OfferScreen() {
             <Text style={type.body}>
               {logStatus === 'rejected'
                 ? `It was sent back, so ${amIDoer ? 'you need' : `${offer.doerName} needs`} to redo it first.`
-                : logStatus === 'verified' || logStatus === 'auto_verified'
+                : checked
                   ? `${amIDoer ? 'You' : offer.doerName} did it and it's been checked.`
                   : `${amIDoer ? 'You' : offer.doerName} did it. Waiting for a housemate to check the photo (or 24 hours).`}
             </Text>
           </Card>
-          {mine && (logStatus === 'verified' || logStatus === 'auto_verified') && (
+          {mine && checked && (
             <>
               <Label>Pay {offer.doerName}</Label>
-              {doer?.payLink ? (
-                <Button title={`Pay ${price$} with ${doer.payLink.includes('paypal') ? 'PayPal' : 'Monzo'}`} icon="card-outline" variant="secondary"
-                  onPress={() => Linking.openURL(payUrl(doer.payLink!, offer.agreedPrice!, `Choreboard: ${offer.choreName}`))} />
+              {offer.doerPay && offer.doerPay.method !== 'cash' && offer.doerPay.link ? (
+                <>
+                  <Text style={type.small}>{offer.doerName} asked to be paid by {PAY_LABELS[offer.doerPay.method]}.</Text>
+                  <Button title={`Pay ${price$} with ${PAY_LABELS[offer.doerPay.method]}`} icon="card-outline" variant="secondary"
+                    onPress={() => Linking.openURL(payUrl(offer.doerPay!.link!, amount, `Choreboard: ${offer.choreName}`))} />
+                </>
               ) : (
-                <Text style={type.small}>
-                  {offer.doerName} hasn&apos;t added a Monzo or PayPal link, so pay them by bank transfer or cash.
-                </Text>
+                <Text style={type.small}>{offer.doerName} asked for cash. Pay them in person.</Text>
               )}
               <Button title={`I've paid ${offer.doerName}`} icon="checkmark-done" loading={busy === 'paid'} disabled={!!busy}
                 onPress={async () => {
-                  if (await confirm(`Paid ${offer.doerName} ${price$}?`, 'This closes the offer and gives you the point for this chore.', "I've paid")) {
+                  if (await confirm(`Paid ${offer.doerName} ${price$}?`, 'This closes the deal and gives you the point for this chore.', "I've paid")) {
                     run('paid', () => markOfferPaid(house, offer, members), () => {
                       notify('Done', 'Thanks! The chore counts for you now.');
                       router.back();
@@ -202,7 +223,18 @@ export default function OfferScreen() {
                 }} />
             </>
           )}
-          {amIDoer && <Text style={type.small}>{offer.fromName} will pay you {price$} once it&apos;s checked. You&apos;ll get a notification.</Text>}
+          {amIDoer && (
+            <>
+              <Text style={type.small}>
+                {offer.fromName} will pay you {price$}
+                {offer.doerPay ? ` by ${PAY_LABELS[offer.doerPay.method]}` : ''} once it&apos;s checked. You&apos;ll get a notification.
+              </Text>
+              {canRemind && (
+                <Button title={`Remind ${offer.fromName}`} icon="notifications-outline" variant="secondary" loading={busy === 'remind'} disabled={!!busy}
+                  onPress={() => run('remind', () => remindPayer(house.id, offer, members), () => notify('Sent', `${offer.fromName} has been reminded.`))} />
+              )}
+            </>
+          )}
         </>
       )}
       <ErrorText>{error}</ErrorText>
@@ -220,7 +252,7 @@ function PriceInput({ value, onChange }: { value: string; onChange: (v: string) 
         placeholder="3.00"
         keyboardType="decimal-pad"
         accessibilityLabel="Price in pounds"
-        style={{ flex: 1 }}
+        style={{ flex: 1, fontFamily: fonts.mono }}
         maxLength={6}
       />
     </View>
@@ -228,9 +260,7 @@ function PriceInput({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 const styles = StyleSheet.create({
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  price: { fontSize: 34, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
   pair: { flexDirection: 'row', gap: space.sm },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  pound: { fontSize: 22, fontWeight: '600', color: colors.muted },
+  pound: { fontSize: 22, fontFamily: fonts.mono, color: colors.muted },
 });

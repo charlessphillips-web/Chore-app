@@ -112,14 +112,12 @@ service cloud.firestore {
         allow create: if signedIn() && me() == uid
           && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.joinCode)).data.houseId == houseId
           && request.resource.data.stats == {};
-        // Your own doc: name, push token, payment link, and your score up by at most 1.
+        // Your own doc: name, push token, profile picture, and your score up by at most 1.
         allow update: if signedIn() && me() == uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'payLink'])
+               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar'])
           && ownStatsOk()
-          && (request.resource.data.get('payLink', null) == null
-              || (request.resource.data.payLink is string
-                  && request.resource.data.payLink.matches('^https://(monzo[.]me|paypal[.]me)/[A-Za-z0-9._-]{1,40}$')));
+          && validAvatar(request.resource.data.get('avatar', null));
         // A housemate rejecting your chore takes exactly 1 off that chore.
         allow update: if isMember(houseId) && me() != uid && isRejectAdjustment(houseId, uid);
         // Leave yourself, or be removed by the admin.
@@ -191,6 +189,7 @@ service cloud.firestore {
           && request.resource.data.counters == {}
           && request.resource.data.declined == []
           && request.resource.data.doerUid == null
+          && request.resource.data.get('doerPay', null) == null
           && request.resource.data.logId == null
           && request.resource.data.paid == false
           && request.resource.data.closed == false;
@@ -232,29 +231,50 @@ service cloud.firestore {
             && h.customEnd > h.customStart);
     }
 
+    // Profile picture: a small photo, or a drawn character (numbers pick each part).
+    function validAvatar(a) {
+      return a == null
+        || (a is map && a.kind == 'photo' && a.keys().hasOnly(['kind', 'data']) && a.data is string && a.data.size() < 60000)
+        || (a is map && a.kind == 'character'
+            && a.keys().hasOnly(['kind', 'skin', 'hair', 'hairColor', 'eyes', 'mouth', 'extra', 'bg'])
+            && part(a.skin, 6) && part(a.hair, 7) && part(a.hairColor, 6) && part(a.eyes, 4)
+            && part(a.mouth, 4) && part(a.extra, 4) && part(a.bg, 6));
+    }
+    function part(v, n) { return v is int && v >= 0 && v < n; }
+
     // ---- Chore offers ----
 
     function validPrice(p) { return p is int && p >= 50 && p <= 5000; }
 
+    // How the doer wants paying for one deal: a Monzo/PayPal link, or cash.
+    function validPay(p) {
+      return p is map && p.keys().hasOnly(['method', 'link'])
+        && ((p.method == 'cash' && p.get('link', null) == null)
+            || (p.method == 'monzo' && p.link is string && p.link.matches('^https://monzo[.]me/[A-Za-z0-9._-]{1,40}$'))
+            || (p.method == 'paypal' && p.link is string && p.link.matches('^https://paypal[.]me/[A-Za-z0-9._-]{1,40}$')));
+    }
+
     function offerUpdateOk(o, n, houseId, offerId) {
       let keys = n.diff(o).affectedKeys();
-      let agreeKeys = ['status', 'doerUid', 'doerName', 'agreedPrice', 'agreedAt'];
+      let agreeKeys = ['status', 'doerUid', 'doerName', 'agreedPrice', 'agreedAt', 'doerPay'];
       return
         // A housemate accepts the asking price.
         (me() != o.fromUid && o.status == 'open' && keys.hasOnly(agreeKeys)
-          && n.status == 'agreed' && n.doerUid == me() && n.agreedPrice == o.price)
+          && n.status == 'agreed' && n.doerUid == me() && n.agreedPrice == o.price && validPay(n.doerPay))
         // A housemate makes their one counter offer.
         || (me() != o.fromUid && o.status == 'open' && keys.hasOnly(['counters'])
           && n.counters.diff(o.counters).affectedKeys().hasOnly([me()])
           && !(me() in o.counters)
-          && validPrice(n.counters[me()].price) && n.counters[me()].name is string)
+          && validPrice(n.counters[me()].price) && n.counters[me()].name is string
+          && validPay(n.counters[me()].pay))
         // The offerer declines a counter offer.
         || (me() == o.fromUid && o.status == 'open' && keys.hasOnly(['declined'])
           && n.declined.hasAll(o.declined) && n.declined.size() == o.declined.size() + 1)
         // The offerer accepts a counter offer.
         || (me() == o.fromUid && o.status == 'open' && keys.hasOnly(agreeKeys)
           && n.status == 'agreed' && n.doerUid in o.counters && !(n.doerUid in o.declined)
-          && n.agreedPrice == o.counters[n.doerUid].price)
+          && n.agreedPrice == o.counters[n.doerUid].price
+          && n.doerPay == o.counters[n.doerUid].get('pay', null))
         // The offerer withdraws it before anyone agrees.
         || (me() == o.fromUid && o.status == 'open' && keys.hasOnly(['status', 'closed'])
           && n.status == 'cancelled' && n.closed == true)
@@ -263,6 +283,10 @@ service cloud.firestore {
           && n.status == 'done'
           && getAfter(logPath(houseId, n.logId)).data.userId == me()
           && getAfter(logPath(houseId, n.logId)).data.offerId == offerId)
+        // The doer nudges the offerer to pay, at most once a day.
+        || (me() == o.doerUid && o.status == 'done' && keys.hasOnly(['remindedAt'])
+          && n.remindedAt == request.time
+          && (o.get('remindedAt', null) == null || request.time > o.remindedAt + duration.value(20, 'h')))
         // The offerer has paid.
         || (me() == o.fromUid && o.status == 'done' && keys.hasOnly(['paid', 'paidAt', 'closed'])
           && n.paid == true && n.closed == true);

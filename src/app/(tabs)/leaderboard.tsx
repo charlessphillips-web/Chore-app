@@ -2,8 +2,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
 import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
-import { Loading, Screen, Title } from '../../components/ui';
-import { colors, radius, space, type } from '../../components/theme';
+import { DotNumber, Loading, Screen, Title } from '../../components/ui';
+import { Avatar } from '../../components/Avatar';
+import { colors, fonts, radius, space, type } from '../../components/theme';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -34,8 +35,14 @@ export default function Leaderboard() {
 
       <View style={styles.period}>
         <View style={styles.periodTop}>
-          <Text style={styles.periodName}>{periodLabel(now, rule)}</Text>
-          <Text style={type.small}>{daysLeft} {daysLeft === 1 ? 'day' : 'days'} left</Text>
+          <View style={{ gap: 2 }}>
+            <Text style={type.label}>Period</Text>
+            <Text style={styles.periodName}>{periodLabel(now, rule)}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <DotNumber value={String(daysLeft).padStart(2, '0')} size={40} />
+            <Text style={type.label}>{daysLeft === 1 ? 'Day left' : 'Days left'}</Text>
+          </View>
         </View>
         <View style={styles.track}>
           <View style={[styles.trackFill, { width: `${Math.min(100, Math.round(elapsed * 100))}%` }]} />
@@ -50,26 +57,26 @@ export default function Leaderboard() {
       <View style={styles.table}>
         <View style={[styles.row, styles.head]}>
           <Text style={[styles.headText, styles.pos]}>#</Text>
-          <Text style={[styles.headText, { flex: 1 }]}>Housemate</Text>
+          <Text style={[styles.headText, { flex: 1, marginLeft: 46 }]}>Housemate</Text>
           <Text style={[styles.headText, styles.score]}>Chores</Text>
         </View>
         {ranked.map((m, i) => {
           const me = m.uid === user.uid;
           return (
             <View key={m.uid} style={[styles.row, i > 0 && styles.divider, me && styles.meRow]}>
-              {me && <View style={styles.meMark} />}
-              <Text style={[styles.posText, styles.pos]}>{position(i)}</Text>
+              <Text style={[styles.posText, styles.pos]}>{String(position(i)).padStart(2, '0')}</Text>
+              <Avatar avatar={m.avatar} name={m.username} size={34} />
               <View style={{ flex: 1, gap: 6 }}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {m.username}
-                  {me ? <Text style={type.small}>  You</Text> : null}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.name} numberOfLines={1}>{m.username}</Text>
+                  {me && <View style={styles.youDot} accessibilityLabel="You" />}
+                </View>
                 <View style={styles.bar}>
-                  <View style={[styles.barFill, { width: `${(m.totalCompleted / top) * 100}%` }, me && { backgroundColor: colors.primaryBright }]} />
+                  <View style={[styles.barFill, { width: `${(m.totalCompleted / top) * 100}%` }, me && { backgroundColor: colors.text }]} />
                 </View>
                 {nextUp?.uid === m.uid && <Text style={styles.next}>Next up for chores</Text>}
               </View>
-              <Text style={[styles.scoreText, styles.score]}>{m.totalCompleted}</Text>
+              <Text style={[styles.scoreText, styles.score]}>{String(m.totalCompleted).padStart(2, '0')}</Text>
             </View>
           );
         })}
@@ -85,23 +92,23 @@ export default function Leaderboard() {
 
 const styles = StyleSheet.create({
   period: { gap: space.sm, paddingBottom: space.xs },
-  periodTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  periodTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   periodName: { fontSize: 17, fontWeight: '600', color: colors.text },
-  track: { height: 4, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
-  trackFill: { height: '100%', backgroundColor: colors.muted },
-  table: { borderRadius: radius, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, overflow: 'hidden' },
+  track: { height: 2, borderRadius: 1, backgroundColor: colors.line, overflow: 'hidden' },
+  trackFill: { height: '100%', backgroundColor: colors.text },
+  table: { borderRadius: radius, backgroundColor: colors.card, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, gap: 12 },
-  head: { paddingVertical: 10, backgroundColor: colors.cardRaised },
-  headText: { fontSize: 11, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
-  divider: { borderTopWidth: 1, borderTopColor: colors.border },
-  meRow: { backgroundColor: 'rgba(147,129,242,0.06)' },
-  meMark: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, backgroundColor: colors.primaryBright },
-  pos: { width: 20 },
-  posText: { fontSize: 15, fontWeight: '600', color: colors.muted, fontVariant: ['tabular-nums'] },
+  head: { paddingVertical: 10 },
+  headText: { fontSize: 10, fontFamily: fonts.mono, color: colors.muted, textTransform: 'uppercase', letterSpacing: 1.2 },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  meRow: { backgroundColor: colors.cardRaised },
+  youDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.you },
+  pos: { width: 24 },
+  posText: { fontSize: 13, fontFamily: fonts.mono, color: colors.muted },
   name: { fontSize: 16, fontWeight: '600', color: colors.text },
-  bar: { height: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
+  bar: { height: 2, borderRadius: 1, backgroundColor: colors.line, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: colors.muted },
   next: { fontSize: 12, color: colors.muted },
   score: { width: 56, textAlign: 'right' },
-  scoreText: { fontSize: 20, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  scoreText: { fontSize: 30, fontFamily: fonts.dot, color: colors.text },
 });

@@ -5,12 +5,13 @@ export default function SettingsLayout() {
   return (
     <Stack screenOptions={{ ...darkHeader, headerBackTitle: 'Settings' }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="personal" options={{ title: 'Personal details' }} />
-      <Stack.Screen name="chores" options={{ title: 'Chores' }} />
-      <Stack.Screen name="housemates" options={{ title: 'Housemates' }} />
-      <Stack.Screen name="house-details" options={{ title: 'House details' }} />
+      <Stack.Screen name="personal" options={{ title: 'PERSONAL DETAILS' }} />
+      <Stack.Screen name="chores" options={{ title: 'CHORES' }} />
+      <Stack.Screen name="housemates" options={{ title: 'HOUSEMATES' }} />
+      <Stack.Screen name="house-details" options={{ title: 'HOUSE DETAILS' }} />
       <Stack.Screen name="feedback" />
-      <Stack.Screen name="inbox" options={{ title: 'Feedback inbox' }} />
+      <Stack.Screen name="inbox" options={{ title: 'FEEDBACK INBOX' }} />
+      <Stack.Screen name="avatar" options={{ title: 'PROFILE PICTURE' }} />
     </Stack>
   );
 }

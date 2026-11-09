@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Text } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
 import { deleteAccount, isAppOwner, leaveHouse } from '../../../lib/db';
-import { Button, Card, confirm, Label, Loading, notify, RowButton, Screen, Title } from '../../../components/ui';
-import { space, type } from '../../../components/theme';
+import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Screen, Title } from '../../../components/ui';
+import { Avatar } from '../../../components/Avatar';
+import { haptics } from '../../../lib/haptics';
+import { colors, fonts, space, type } from '../../../components/theme';
 
 export default function SettingsIndex() {
-  const { user, house, members, isAdmin } = useApp();
+  const { user, profile, house, members, isAdmin } = useApp();
+  const [hapticsOn, setHapticsOn] = useState(haptics.isEnabled());
   const [busy, setBusy] = useState<'leave' | 'delete' | null>(null);
   // Owner = you (the app's creator). Shows the Feedback inbox. Set up in the Firebase console.
   const [ownerOf, setOwnerOf] = useState<string | null>(null);
@@ -57,47 +60,95 @@ export default function SettingsIndex() {
     }
   }
 
+  const myAvatar = members.find((m) => m.uid === user.uid)?.avatar ?? null;
+
   return (
     <Screen>
       <Title>Settings</Title>
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Profile picture"
+        onPress={() => {
+          haptics.tap();
+          router.push('/settings/avatar');
+        }}
+        style={styles.me}
+      >
+        <Avatar avatar={myAvatar} name={profile?.username ?? '?'} size={64} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={type.heading}>{profile?.username}</Text>
+          <Text style={type.small}>{myAvatar ? 'Change your picture' : 'Add a photo or character'}</Text>
+        </View>
+        <Icon name="arrow-forward" size={16} color={colors.muted} />
+      </Pressable>
+
       {isOwner && (
         <>
           <Label>App owner</Label>
-          <RowButton icon="mail-outline" title="Feedback inbox" subtitle="Bug reports and suggestions" onPress={() => router.push('/settings/inbox')} />
+          <ListGroup>
+            <ListRow icon="mail-outline" title="Feedback inbox" subtitle="Bug reports and suggestions" onPress={() => router.push('/settings/inbox')} />
+          </ListGroup>
         </>
       )}
 
       <Label>You</Label>
-      <RowButton icon="person-outline" title="Personal details" subtitle="Username, date of birth, university" onPress={() => router.push('/settings/personal')} />
+      <ListGroup>
+        <ListRow icon="person-outline" title="Personal details" subtitle="Username, date of birth, university" onPress={() => router.push('/settings/personal')} />
+        <ListRow
+          icon="phone-portrait-outline"
+          title="Haptics"
+          subtitle="Gentle vibration when you tap (app only)"
+          right={
+            <Switch
+              value={hapticsOn}
+              onValueChange={(v) => {
+                haptics.setEnabled(v);
+                setHapticsOn(v);
+                haptics.select();
+              }}
+              trackColor={{ true: colors.text, false: colors.line }}
+              thumbColor={hapticsOn ? colors.inverse : colors.muted}
+              {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
+              accessibilityLabel="Haptics"
+            />
+          }
+        />
+      </ListGroup>
 
       {isAdmin ? (
         <>
           <Label>House admin</Label>
-          <RowButton icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
-          <RowButton icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
-          <RowButton icon="image-outline" title="House details" subtitle="Name, leaderboard reset, wallpaper" onPress={() => router.push('/settings/house-details')} />
+          <ListGroup>
+            <ListRow icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
+            <ListRow icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
+            <ListRow icon="options-outline" title="House details" subtitle="Name, leaderboard reset, wallpaper" onPress={() => router.push('/settings/house-details')} />
+          </ListGroup>
         </>
       ) : (
-        <Card>
-          <Text style={type.small}>
-            {admin ? `${admin.username} is the house admin` : 'Your house admin'} and manages the chores and housemates.
-          </Text>
-        </Card>
+        <Text style={type.small}>
+          {admin ? `${admin.username} is the house admin` : 'Your house admin'} and manages the chores and housemates.
+        </Text>
       )}
 
       <Label>Help</Label>
-      <RowButton icon="information-circle-outline" title="How Choreboard works" onPress={() => router.push('/how-it-works')} />
-      <RowButton icon="bug-outline" title="Report a bug" subtitle="Something not working? Tell us" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'bug' } })} />
-      <RowButton icon="bulb-outline" title="Make a suggestion" subtitle="Ideas to make Choreboard better" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'suggestion' } })} />
+      <ListGroup>
+        <ListRow icon="information-circle-outline" title="How Choreboard works" onPress={() => router.push('/how-it-works')} />
+        <ListRow icon="bug-outline" title="Report a bug" subtitle="Something not working? Tell us" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'bug' } })} />
+        <ListRow icon="bulb-outline" title="Make a suggestion" subtitle="Ideas to make Choreboard better" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'suggestion' } })} />
+      </ListGroup>
 
       <Label>Account</Label>
       <Button title="Leave house" icon="exit-outline" variant="secondary" onPress={leave} loading={busy === 'leave'} disabled={!!busy} />
       <Button title="Delete my account" icon="trash-outline" variant="danger" onPress={del} loading={busy === 'delete'} disabled={!!busy} />
 
-      <Text selectable style={[type.small, { textAlign: 'center', marginTop: space.lg }]}>
+      <Text selectable style={[type.small, { textAlign: 'center', marginTop: space.lg, fontFamily: fonts.mono, fontSize: 11 }]}>
         Account ID: {user.uid}
       </Text>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  me: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+});

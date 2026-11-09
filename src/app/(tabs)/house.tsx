@@ -4,7 +4,8 @@ import { useApp } from '../../context/AppContext';
 import { jpegUri } from '../../lib/photos';
 import { Button, Card, Empty, HouseName, Icon, Label, Loading, Screen, timeAgo } from '../../components/ui';
 import { StatusBadge } from '../../components/StatusBadge';
-import { colors, space, type } from '../../components/theme';
+import { Avatar } from '../../components/Avatar';
+import { colors, fonts, space, type } from '../../components/theme';
 
 export default function HouseTab() {
   const { user, house, members, logs } = useApp();
@@ -20,7 +21,7 @@ export default function HouseTab() {
 
       <Card style={{ alignItems: 'center' }}>
         <Text style={type.label}>House code</Text>
-        <Text style={styles.code} selectable>{house.code}</Text>
+        <Text style={styles.code} selectable accessibilityLabel={house.code}>{house.code}</Text>
         <Button title="Share code" icon="share-outline" variant="secondary" onPress={share} style={{ alignSelf: 'stretch' }} />
       </Card>
 
@@ -28,6 +29,7 @@ export default function HouseTab() {
       <Card style={{ paddingVertical: space.sm }}>
         {sorted.map((m, i) => (
           <View key={m.uid} style={[styles.row, i < sorted.length - 1 && styles.divider]}>
+            <Avatar avatar={m.avatar} name={m.username} size={34} />
             <Text style={[type.body, { flex: 1 }]}>
               {m.username}{m.uid === user.uid ? ' (you)' : ''}
             </Text>
@@ -73,9 +75,9 @@ export default function HouseTab() {
 }
 
 const styles = StyleSheet.create({
-  code: { fontSize: 38, fontWeight: '700', letterSpacing: 8, color: colors.text, marginVertical: space.sm },
+  code: { fontSize: 46, fontFamily: fonts.dot, letterSpacing: 6, color: colors.text, marginVertical: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 12 },
-  divider: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  admin: { fontSize: 11, fontWeight: '700', color: colors.primaryBright, letterSpacing: 1 },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  admin: { fontSize: 10, fontFamily: fonts.mono, color: colors.muted, letterSpacing: 1.2 },
   thumb: { width: 52, height: 52, borderRadius: 8 },
 });

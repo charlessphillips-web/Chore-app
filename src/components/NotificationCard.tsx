@@ -30,9 +30,9 @@ export function NotificationCard() {
   }
 
   return (
-    <Card style={{ borderColor: colors.primaryBright }}>
+    <Card>
       <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
-        <Icon name="notifications" size={24} color={colors.primaryBright} />
+        <Icon name="notifications-outline" size={22} color={colors.text} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={type.heading}>Turn on notifications</Text>
           <Text style={[type.small, { fontSize: 15, lineHeight: 21 }]}>

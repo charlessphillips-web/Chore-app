@@ -1,13 +1,7 @@
 import { router } from 'expo-router';
-import { HowItWorks } from '../components/HowItWorks';
-import { Button, Screen } from '../components/ui';
+import { StoryIntro } from '../components/StoryIntro';
 
 /** "How Choreboard works", opened from Settings. */
 export default function HowItWorksScreen() {
-  return (
-    <Screen edges={['left', 'right']}>
-      <HowItWorks />
-      <Button title="Got it" onPress={() => router.back()} />
-    </Screen>
-  );
+  return <StoryIntro showWelcome={false} finishLabel={'Hold to\nclose'} onFinish={() => router.back()} />;
 }

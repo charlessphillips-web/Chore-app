@@ -369,9 +369,11 @@ async function needsRequest(by, to, id) {
 }
 const offerData = (from, id, price = 300) => ({
   requestId: id, choreKey: 'bins', choreName: 'Bins', fromUid: from, fromName: from, price, status: 'open',
-  counters: {}, declined: [], doerUid: null, doerName: null, agreedPrice: null, logId: null, paid: false, closed: false,
+  counters: {}, declined: [], doerUid: null, doerName: null, agreedPrice: null, doerPay: null, logId: null, paid: false, closed: false,
   createdAt: serverTimestamp(),
 });
+const MONZO = { method: 'monzo', link: 'https://monzo.me/sam' };
+const CASH = { method: 'cash', link: null };
 const offerRef = (uid, id) => doc(db(uid), 'houses', 'h1', 'offers', id);
 // Mirrors logChore() with an agreed offer: no score for the doer, offer -> done.
 async function logForOffer(uid, offerId, creditTo, requestId = null) {
@@ -398,21 +400,23 @@ test('offers: offer, counters, accept, do it for someone, pay', async () => {
   await assertSucceeds(setDoc(offerRef('alice', 'r1'), offerData('alice', 'r1')));
 
   // One counter offer each; the offerer can't counter their own.
-  await assertSucceeds(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 400 } }));
-  await assertFails(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 350 } }));
-  await assertFails(updateDoc(offerRef('alice', 'r1'), { 'counters.alice': { name: 'Alice', price: 100 } }));
-  await assertFails(updateDoc(offerRef('jo', 'r1'), { 'counters.sam': { name: 'Sam', price: 9999 } }));
+  await assertFails(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 400, pay: { method: 'monzo', link: 'https://evil.com/x' } } }));
+  await assertSucceeds(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 400, pay: MONZO } }));
+  await assertFails(updateDoc(offerRef('sam', 'r1'), { 'counters.sam': { name: 'Sam', price: 350, pay: MONZO } }));
+  await assertFails(updateDoc(offerRef('alice', 'r1'), { 'counters.alice': { name: 'Alice', price: 100, pay: CASH } }));
+  await assertFails(updateDoc(offerRef('jo', 'r1'), { 'counters.sam': { name: 'Sam', price: 9999, pay: CASH } }));
 
   // Alice declines Sam, then can't accept him; Jo counters and Alice accepts Jo.
   await assertFails(updateDoc(offerRef('sam', 'r1'), { declined: ['sam'] }));
   await assertSucceeds(updateDoc(offerRef('alice', 'r1'), { declined: ['sam'] }));
-  const agree = (uid, price) => ({ status: 'agreed', doerUid: uid, doerName: uid, agreedPrice: price, agreedAt: serverTimestamp() });
-  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('sam', 400)));
-  await assertSucceeds(updateDoc(offerRef('jo', 'r1'), { 'counters.jo': { name: 'Jo', price: 350 } }));
-  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('jo', 100)));
-  await assertSucceeds(updateDoc(offerRef('alice', 'r1'), agree('jo', 350)));
+  const agree = (uid, price, pay) => ({ status: 'agreed', doerUid: uid, doerName: uid, agreedPrice: price, doerPay: pay, agreedAt: serverTimestamp() });
+  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('sam', 400, MONZO)));
+  await assertSucceeds(updateDoc(offerRef('jo', 'r1'), { 'counters.jo': { name: 'Jo', price: 350, pay: CASH } }));
+  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('jo', 100, CASH)));
+  await assertFails(updateDoc(offerRef('alice', 'r1'), agree('jo', 350, MONZO)));
+  await assertSucceeds(updateDoc(offerRef('alice', 'r1'), agree('jo', 350, CASH)));
   // Too late for anyone else.
-  await assertFails(updateDoc(offerRef('sam', 'r1'), agree('sam', 300)));
+  await assertFails(updateDoc(offerRef('sam', 'r1'), agree('sam', 300, CASH)));
 
   // Only Jo can log it for Alice; it doesn't add to Jo's score.
   await assertFails(logForOffer('sam', 'r1', 'alice', 'r1'));
@@ -433,6 +437,11 @@ test('offers: offer, counters, accept, do it for someone, pay', async () => {
   await assertSucceeds(b.commit());
   await assertSucceeds(logForOffer('jo', 'r1', 'alice', 'redo1'));
 
+  // Jo can nudge Alice once a day; nobody else can.
+  await assertSucceeds(updateDoc(offerRef('jo', 'r1'), { remindedAt: serverTimestamp() }));
+  await assertFails(updateDoc(offerRef('jo', 'r1'), { remindedAt: serverTimestamp() }));
+  await assertFails(updateDoc(offerRef('sam', 'r1'), { remindedAt: serverTimestamp() }));
+
   // Paying: only Alice, and she gets the point.
   await assertFails(updateDoc(offerRef('jo', 'r1'), { paid: true, paidAt: serverTimestamp(), closed: true }));
   const fa = db('alice');
@@ -445,26 +454,37 @@ test('offers: offer, counters, accept, do it for someone, pay', async () => {
   assert.equal((await stats('alice')).total, 1);
 });
 
-test('offers: withdraw, accept the asking price, payment links', async () => {
+test('offers: withdraw, accept the asking price', async () => {
   await createHouse('alice');
   await joinHouse('sam');
   await needsRequest('sam', 'alice', 'r2');
   await assertSucceeds(setDoc(offerRef('alice', 'r2'), offerData('alice', 'r2')));
   await assertFails(updateDoc(offerRef('sam', 'r2'), { status: 'cancelled', closed: true }));
   await assertSucceeds(updateDoc(offerRef('alice', 'r2'), { status: 'cancelled', closed: true }));
-  await assertFails(updateDoc(offerRef('sam', 'r2'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 300, agreedAt: serverTimestamp() }));
+  await assertFails(updateDoc(offerRef('sam', 'r2'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 300, doerPay: CASH, agreedAt: serverTimestamp() }));
 
   await needsRequest('sam', 'alice', 'r3');
   await assertSucceeds(setDoc(offerRef('alice', 'r3'), offerData('alice', 'r3', 250)));
-  await assertFails(updateDoc(offerRef('sam', 'r3'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 100, agreedAt: serverTimestamp() }));
-  await assertSucceeds(updateDoc(offerRef('sam', 'r3'), { status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: 250, agreedAt: serverTimestamp() }));
+  const take = (price, pay) => ({ status: 'agreed', doerUid: 'sam', doerName: 'Sam', agreedPrice: price, doerPay: pay, agreedAt: serverTimestamp() });
+  await assertFails(updateDoc(offerRef('sam', 'r3'), take(100, MONZO)));
+  await assertFails(updateDoc(offerRef('sam', 'r3'), take(250, null)));
+  await assertFails(updateDoc(offerRef('sam', 'r3'), take(250, { method: 'paypal', link: 'https://monzo.me/sam' })));
+  await assertSucceeds(updateDoc(offerRef('sam', 'r3'), take(250, MONZO)));
+});
 
-  const me = (uid) => doc(db(uid), 'houses', 'h1', 'members', uid);
-  await assertSucceeds(updateDoc(me('sam'), { payLink: 'https://monzo.me/sam' }));
-  await assertSucceeds(updateDoc(me('sam'), { payLink: 'https://paypal.me/sam.99' }));
-  await assertSucceeds(updateDoc(me('sam'), { payLink: null }));
-  await assertFails(updateDoc(me('sam'), { payLink: 'https://evil.com/pay' }));
-  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1', 'members', 'sam'), { payLink: 'https://monzo.me/alice' }));
+test('profile pictures: your own only, photo or valid character', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const me = (uid, who = uid) => doc(db(uid), 'houses', 'h1', 'members', who);
+  const ch = { kind: 'character', skin: 2, hair: 6, hairColor: 0, eyes: 3, mouth: 2, extra: 3, bg: 5 };
+  await assertSucceeds(updateDoc(me('sam'), { avatar: ch }));
+  await assertSucceeds(updateDoc(me('sam'), { avatar: { kind: 'photo', data: 'jpegdata' } }));
+  await assertSucceeds(updateDoc(me('sam'), { avatar: null }));
+  await assertFails(updateDoc(me('sam'), { avatar: { ...ch, hair: 7 } }));
+  await assertFails(updateDoc(me('sam'), { avatar: { ...ch, extra: 'cape' } }));
+  await assertFails(updateDoc(me('sam'), { avatar: { kind: 'photo', data: 'x'.repeat(60001) } }));
+  await assertFails(updateDoc(me('sam'), { avatar: { kind: 'gif', data: 'x' } }));
+  await assertFails(updateDoc(me('alice', 'sam'), { avatar: ch }));
 });
 
 test('sending back creates a redo for the chore-doer', async () => {

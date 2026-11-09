@@ -66,3 +66,35 @@ export async function pickFromLibrary(): Promise<string | null> {
   }
   throw new Error('That photo is too large — try another.');
 }
+
+/** A picture picked for a profile photo, before it's cropped. */
+export interface PickedImage {
+  uri: string;
+  width: number;
+  height: number;
+}
+
+/** Camera (front-facing) or photo library, for a profile picture. */
+export async function pickProfileImage(from: 'camera' | 'library'): Promise<PickedImage | null> {
+  if (from === 'camera' && Platform.OS !== 'web') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) throw new Error('Camera access is off. You can turn it on in Settings, or choose a photo instead.');
+  }
+  const result = from === 'camera'
+    ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, cameraType: ImagePicker.CameraType.front })
+    : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+  const a = result.canceled ? null : result.assets?.[0];
+  if (!a) return null;
+  return { uri: a.uri, width: a.width, height: a.height };
+}
+
+/** Crops the square the person framed in the circle, as a small JPEG (base64). */
+export async function cropProfilePhoto(
+  img: PickedImage,
+  crop: { originX: number; originY: number; width: number; height: number },
+): Promise<string> {
+  const ref = await ImageManipulator.manipulate(img.uri).crop(crop).resize({ width: 256 }).renderAsync();
+  const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.7, base64: true });
+  if (!out.base64) throw new Error('Could not process photo.');
+  return out.base64;
+}

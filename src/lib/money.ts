@@ -44,3 +44,25 @@ export function payUrl(link: string, pence: number, note: string): string {
   if (link.startsWith('https://paypal.me/')) return `${link}/${amount}GBP`;
   return `${link}/${amount}?d=${encodeURIComponent(note.slice(0, 40))}`;
 }
+
+/** How someone wants to be paid for one deal. */
+export type PayMethod = 'monzo' | 'paypal' | 'cash';
+export interface PayChoice {
+  method: PayMethod;
+  /** https://monzo.me/… or https://paypal.me/… (not for cash). */
+  link: string | null;
+}
+
+export const PAY_LABELS: Record<PayMethod, string> = { monzo: 'Monzo', paypal: 'PayPal', cash: 'Cash' };
+
+/** Checks a pay choice; returns the cleaned-up choice or an error message. */
+export function checkPayChoice(method: PayMethod, linkText: string): PayChoice | { error: string } {
+  if (method === 'cash') return { method, link: null };
+  const n = normalisePayLink(linkText);
+  if (!n) return { error: `Add your ${PAY_LABELS[method]} link, e.g. ${method === 'monzo' ? 'monzo.me' : 'paypal.me'}/yourname` };
+  if (typeof n === 'object') return n;
+  if (!n.startsWith(`https://${method === 'monzo' ? 'monzo' : 'paypal'}.me/`)) {
+    return { error: `That's not a ${PAY_LABELS[method]} link.` };
+  }
+  return { method, link: n };
+}

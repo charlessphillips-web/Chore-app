@@ -38,10 +38,11 @@
         "expo-image-picker",
         {
           "cameraPermission": "Choreboard uses your camera so you can photograph chores you have done for your housemates to check.",
-          "photosPermission": "Choreboard uses your photos so a house admin can choose a wallpaper for the house."
+          "photosPermission": "Choreboard uses your photos for your profile picture, the house wallpaper and bug report screenshots."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "scheme": "choreboard",
     "backgroundColor": "#000000",

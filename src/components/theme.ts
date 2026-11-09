@@ -1,39 +1,57 @@
-/** Choreboard colours: black background, dark purple, white. */
+/**
+ * Choreboard look: black, white and greys, minimal. Purple is only in the
+ * logo (and a tiny dot marking "you"). Labels use a mono font; big numbers
+ * (scores, prices) use a dot-matrix font.
+ */
 export const colors = {
   bg: '#000000',
-  card: '#111114',
-  cardRaised: '#1A1A1F',
-  border: '#26262D',
-  text: '#FFFFFF',
-  muted: '#9C9CA8',
-  /** Deep purple: logo, filled buttons, the Home card. */
-  primary: '#3A1C71',
-  /** Soft violet: icons and small highlights (readable on black). */
-  primaryBright: '#9381F2',
-  /** Muted purple for thin outlines on buttons and tiles. */
-  outline: '#3B3358',
-  primaryText: '#FFFFFF',
-  success: '#22C55E',
-  danger: '#F04444',
+  card: '#0E0E0E',
+  cardRaised: '#181818',
+  border: '#1F1F1F',
+  /** Hairlines between list rows and around inputs. */
+  line: '#2A2A2A',
+  text: '#F2F2F2',
+  muted: '#8E8E8E',
+  faint: '#545454',
+  /** Text on white buttons. */
+  inverse: '#000000',
+  /** White: filled buttons, selected chips, icons. */
+  primary: '#F2F2F2',
+  primaryBright: '#F2F2F2',
+  outline: '#2A2A2A',
+  primaryText: '#000000',
+  /** The only purple outside the logo: marks "you". */
+  you: '#9381F2',
+  success: '#4ADE80',
+  danger: '#FF4D4D',
   warning: '#F5A524',
 };
 
+/** Font names (loaded in app/_layout.tsx). */
+export const fonts = {
+  dot: 'Doto_800ExtraBold',
+  mono: 'SpaceMono_400Regular',
+  monoBold: 'SpaceMono_700Bold',
+};
+
 export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
-export const radius = 12;
+export const radius = 14;
 
 export const type = {
-  title: { fontSize: 28, fontWeight: '700' as const, color: colors.text, letterSpacing: -0.5 },
-  heading: { fontSize: 18, fontWeight: '700' as const, color: colors.text },
+  title: { fontSize: 30, fontWeight: '700' as const, color: colors.text, letterSpacing: -1 },
+  heading: { fontSize: 18, fontWeight: '600' as const, color: colors.text, letterSpacing: -0.3 },
   body: { fontSize: 16, color: colors.text },
-  small: { fontSize: 13, color: colors.muted },
-  label: { fontSize: 13, fontWeight: '600' as const, color: colors.muted, textTransform: 'uppercase' as const, letterSpacing: 0.8 },
+  small: { fontSize: 13, color: colors.muted, lineHeight: 18 },
+  label: { fontSize: 11, fontFamily: fonts.mono, color: colors.muted, textTransform: 'uppercase' as const, letterSpacing: 1.2 },
+  /** Big dot-matrix numbers. */
+  dot: { fontFamily: fonts.dot, color: colors.text },
 };
 
 /** Header style for stack screens. */
 export const darkHeader = {
   headerStyle: { backgroundColor: colors.bg },
   headerTintColor: colors.text,
-  headerTitleStyle: { fontWeight: '600' as const },
+  headerTitleStyle: { fontFamily: fonts.mono, fontSize: 13, letterSpacing: 1 },
   headerShadowVisible: false,
   contentStyle: { backgroundColor: colors.bg },
 };

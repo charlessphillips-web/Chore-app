@@ -30,7 +30,7 @@ test('2nd: how many to overtake the person above', () => {
 
 test('top, and joint top', () => {
   assert.deepEqual(standing([m('me', 5), m('sam', 3), m('jo', 3)], 'me'),
-    { headline: "You're top with 5 chores", hint: '2 ahead of Jo and Sam', progress: 1 });
+    { headline: "You're top with 5 chores", hint: '2 ahead of Jo and Sam', progress: 1, place: '1st' });
   assert.equal(standing([m('me', 4), m('sam', 4)], 'me').hint, '1 more to beat Sam');
 });
 

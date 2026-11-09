@@ -2,6 +2,8 @@ import type { MemberStats } from './assign';
 import type { HouseChore } from './chores';
 import type { ReviewStatus } from './review';
 import type { ResetRule } from './period';
+import type { PayChoice } from './money';
+import type { Avatar } from './avatar';
 
 export type Gender = 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
 export const GENDERS: Gender[] = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'];
@@ -40,8 +42,8 @@ export interface House {
  */
 export interface Member extends MemberStats {
   pushToken: string | null;
-  /** Their monzo.me / paypal.me link, so housemates can pay them for chores. */
-  payLink: string | null;
+  /** Profile picture: photo or drawn character (null = their initial). */
+  avatar: Avatar | null;
 }
 
 /** houses/{houseId}/logs/{id} — a completed chore. */
@@ -107,12 +109,17 @@ export interface ChoreOffer {
   price: number;
   /** open → agreed (someone's doing it) → done (photo logged) → paid. Or cancelled. */
   status: 'open' | 'agreed' | 'done' | 'cancelled';
-  counters: Record<string, { name: string; price: number }>;
+  /** Counter offers, each with how that person wants to be paid. */
+  counters: Record<string, { name: string; price: number; pay: PayChoice | null }>;
   /** uids whose counter offers were declined. */
   declined: string[];
   doerUid: string | null;
   doerName: string | null;
   agreedPrice: number | null;
+  /** How the doer asked to be paid for this deal. */
+  doerPay: PayChoice | null;
+  /** When the doer last nudged the payer. */
+  remindedAt: number | null;
   logId: string | null;
   paid: boolean;
   createdAt: number;

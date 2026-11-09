@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatPrice, normalisePayLink, parsePrice, payUrl, priceError } from './money.ts';
+import { checkPayChoice, formatPrice, normalisePayLink, parsePrice, payUrl, priceError } from './money.ts';
 
 test('prices', () => {
   assert.equal(parsePrice('3'), 300);
@@ -26,4 +26,11 @@ test('payment links', () => {
   assert.deepEqual(normalisePayLink('https://evil.com/monzo.me/x'), { error: 'Use your monzo.me or paypal.me link, e.g. monzo.me/yourname' });
   assert.equal(payUrl('https://monzo.me/sam', 350, 'Bins'), 'https://monzo.me/sam/3.50?d=Bins');
   assert.equal(payUrl('https://paypal.me/sam', 300, 'Bins'), 'https://paypal.me/sam/3.00GBP');
+});
+
+test('pay choice per deal', () => {
+  assert.deepEqual(checkPayChoice('cash', 'whatever'), { method: 'cash', link: null });
+  assert.deepEqual(checkPayChoice('monzo', 'monzo.me/sam'), { method: 'monzo', link: 'https://monzo.me/sam' });
+  assert.deepEqual(checkPayChoice('monzo', ''), { error: 'Add your Monzo link, e.g. monzo.me/yourname' });
+  assert.deepEqual(checkPayChoice('paypal', 'monzo.me/sam'), { error: "That's not a PayPal link." });
 });

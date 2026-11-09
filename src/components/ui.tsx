@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, space, type } from './theme';
+import { colors, fonts, radius, space, type } from './theme';
+import { haptics } from '../lib/haptics';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -99,21 +100,24 @@ export function Button({
   icon?: IconName;
 }) {
   const filled = variant === 'primary';
-  const fg = variant === 'danger' ? colors.danger : colors.text;
+  const fg = filled ? colors.inverse : variant === 'danger' ? colors.danger : colors.text;
   const off = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
       accessibilityState={{ disabled: !!off }}
-      onPress={onPress}
+      onPress={() => {
+        haptics.tap();
+        onPress();
+      }}
       disabled={off}
       style={({ pressed }) => [
         styles.button,
         filled && { backgroundColor: colors.primary, borderColor: colors.primary },
-        variant === 'secondary' && { borderColor: colors.primaryBright },
         variant === 'danger' && { borderColor: colors.danger },
         variant === 'ghost' && { borderColor: 'transparent' },
-        { opacity: off ? 0.45 : pressed ? 0.75 : 1 },
+        { opacity: off ? 0.4 : pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
         style,
       ]}
     >
@@ -121,7 +125,7 @@ export function Button({
         <ActivityIndicator color={fg} />
       ) : (
         <View style={styles.buttonInner}>
-          {icon && <Icon name={icon} size={18} color={fg} />}
+          {icon && <Icon name={icon} size={16} color={fg} />}
           <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
         </View>
       )}
@@ -129,9 +133,9 @@ export function Button({
   );
 }
 
-/** A tappable row with a purple outline and a white arrow, e.g. a chore. */
+/** A tappable row, e.g. a setting or "needs doing". */
 export function RowButton({
-  title, subtitle, onPress, icon, right, testID,
+  title, subtitle, onPress, icon, right, testID, highlight,
 }: {
   title: string;
   subtitle?: string;
@@ -139,23 +143,83 @@ export function RowButton({
   icon?: IconName;
   right?: React.ReactNode;
   testID?: string;
+  /** Small white dot: something needs you. */
+  highlight?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
       testID={testID}
-      onPress={onPress}
+      onPress={() => {
+        haptics.tap();
+        onPress();
+      }}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.cardRaised }]}
     >
-      {icon && <Icon name={icon} size={20} color={colors.primaryBright} />}
-      <View style={{ flex: 1 }}>
+      {icon && <Icon name={icon} size={19} color={colors.text} />}
+      <View style={{ flex: 1, gap: 2 }}>
         <Text style={styles.rowTitle}>{title}</Text>
         {subtitle ? <Text style={type.small}>{subtitle}</Text> : null}
       </View>
+      {highlight && <View style={styles.dot} />}
       {right}
-      <Icon name="chevron-forward" size={20} color={colors.text} />
+      <Icon name="arrow-forward" size={16} color={colors.muted} />
     </Pressable>
+  );
+}
+
+/** Rows grouped in one block with hairlines between them (the "list" look). */
+export function ListGroup({ children }: { children: React.ReactNode }) {
+  const items = React.Children.toArray(children).filter(Boolean);
+  return (
+    <View style={styles.group}>
+      {items.map((c, i) => (
+        <View key={i} style={i > 0 ? styles.groupLine : undefined}>{c}</View>
+      ))}
+    </View>
+  );
+}
+
+/** One row inside a ListGroup. */
+export function ListRow({
+  title, subtitle, onPress, icon, right, accessibilityLabel,
+}: {
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+  icon?: IconName;
+  right?: React.ReactNode;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={accessibilityLabel ?? title}
+      disabled={!onPress}
+      onPress={() => {
+        haptics.tap();
+        onPress?.();
+      }}
+      style={({ pressed }) => [styles.listRow, pressed && onPress && { backgroundColor: colors.cardRaised }]}
+    >
+      {icon && <Icon name={icon} size={19} color={colors.muted} />}
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={styles.listTitle} numberOfLines={2}>{title}</Text>
+        {subtitle ? <Text style={type.small} numberOfLines={2}>{subtitle}</Text> : null}
+      </View>
+      {right}
+      {onPress && <Icon name="arrow-forward" size={16} color={colors.faint} />}
+    </Pressable>
+  );
+}
+
+/** Dot-matrix number, e.g. a score. */
+export function DotNumber({ value, size = 56, color = colors.text }: { value: string | number; size?: number; color?: string }) {
+  return (
+    <Text style={[type.dot, { fontSize: size, lineHeight: size * 1.05, color }]} accessibilityLabel={String(value)}>
+      {value}
+    </Text>
   );
 }
 
@@ -168,10 +232,14 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.outline }]}
+      accessibilityLabel={label}
+      onPress={() => {
+        haptics.select();
+        onPress();
+      }}
+      style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
     >
-      <Text style={[styles.chipText, selected && { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.chipText, selected && { color: colors.inverse }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -197,12 +265,12 @@ export function Empty({ icon, children }: { icon: IconName; children: React.Reac
 export function Loading() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-      <ActivityIndicator size="large" color={colors.primaryBright} />
+      <ActivityIndicator size="small" color={colors.muted} />
     </View>
   );
 }
 
-/** Dark purple square with a white house-and-tick symbol (same as the app icon). */
+/** Purple square with a white house-and-tick symbol (same as the app icon). The only big bit of colour. */
 export function Logo({ size = 40 }: { size?: number }) {
   return <Image source={require('../../assets/logo.png')} style={{ width: size, height: size }} accessibilityLabel="Choreboard" />;
 }
@@ -236,33 +304,34 @@ export function timeAgo(ms: number): string {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1 },
-  screenInner: { paddingHorizontal: 12, paddingTop: space.md, gap: 12, paddingBottom: 160 },
-  card: {
-    backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm,
-    borderWidth: 1, borderColor: colors.border,
-  },
+  screenInner: { paddingHorizontal: 16, paddingTop: space.md, gap: 12, paddingBottom: 160 },
+  card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm },
   button: {
-    borderRadius: radius, paddingVertical: 14, paddingHorizontal: space.md, alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: 999, paddingVertical: 15, paddingHorizontal: space.lg, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.line,
   },
   buttonInner: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  buttonText: { fontSize: 16, fontWeight: '600' },
+  buttonText: { fontSize: 13, fontFamily: fonts.monoBold, letterSpacing: 1.2, textTransform: 'uppercase' },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: space.md,
-    borderWidth: 1, borderColor: colors.outline, borderRadius: radius,
-    paddingVertical: 14, paddingHorizontal: space.md, backgroundColor: 'rgba(17,17,20,0.85)',
+    flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: radius,
+    paddingVertical: 16, paddingHorizontal: space.md, backgroundColor: colors.card,
   },
-  rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.text },
+  group: { backgroundColor: colors.card, borderRadius: radius, overflow: 'hidden' },
+  groupLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: space.md },
+  listTitle: { fontSize: 16, color: colors.text, letterSpacing: -0.2 },
   input: {
-    backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.line,
     paddingHorizontal: space.md, paddingVertical: 14, fontSize: 16, color: colors.text,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1,
-    borderColor: colors.border, backgroundColor: colors.card,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1,
+    borderColor: colors.line, backgroundColor: 'transparent',
   },
-  chipText: { fontSize: 15, color: colors.muted, fontWeight: '500' },
+  chipText: { fontSize: 14, color: colors.text, fontWeight: '500' },
   error: { color: colors.danger, fontSize: 14 },
   empty: { alignItems: 'center', gap: space.sm, paddingVertical: space.lg },
 });
