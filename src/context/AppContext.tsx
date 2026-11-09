@@ -163,7 +163,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
   // Scores for the current period, using the house's reset setting.
-  const period = periodKey(new Date(), house?.resetMonths);
+  const period = periodKey(new Date(), house?.reset);
   const members: Member[] = (current?.members ?? []).map((m) => toMember(m.id, m.data, period));
   const value: AppState = {
     ready: profileReady,

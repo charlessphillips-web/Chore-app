@@ -28,7 +28,7 @@ export default function Home() {
         <View style={styles.heroTop}>
           <Logo size={32} />
           <Text style={styles.houseName} numberOfLines={2}>{house.name}</Text>
-          <Text style={styles.period}>{periodLabel(new Date(), house.resetMonths)}</Text>
+          <Text style={styles.period}>{periodLabel(new Date(), house.reset)}</Text>
         </View>
         <Text style={styles.hello} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
           Hey {profile?.username ?? ''}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { periodEnd, periodKey, periodLabel, resetLabel, toResetMonths } from './period.ts';
+import { customError, periodEnd, periodKey, periodLabel, periodStart, resetLabel, toResetMonths, toResetRule } from './period.ts';
 import { ageOn, dobError, parseDob, toDobString } from './dob.ts';
 import { addChore, DEFAULT_CHORES, makeChore } from './chores.ts';
 
@@ -20,6 +20,31 @@ test('other reset lengths', () => {
   assert.equal(toResetMonths(3), 3);
   assert.equal(resetLabel(1), 'every month');
   assert.equal(resetLabel(6), 'every 6 months');
+});
+
+test('custom dates', () => {
+  const term = { start: '2026-09-15', end: '2026-12-21' }; // 98 days
+  const nov = new Date(2026, 10, 8, 15, 30);
+  assert.equal(periodKey(nov, term), 'c20260915_98_0');
+  assert.equal(periodLabel(nov, term), '15 Sep – 21 Dec 2026');
+  assert.deepEqual(periodStart(nov, term), new Date(2026, 8, 15));
+  assert.deepEqual(periodEnd(nov, term), new Date(2026, 11, 22));
+  // Last day is still in the period; the day after starts a repeat of the same length.
+  assert.equal(periodKey(new Date(2026, 11, 21, 23, 59), term), 'c20260915_98_0');
+  assert.equal(periodKey(new Date(2026, 11, 22), term), 'c20260915_98_1');
+  assert.equal(periodLabel(new Date(2026, 11, 22), term), '22 Dec 2026 – 29 Mar 2027');
+  // Clock change (late October) doesn't shift days.
+  assert.equal(periodKey(new Date(2026, 9, 26, 0, 30), term), 'c20260915_98_0');
+  assert.equal(resetLabel(term), 'on custom dates');
+  const today = new Date(2026, 10, 8);
+  assert.equal(customError('2026-09-15', '2026-12-21', today), null);
+  assert.equal(customError('2026-12-01', '2026-12-21', today), 'The start date can’t be in the future.');
+  assert.equal(customError('2026-09-15', '2026-09-10', today), 'The end date must be after the start date.');
+  assert.equal(customError('2026-09-15', '2026-11-01', today), 'The end date must be today or later.');
+  assert.equal(customError('2025-09-15', '2026-12-21', today), 'Pick a period of a year or less.');
+  assert.deepEqual(toResetRule(0, '2026-09-15', '2026-12-21'), term);
+  assert.equal(toResetRule(0, '2026-09-15', 'nonsense'), 2);
+  assert.equal(toResetRule(3, null, null), 3);
 });
 
 test('2-month periods', () => {

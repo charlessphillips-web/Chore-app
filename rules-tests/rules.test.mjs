@@ -350,6 +350,13 @@ test('only the admin can change how often the leaderboard resets', async () => {
   await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 5 }));
   await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: '2' }));
   await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1'), { resetMonths: 6 }));
+  // Custom dates
+  await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 0, customStart: '2026-09-15', customEnd: '2026-12-21' }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 0, customStart: '2026-12-21', customEnd: '2026-09-15' }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { customEnd: 'next week' }));
+  await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1'), { customEnd: '2026-12-30' }));
+  await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 2, customStart: deleteField(), customEnd: deleteField() }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { resetMonths: 0 }));
 });
 
 test('sending back creates a redo for the chore-doer', async () => {

@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Image, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
-import { setWallpaper, updateHouse } from '../../../lib/db';
+import { setResetRule, setWallpaper, updateHouse } from '../../../lib/db';
 import { pickFromLibrary } from '../../../lib/photos';
-import { DEFAULT_RESET_MONTHS, periodEnd, RESET_OPTIONS, resetLabel, type ResetMonths } from '../../../lib/period';
-import { Button, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
-import { colors, radius } from '../../../components/theme';
+import { customError, DEFAULT_RESET_MONTHS, periodEnd, RESET_OPTIONS, resetLabel, type ResetRule } from '../../../lib/period';
+import { toDobString } from '../../../lib/dob';
+import { DateField } from '../../../components/DobPicker';
+import { Button, Card, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
+import { colors, radius, type } from '../../../components/theme';
 
 /** Admin: house name, leaderboard reset and wallpaper. */
 export default function HouseDetails() {
@@ -13,7 +15,13 @@ export default function HouseDetails() {
   const [name, setName] = useState(house?.name ?? '');
   const [busy, setBusy] = useState<'name' | 'wall' | 'reset' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const reset = house?.reset;
+  const [customOpen, setCustomOpen] = useState(false);
+  const [start, setStart] = useState(typeof reset === 'object' ? reset.start : '');
+  const [end, setEnd] = useState(typeof reset === 'object' ? reset.end : '');
   if (!house || !user) return <Loading />;
+  const isCustom = typeof house.reset === 'object';
+  const today = toDobString(new Date());
   if (!isAdmin) return <Screen edges={['left', 'right']}><Subtitle>Only the house admin can change these.</Subtitle></Screen>;
 
   async function saveName() {
@@ -30,24 +38,30 @@ export default function HouseDetails() {
     }
   }
 
-  async function changeReset(months: ResetMonths) {
-    if (months === house!.resetMonths) return;
-    const next = periodEnd(new Date(), months).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  async function changeReset(rule: ResetRule) {
+    const next = periodEnd(new Date(), rule).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
     const ok = await confirm(
-      `Reset ${resetLabel(months)}?`,
-      `This starts a fresh leaderboard for everyone straight away. Scores so far this period won't carry over. The next reset after that is ${next}.`,
+      typeof rule === 'object' ? 'Use these dates?' : `Reset ${resetLabel(rule)}?`,
+      `This starts a fresh leaderboard for everyone straight away. Scores so far this period won't carry over. The next reset is ${next}.`,
       'Change',
     );
     if (!ok) return;
     setError(null);
     setBusy('reset');
     try {
-      await updateHouse(house!.id, { resetMonths: months });
+      await setResetRule(house!.id, rule);
+      if (typeof rule !== 'object') setCustomOpen(false);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(null);
     }
+  }
+
+  function saveCustom() {
+    const err = customError(start, end);
+    if (err) return setError(err);
+    changeReset({ start, end });
   }
 
   async function changeWallpaper(remove = false) {
@@ -78,11 +92,30 @@ export default function HouseDetails() {
           <Chip
             key={m}
             label={`${m === 1 ? 'Every month' : `Every ${m} months`}${m === DEFAULT_RESET_MONTHS ? ' (default)' : ''}`}
-            selected={house.resetMonths === m}
-            onPress={() => !busy && changeReset(m)}
+            selected={!customOpen && house.reset === m}
+            onPress={() => !busy && house.reset !== m && changeReset(m)}
           />
         ))}
+        <Chip label="Custom dates" selected={customOpen || isCustom} onPress={() => setCustomOpen(true)} />
       </ChipRow>
+      {(customOpen || isCustom) && (
+        <Card>
+          <Text style={type.small}>
+            Pick when this leaderboard starts and ends, e.g. your uni term. When it ends, a new one starts with the same
+            length, until you change it.
+          </Text>
+          <Text style={styles.fieldLabel}>Start date</Text>
+          <DateField value={start} onChange={setStart} label="Start date" placeholder="Choose start date" max={today} />
+          <Text style={styles.fieldLabel}>End date (last day)</Text>
+          <DateField value={end} onChange={setEnd} label="End date" placeholder="Choose end date" min={today} />
+          <Button
+            title={isCustom ? 'Save new dates' : 'Use these dates'}
+            onPress={saveCustom}
+            loading={busy === 'reset'}
+            disabled={!!busy || !start || !end || (typeof house.reset === 'object' && start === house.reset.start && end === house.reset.end)}
+          />
+        </Card>
+      )}
 
       <Label>Wallpaper</Label>
       <Subtitle>Shown faintly behind everyone&apos;s Home screen.</Subtitle>
@@ -99,3 +132,7 @@ export default function HouseDetails() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 4 },
+});

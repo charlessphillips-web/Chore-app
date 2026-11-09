@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
-import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, resetLabel } from '../../lib/period';
+import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
 import { Loading, Screen, Title } from '../../components/ui';
 import { colors, radius, space, type } from '../../components/theme';
 
@@ -12,10 +12,10 @@ export default function Leaderboard() {
   const { user, house, members } = useApp();
   if (!user || !house) return <Loading />;
 
-  const months = house.resetMonths;
+  const rule = house.reset;
   const now = new Date();
-  const end = periodEnd(now, months);
-  const start = new Date(end.getFullYear(), end.getMonth() - months, 1);
+  const end = periodEnd(now, rule);
+  const start = periodStart(now, rule);
   const totalDays = Math.round((end.getTime() - start.getTime()) / DAY);
   const daysLeft = Math.max(1, Math.ceil((end.getTime() - now.getTime()) / DAY));
   const elapsed = (now.getTime() - start.getTime()) / (end.getTime() - start.getTime());
@@ -34,15 +34,16 @@ export default function Leaderboard() {
 
       <View style={styles.period}>
         <View style={styles.periodTop}>
-          <Text style={styles.periodName}>{periodLabel(now, months)}</Text>
+          <Text style={styles.periodName}>{periodLabel(now, rule)}</Text>
           <Text style={type.small}>{daysLeft} {daysLeft === 1 ? 'day' : 'days'} left</Text>
         </View>
         <View style={styles.track}>
           <View style={[styles.trackFill, { width: `${Math.min(100, Math.round(elapsed * 100))}%` }]} />
         </View>
         <Text style={type.small}>
-          Resets {resetLabel(months)}
-          {months === DEFAULT_RESET_MONTHS ? ' (the default)' : ', set by the house admin'} · next reset {resets} · {totalDays}-day period
+          {typeof rule === 'object'
+            ? `Custom dates set by the house admin · resets ${resets}, then repeats every ${totalDays} days`
+            : `Resets ${resetLabel(rule)}${rule === DEFAULT_RESET_MONTHS ? ' (the default)' : ', set by the house admin'} · next reset ${resets}`}
         </Text>
       </View>
 

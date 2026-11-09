@@ -11,7 +11,7 @@ import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
-import { DEFAULT_RESET_MONTHS, periodKey, toResetMonths, type ResetMonths } from './period';
+import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
 import type { ChoreLog, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
 
@@ -153,9 +153,19 @@ export async function makeAdmin(houseId: string, uid: string): Promise<void> {
 
 export async function updateHouse(
   houseId: string,
-  patch: { name?: string; chores?: HouseChore[]; resetMonths?: ResetMonths },
+  patch: { name?: string; chores?: HouseChore[] },
 ): Promise<void> {
   await updateDoc(houseRef(houseId), patch);
+}
+
+/** Admin: how often the leaderboard resets. Stored as resetMonths (0 = custom dates). */
+export async function setResetRule(houseId: string, rule: ResetRule): Promise<void> {
+  await updateDoc(
+    houseRef(houseId),
+    typeof rule === 'object'
+      ? { resetMonths: 0, customStart: rule.start, customEnd: rule.end }
+      : { resetMonths: rule, customStart: deleteField(), customEnd: deleteField() },
+  );
 }
 
 export async function setWallpaper(houseId: string, uid: string, data: string | null): Promise<void> {
@@ -183,7 +193,7 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
         // Houses made before admins existed: the creator is admin.
         adminUid: d.adminUid ?? d.createdBy,
         chores: Array.isArray(d.chores) ? d.chores : DEFAULT_CHORES,
-        resetMonths: toResetMonths(d.resetMonths),
+        reset: toResetRule(d.resetMonths, d.customStart, d.customEnd),
         createdAt: ms(d.createdAt) ?? Date.now(),
       });
     },
@@ -301,7 +311,7 @@ export async function logChore(opts: {
   const key = opts.chore.key || choreKey(name);
   if (!key) throw new Error('Pick a chore.');
   if (!photo?.thumb || !photo?.full) throw new Error('Take a photo of the finished chore first.');
-  const period = periodKey(new Date(), house.resetMonths);
+  const period = periodKey(new Date(), house.reset);
 
   const batch = writeBatch(db);
   const logRef = doc(collection(db, 'houses', house.id, 'logs'));

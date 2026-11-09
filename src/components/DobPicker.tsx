@@ -5,17 +5,44 @@ import { formatDob, parseDob, toDobString } from '../lib/dob';
 import { colors, radius, space } from './theme';
 import { Button, Icon } from './ui';
 
+interface DateFieldProps {
+  value: string;
+  onChange: (date: string) => void;
+  /** Read out by screen readers. */
+  label?: string;
+  placeholder?: string;
+  /** "YYYY-MM-DD" limits. */
+  min?: string;
+  max?: string;
+}
+
 /** Date of birth as a scroll wheel (iPhone) or calendar pop-up (Android). */
 export function DobPicker({ value, onChange }: { value: string; onChange: (dob: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const current = parseDob(value) ?? new Date(2005, 0, 1);
   const today = new Date();
+  return (
+    <DateField
+      value={value}
+      onChange={onChange}
+      label="Date of birth"
+      placeholder="Select your date of birth"
+      min={toDobString(new Date(today.getFullYear() - 100, 0, 1))}
+      max={toDobString(today)}
+    />
+  );
+}
+
+/** Any date, as a scroll wheel (iPhone) or calendar pop-up (Android). Value is "YYYY-MM-DD". */
+export function DateField({ value, onChange, label = 'Date', placeholder = 'Select a date', min, max }: DateFieldProps) {
+  const [open, setOpen] = useState(false);
+  const minDate = min ? parseDob(min) ?? undefined : undefined;
+  const maxDate = max ? parseDob(max) ?? undefined : undefined;
+  const current = parseDob(value) ?? (label === 'Date of birth' ? new Date(2005, 0, 1) : maxDate && maxDate < new Date() ? maxDate : new Date());
 
   return (
     <View style={{ gap: space.sm }}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Date of birth"
+        accessibilityLabel={label}
         onPress={() => setOpen((o) => !o)}
         style={{
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -24,7 +51,7 @@ export function DobPicker({ value, onChange }: { value: string; onChange: (dob: 
         }}
       >
         <Text style={{ fontSize: 16, color: value ? colors.text : colors.muted }}>
-          {value ? formatDob(value) : 'Select your date of birth'}
+          {value ? formatDob(value) : placeholder}
         </Text>
         <Icon name="calendar-outline" color={colors.muted} />
       </Pressable>
@@ -35,8 +62,8 @@ export function DobPicker({ value, onChange }: { value: string; onChange: (dob: 
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             themeVariant="dark"
-            maximumDate={today}
-            minimumDate={new Date(today.getFullYear() - 100, 0, 1)}
+            maximumDate={maxDate}
+            minimumDate={minDate}
             onChange={(event, date) => {
               if (Platform.OS === 'android') setOpen(false);
               if (event.type === 'set' && date) onChange(toDobString(date));

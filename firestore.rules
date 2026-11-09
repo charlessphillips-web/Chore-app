@@ -89,11 +89,13 @@ service cloud.firestore {
         && request.resource.data.createdBy == me()
         && request.resource.data.adminUid == me()
         && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.code)).data.houseId == houseId;
-      // Admin can rename, change chores, set how often the leaderboard
-      // resets (months), and hand admin to a housemate.
+      // Admin can rename, change chores, set when the leaderboard resets
+      // (every 1/2/3/6 months, or 0 = custom dates), and hand admin to a
+      // housemate.
       allow update: if isAdmin(houseId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'chores', 'adminUid', 'resetMonths'])
-        && (!('resetMonths' in request.resource.data) || request.resource.data.resetMonths in [1, 2, 3, 6])
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd'])
+        && validReset(request.resource.data)
         && request.resource.data.name is string && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 40
         && (!('chores' in request.resource.data) || request.resource.data.chores.size() <= 60)
@@ -189,6 +191,16 @@ service cloud.firestore {
           && request.resource.data.completedBy == me();
         allow delete: if false;
       }
+    }
+
+    // resetMonths: 1, 2, 3 or 6, or 0 with customStart/customEnd dates.
+    function validReset(h) {
+      let m = h.get('resetMonths', 2);
+      return m in [1, 2, 3, 6]
+        || (m == 0
+            && h.get('customStart', null) is string && h.customStart.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && h.get('customEnd', null) is string && h.customEnd.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && h.customEnd > h.customStart);
     }
 
     // ---- Score rules ----

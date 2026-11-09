@@ -7,7 +7,28 @@ import { colors, radius, space } from './theme';
  * an iPhone is the same scroll wheel as the app.
  */
 export function DobPicker({ value, onChange }: { value: string; onChange: (dob: string) => void }) {
-  const today = toDobString(new Date());
+  return (
+    <DateField
+      value={value}
+      onChange={onChange}
+      label="Date of birth"
+      placeholder="Select your date of birth"
+      min="1900-01-01"
+      max={toDobString(new Date())}
+    />
+  );
+}
+
+export function DateField({
+  value, onChange, label = 'Date', placeholder = 'Select a date', min, max,
+}: {
+  value: string;
+  onChange: (date: string) => void;
+  label?: string;
+  placeholder?: string;
+  min?: string;
+  max?: string;
+}) {
   return (
     <View
       style={{
@@ -20,15 +41,15 @@ export function DobPicker({ value, onChange }: { value: string; onChange: (dob: 
           style={{ position: 'absolute', left: space.md, fontSize: 16, color: colors.muted }}
           pointerEvents="none"
         >
-          Select your date of birth
+          {placeholder}
         </Text>
       )}
       <input
         type="date"
-        aria-label="Date of birth"
+        aria-label={label}
         value={value}
-        max={today}
-        min="1900-01-01"
+        max={max}
+        min={min}
         onChange={(e) => onChange(e.currentTarget.value)}
         style={{
           appearance: 'none',
