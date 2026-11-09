@@ -57,3 +57,21 @@ export function addChore(list: HouseChore[], name: string, needs: string): House
   if (list.some((x) => x.key === c.key)) return 'That chore is already on the list.';
   return [...list, c];
 }
+
+/** Ionicons name for a chore's tile. Chores the admin adds get a tick. */
+const ICONS: Record<string, string> = {
+  bins: 'trash-outline',
+  'cleaning kitchen surfaces': 'sparkles-outline',
+  hoovering: 'grid-outline',
+  'tidying sitting room': 'tv-outline',
+  'cleaning sink': 'water-outline',
+  'emptying dishwasher': 'restaurant-outline',
+  'taking big bins out on bin days': 'trash-bin-outline',
+  'cleaning microwave': 'cube-outline',
+  'cleaning oven': 'flame-outline',
+  'cleaning stove': 'bonfire-outline',
+};
+
+export function choreIcon(key: string): string {
+  return ICONS[key] ?? 'checkmark-circle-outline';
+}
