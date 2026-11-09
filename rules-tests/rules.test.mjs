@@ -315,6 +315,33 @@ test('feedback: anyone can send a bug or suggestion, nobody can read them back',
   await assertFails(setDoc(doc(collection(db('sam'), 'feedback')), report('sam', { type: 'spam' })));
 });
 
+test('feedback inbox: only owners can read reports and tick them off', async () => {
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'owners', 'charlie'), { name: 'Charlie' }));
+  const ref = doc(collection(db('sam'), 'feedback'));
+  await assertSucceeds(setDoc(ref, {
+    type: 'bug', userId: 'sam', username: 'Sam', houseId: null, message: 'Checks tab is blank', screenshot: null,
+    device: { os: 'ios' }, createdAt: serverTimestamp(),
+  }));
+  // Owner check: you can see your own owner doc, nobody can list or write owners.
+  await assertSucceeds(getDoc(doc(db('charlie'), 'owners', 'charlie')));
+  await assertFails(getDoc(doc(db('sam'), 'owners', 'charlie')));
+  await assertFails(getDocs(collection(db('charlie'), 'owners')));
+  await assertFails(setDoc(doc(db('sam'), 'owners', 'sam'), { name: 'Sam' }));
+  // Reading the inbox.
+  await assertSucceeds(getDocs(query(collection(db('charlie'), 'feedback'), orderBy('createdAt', 'desc'))));
+  await assertFails(getDocs(collection(db('sam'), 'feedback')));
+  // Ticking off.
+  await assertSucceeds(updateDoc(doc(db('charlie'), 'feedback', ref.id), { done: true }));
+  await assertFails(updateDoc(doc(db('charlie'), 'feedback', ref.id), { message: 'edited' }));
+  await assertFails(updateDoc(doc(db('sam'), 'feedback', ref.id), { done: false }));
+  await assertFails(deleteDoc(doc(db('charlie'), 'feedback', ref.id)));
+  // Senders can't pre-tick their own report.
+  await assertFails(setDoc(doc(collection(db('sam'), 'feedback')), {
+    type: 'bug', userId: 'sam', username: 'Sam', houseId: null, message: 'Another one', screenshot: null, done: true,
+    device: { os: 'ios' }, createdAt: serverTimestamp(),
+  }));
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

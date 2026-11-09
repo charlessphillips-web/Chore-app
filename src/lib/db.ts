@@ -493,3 +493,53 @@ export async function submitFeedback(opts: {
     createdAt: serverTimestamp(),
   });
 }
+
+// ---------- Feedback inbox (app owners only) ----------
+
+export interface FeedbackItem {
+  id: string;
+  type: FeedbackType;
+  username: string | null;
+  message: string;
+  screenshot: string | null;
+  phone: string;
+  appVersion: string | null;
+  createdAt: number;
+  done: boolean;
+}
+
+/** True if this account is listed in "owners" (set up in the Firebase console). */
+export async function isAppOwner(uid: string): Promise<boolean> {
+  try {
+    return (await getDoc(doc(db, 'owners', uid))).exists();
+  } catch {
+    return false;
+  }
+}
+
+/** The 40 most recent reports, newest first. */
+export function watchFeedback(cb: (items: FeedbackItem[]) => void, onError: (e: FirestoreError) => void) {
+  return onSnapshot(
+    query(collection(db, 'feedback'), orderBy('createdAt', 'desc'), limit(40)),
+    (snap) =>
+      cb(snap.docs.map((d) => {
+        const r = d.data();
+        return {
+          id: d.id,
+          type: r.type === 'suggestion' ? 'suggestion' : 'bug',
+          username: r.username ?? null,
+          message: r.message ?? '',
+          screenshot: r.screenshot ?? null,
+          phone: [r.device?.model, r.device?.os === 'ios' ? 'iOS' : r.device?.os, r.device?.osVersion].filter(Boolean).join(' '),
+          appVersion: r.device?.appVersion ?? null,
+          createdAt: (r.createdAt as Timestamp | null)?.toMillis() ?? Date.now(),
+          done: r.done === true,
+        };
+      })),
+    onError,
+  );
+}
+
+export async function setFeedbackDone(id: string, done: boolean): Promise<void> {
+  await updateDoc(doc(db, 'feedback', id), { done });
+}

@@ -26,7 +26,7 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 - **House:** house code to share, housemates, recent activity with photos.
 - **Settings:** everyone can edit their details, leave the house or delete their account. The **admin** can also switch chores on or off, add chores (with their own "needs doing" wording), remove housemates, hand over the admin role, rename the house and set a wallpaper. If the admin leaves, whoever has been in the house longest takes over.
 
-**Feedback:** in Settings, anyone can **report a bug** or **make a suggestion**, optionally with a screenshot. These are saved in the database, and only you can read them (see "Feedback" below).
+**Feedback:** in Settings, anyone can **report a bug** or **make a suggestion**, optionally with a screenshot. These are saved in the database, and only you can read them, in the app's Feedback inbox (see "Feedback" below).
 
 **Privacy:** date of birth, gender and university go in a private record that housemates can't read. Only you (the app owner) can export it (see below).
 
@@ -86,7 +86,17 @@ This writes `demographics-YYYY-MM-DD.csv` and prints a summary: % students, gend
 
 ## Feedback
 
-Bug reports and suggestions appear in the Firebase console → Firestore Database → `feedback`. Each one has a `type` (`bug` or `suggestion`), the message, the username, and the phone model. To get them all as a spreadsheet, with screenshots saved as pictures (uses the same `service-account.json` as the demographics export):
+Bug reports and suggestions are saved in Firestore → `feedback`. The easiest way to read them is the **Feedback inbox** in the app (Settings → App owner), which shows screenshots and lets you tick reports off.
+
+**Turn on the inbox for your account (once per phone/browser):**
+1. In the app, go to Settings and scroll to the bottom. Copy your **Account ID**.
+2. Firebase console → Firestore Database → **Start collection** (or **+ Add collection**) → Collection ID `owners`.
+3. Document ID: paste your Account ID. Add one field: `name` (string) = your name. Save.
+4. Close and reopen the app. "Feedback inbox" appears at the top of Settings.
+
+Only accounts listed in `owners` can read feedback (see `firestore.rules`). Nobody can add themselves from the app.
+
+To get everything as a spreadsheet instead, with screenshots saved as pictures (uses the same `service-account.json` as the demographics export):
 
 ```bash
 cd scripts && npm install && npm run export-feedback

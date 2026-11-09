@@ -53,9 +53,18 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ---- App owners (you). Add yourself in the Firebase console: a doc in
+    // "owners" whose ID is your Account ID (shown at the bottom of Settings).
+    // Owners can read feedback in the app's Feedback inbox.
+    function isOwner() { return signedIn() && exists(/databases/$(database)/documents/owners/$(me())); }
+    match /owners/{uid} {
+      allow get: if signedIn() && uid == me();
+      allow list, write: if false;
+    }
+
     // ---- Feedback (bug reports + suggestions). Anyone signed in can send
-    // one; nobody can read them back through the app (you read them in the
-    // Firebase console or with scripts/export-feedback.mjs).
+    // one; only owners can read them (in the app's Feedback inbox, the
+    // Firebase console, or scripts/export-feedback.mjs).
     match /feedback/{feedbackId} {
       allow create: if signedIn()
         && request.resource.data.userId == me()
@@ -64,8 +73,14 @@ service cloud.firestore {
         && request.resource.data.message.size() >= 5
         && request.resource.data.message.size() <= 2000
         && (request.resource.data.screenshot == null
-            || (request.resource.data.screenshot is string && request.resource.data.screenshot.size() < 900000));
-      allow read, update, delete: if false;
+            || (request.resource.data.screenshot is string && request.resource.data.screenshot.size() < 900000))
+        && !('done' in request.resource.data);
+      allow read: if isOwner();
+      // Owners can tick a report off as dealt with (and nothing else).
+      allow update: if isOwner()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done'])
+        && request.resource.data.done is bool;
+      allow delete: if false;
     }
 
     match /houses/{houseId} {

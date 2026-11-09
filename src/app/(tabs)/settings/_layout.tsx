@@ -10,6 +10,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="housemates" options={{ title: 'Housemates' }} />
       <Stack.Screen name="house-details" options={{ title: 'House details' }} />
       <Stack.Screen name="feedback" />
+      <Stack.Screen name="inbox" options={{ title: 'Feedback inbox' }} />
     </Stack>
   );
 }

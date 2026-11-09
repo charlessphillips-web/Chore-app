@@ -1,14 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
-import { deleteAccount, leaveHouse } from '../../../lib/db';
+import { deleteAccount, isAppOwner, leaveHouse } from '../../../lib/db';
 import { Button, Card, confirm, Label, Loading, notify, RowButton, Screen, Title } from '../../../components/ui';
-import { type } from '../../../components/theme';
+import { space, type } from '../../../components/theme';
 
 export default function SettingsIndex() {
   const { user, house, members, isAdmin } = useApp();
   const [busy, setBusy] = useState<'leave' | 'delete' | null>(null);
+  // Owner = you (the app's creator). Shows the Feedback inbox. Set up in the Firebase console.
+  const [ownerOf, setOwnerOf] = useState<string | null>(null);
+  const uid = user?.uid;
+  useEffect(() => {
+    if (!uid) return;
+    let live = true;
+    isAppOwner(uid).then((yes) => live && setOwnerOf(yes ? uid : null));
+    return () => { live = false; };
+  }, [uid]);
+  const isOwner = !!uid && ownerOf === uid;
   if (!user || !house) return <Loading />;
   const admin = members.find((m) => m.uid === house.adminUid);
 
@@ -51,6 +61,13 @@ export default function SettingsIndex() {
     <Screen>
       <Title>Settings</Title>
 
+      {isOwner && (
+        <>
+          <Label>App owner</Label>
+          <RowButton icon="mail-outline" title="Feedback inbox" subtitle="Bug reports and suggestions" onPress={() => router.push('/settings/inbox')} />
+        </>
+      )}
+
       <Label>You</Label>
       <RowButton icon="person-outline" title="Personal details" subtitle="Username, date of birth, university" onPress={() => router.push('/settings/personal')} />
 
@@ -77,6 +94,10 @@ export default function SettingsIndex() {
       <Label>Account</Label>
       <Button title="Leave house" icon="exit-outline" variant="secondary" onPress={leave} loading={busy === 'leave'} disabled={!!busy} />
       <Button title="Delete my account" icon="trash-outline" variant="danger" onPress={del} loading={busy === 'delete'} disabled={!!busy} />
+
+      <Text selectable style={[type.small, { textAlign: 'center', marginTop: space.lg }]}>
+        Account ID: {user.uid}
+      </Text>
     </Screen>
   );
 }
