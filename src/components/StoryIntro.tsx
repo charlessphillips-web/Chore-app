@@ -78,7 +78,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
         >
           {step ? (
             <>
-              <Text style={styles.num}>{String(stepIndex + 1).padStart(2, '0')}</Text>
+              <Text style={styles.num}>STEP {stepIndex + 1}</Text>
               <Icon name={step.icon} size={34} color={colors.text} />
               <Text style={styles.title}>{step.title}</Text>
               <Text style={styles.text}>{step.body}</Text>
@@ -156,7 +156,7 @@ function HoldButton({ label, onDone }: { label: string; onDone: () => void }) {
         onPressOut={cancel}
         style={styles.hold}
       >
-        <Animated.Text style={[styles.holdText, { color: textColor }]}>{label.toUpperCase()}</Animated.Text>
+        <Animated.Text style={[styles.holdText, { color: textColor }]}>{label}</Animated.Text>
       </Pressable>
     </View>
   );
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   count: { fontFamily: fonts.mono, fontSize: 11, color: colors.muted, letterSpacing: 1 },
   skip: { fontFamily: fonts.mono, fontSize: 12, color: colors.text, letterSpacing: 1.2 },
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: space.lg, gap: space.md },
-  num: { fontFamily: fonts.dot, fontSize: 72, color: colors.text, lineHeight: 76 },
+  num: { fontFamily: fonts.mono, fontSize: 13, color: colors.muted, letterSpacing: 1.2 },
   title: { fontSize: 30, fontWeight: '700', color: colors.text, letterSpacing: -1 },
   text: { fontSize: 18, lineHeight: 26, color: colors.muted },
   hint: { fontFamily: fonts.mono, fontSize: 11, color: colors.faint, letterSpacing: 1.2, textAlign: 'center', paddingBottom: space.lg },
@@ -181,5 +181,5 @@ const styles = StyleSheet.create({
     width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: 1, borderColor: colors.text,
     alignItems: 'center', justifyContent: 'center', padding: 12,
   },
-  holdText: { fontFamily: fonts.monoBold, fontSize: 11, letterSpacing: 1.2, textAlign: 'center', lineHeight: 16 },
+  holdText: { fontSize: 14, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
 });

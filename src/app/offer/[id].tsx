@@ -10,7 +10,7 @@ import { effectiveStatus } from '../../lib/review';
 import { haptics } from '../../lib/haptics';
 import { PayChoicePicker, usePayChoice } from '../../components/PayChoicePicker';
 import {
-  Button, Card, confirm, DotNumber, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Title,
+  Button, Card, confirm, BigNumber, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Title,
 } from '../../components/ui';
 import { colors, fonts, space, type } from '../../components/theme';
 
@@ -103,7 +103,7 @@ export default function OfferScreen() {
     <Screen edges={['left', 'right']}>
       <Stack.Screen options={{ title: 'CHORE OFFER' }} />
       <Text style={type.label}>{offer.choreName}</Text>
-      <DotNumber value={price$} size={64} />
+      <BigNumber value={price$} size={56} />
       <Text style={type.small}>
         {offer.status === 'open'
           ? mine ? 'Your offer' : `${offer.fromName} will pay`

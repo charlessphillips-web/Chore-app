@@ -75,7 +75,7 @@ export default function HouseTab() {
 }
 
 const styles = StyleSheet.create({
-  code: { fontSize: 46, fontFamily: fonts.dot, letterSpacing: 6, color: colors.text, marginVertical: space.sm },
+  code: { fontSize: 40, fontFamily: fonts.mono, letterSpacing: 6, color: colors.text, marginVertical: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 12 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   admin: { fontSize: 10, fontFamily: fonts.mono, color: colors.muted, letterSpacing: 1.2 },

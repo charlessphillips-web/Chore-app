@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radius, space, type } from './theme';
+import { colors, radius, space, type } from './theme';
 import { haptics } from '../lib/haptics';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -164,7 +164,7 @@ export function RowButton({
       </View>
       {highlight && <View style={styles.dot} />}
       {right}
-      <Icon name="arrow-forward" size={16} color={colors.muted} />
+      <Icon name="chevron-forward" size={18} color={colors.muted} />
     </Pressable>
   );
 }
@@ -209,15 +209,15 @@ export function ListRow({
         {subtitle ? <Text style={type.small} numberOfLines={2}>{subtitle}</Text> : null}
       </View>
       {right}
-      {onPress && <Icon name="arrow-forward" size={16} color={colors.faint} />}
+      {onPress && <Icon name="chevron-forward" size={18} color={colors.faint} />}
     </Pressable>
   );
 }
 
-/** Dot-matrix number, e.g. a score. */
-export function DotNumber({ value, size = 56, color = colors.text }: { value: string | number; size?: number; color?: string }) {
+/** Big bold number, e.g. a score or price. */
+export function BigNumber({ value, size = 56, color = colors.text }: { value: string | number; size?: number; color?: string }) {
   return (
-    <Text style={[type.dot, { fontSize: size, lineHeight: size * 1.05, color }]} accessibilityLabel={String(value)}>
+    <Text style={[type.number, { fontSize: size, lineHeight: size * 1.1, color, letterSpacing: -size / 28 }]} accessibilityLabel={String(value)}>
       {value}
     </Text>
   );
@@ -305,13 +305,13 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1 },
   screenInner: { paddingHorizontal: 16, paddingTop: space.md, gap: 12, paddingBottom: 160 },
-  card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm },
+  card: { backgroundColor: colors.card, borderRadius: 18, padding: space.md, gap: space.sm },
   button: {
     borderRadius: 999, paddingVertical: 15, paddingHorizontal: space.lg, alignItems: 'center',
     borderWidth: 1, borderColor: colors.line,
   },
   buttonInner: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  buttonText: { fontSize: 13, fontFamily: fonts.monoBold, letterSpacing: 1.2, textTransform: 'uppercase' },
+  buttonText: { fontSize: 16, fontWeight: '600', letterSpacing: -0.2 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: radius,
     paddingVertical: 16, paddingHorizontal: space.md, backgroundColor: colors.card,

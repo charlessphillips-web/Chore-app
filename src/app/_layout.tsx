@@ -1,6 +1,5 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Doto_800ExtraBold } from '@expo-google-fonts/doto';
 import { SpaceMono_400Regular, SpaceMono_700Bold } from '@expo-google-fonts/space-mono';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,7 +8,7 @@ import { colors, darkHeader } from '../components/theme';
 
 export default function RootLayout() {
   // Fonts load in a moment; until then the system font is used.
-  useFonts({ Doto_800ExtraBold, SpaceMono_400Regular, SpaceMono_700Bold });
+  useFonts({ SpaceMono_400Regular, SpaceMono_700Bold });
   return (
     <SafeAreaProvider style={{ backgroundColor: colors.bg }}>
       <AppProvider>

@@ -1,12 +1,12 @@
 /**
- * Choreboard look: black, white and greys, minimal. Purple is only in the
- * logo (and a tiny dot marking "you"). Labels use a mono font; big numbers
- * (scores, prices) use a dot-matrix font.
+ * Choreboard look ("Graphite"): black background, soft grey cards and
+ * tiles, white text and icons. Purple is only in the logo (and a tiny dot
+ * marking "you"). Small labels use a mono font; numbers are big and bold.
  */
 export const colors = {
   bg: '#000000',
-  card: '#0E0E0E',
-  cardRaised: '#181818',
+  card: '#121212',
+  cardRaised: '#1C1C1C',
   border: '#1F1F1F',
   /** Hairlines between list rows and around inputs. */
   line: '#2A2A2A',
@@ -29,7 +29,6 @@ export const colors = {
 
 /** Font names (loaded in app/_layout.tsx). */
 export const fonts = {
-  dot: 'Doto_800ExtraBold',
   mono: 'SpaceMono_400Regular',
   monoBold: 'SpaceMono_700Bold',
 };
@@ -43,8 +42,8 @@ export const type = {
   body: { fontSize: 16, color: colors.text },
   small: { fontSize: 13, color: colors.muted, lineHeight: 18 },
   label: { fontSize: 11, fontFamily: fonts.mono, color: colors.muted, textTransform: 'uppercase' as const, letterSpacing: 1.2 },
-  /** Big dot-matrix numbers. */
-  dot: { fontFamily: fonts.dot, color: colors.text },
+  /** Big bold numbers (scores, prices). */
+  number: { fontWeight: '700' as const, color: colors.text, letterSpacing: -2 },
 };
 
 /** Header style for stack screens. */

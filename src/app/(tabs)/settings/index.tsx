@@ -80,7 +80,7 @@ export default function SettingsIndex() {
           <Text style={type.heading}>{profile?.username}</Text>
           <Text style={type.small}>{myAvatar ? 'Change your picture' : 'Add a photo or character'}</Text>
         </View>
-        <Icon name="arrow-forward" size={16} color={colors.muted} />
+        <Icon name="chevron-forward" size={18} color={colors.muted} />
       </Pressable>
 
       {isOwner && (

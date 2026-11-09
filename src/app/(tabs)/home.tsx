@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
@@ -7,8 +7,9 @@ import { choreIcon } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
 import { periodLabel } from '../../lib/period';
 import { standing } from '../../lib/standing';
-import { DotNumber, Icon, Label, ListGroup, ListRow, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
-import { colors, fonts, space, type } from '../../components/theme';
+import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
+import { haptics } from '../../lib/haptics';
+import { colors, fonts, type } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
@@ -38,15 +39,15 @@ export default function Home() {
 
       <View style={styles.hero}>
         <View style={styles.helloRow}>
-          <Avatar avatar={me?.avatar} name={profile?.username ?? '?'} size={36} />
+          <Avatar avatar={me?.avatar} name={profile?.username ?? '?'} size={34} />
           <Text style={styles.hello} numberOfLines={1}>Hey {profile?.username ?? ''}</Text>
         </View>
         <View style={styles.scoreRow}>
-          <DotNumber value={String(total).padStart(2, '0')} size={88} />
-          <View style={{ paddingBottom: 14, gap: 2 }}>
-            <Text style={type.label}>Chores</Text>
-            <Text style={styles.place}>{s.place ?? 'this period'}</Text>
-          </View>
+          <Text style={styles.score}>{total}</Text>
+          <Text style={styles.scoreText}>
+            {total === 1 ? 'chore' : 'chores'}
+            {s.place ? <Text style={styles.place}>{` · ${s.place}`}</Text> : ' this period'}
+          </Text>
         </View>
         {s.progress !== null && (
           <View style={styles.bar}>
@@ -110,21 +111,33 @@ export default function Home() {
 
       <Label>Chores</Label>
       {chores.length > 0 ? (
-        <ListGroup>
+        <View style={styles.grid}>
           {chores.map((c) => {
             const waiting = others.find((r) => r.choreKey === c.key);
             return (
-              <ListRow
+              <Pressable
                 key={c.key}
-                icon={choreIcon(c.key) as IconName}
-                title={c.name}
+                accessibilityRole="button"
                 accessibilityLabel={c.name}
-                subtitle={waiting ? `${waiting.kind === 'redo' ? 'Being redone by' : 'Waiting on'} ${waiting.assignedToName}` : undefined}
-                onPress={() => openChore(c.key)}
-              />
+                onPress={() => {
+                  haptics.tap();
+                  openChore(c.key);
+                }}
+                style={({ pressed }) => [styles.tile, pressed && { backgroundColor: colors.cardRaised, transform: [{ scale: 0.98 }] }]}
+              >
+                <Icon name={choreIcon(c.key) as IconName} size={22} color={colors.text} />
+                <View>
+                  <Text style={styles.tileText} numberOfLines={2}>{c.name}</Text>
+                  {waiting && (
+                    <Text style={styles.tileSub} numberOfLines={1}>
+                      {waiting.kind === 'redo' ? 'Being redone by' : 'Waiting on'} {waiting.assignedToName}
+                    </Text>
+                  )}
+                </View>
+              </Pressable>
             );
           })}
-        </ListGroup>
+        </View>
       ) : (
         <Text style={type.small}>No chores switched on. The house admin can add some in Settings.</Text>
       )}
@@ -134,13 +147,22 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  house: { flex: 1, fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1.2, color: colors.text, textTransform: 'uppercase' },
-  period: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1, color: colors.muted, textTransform: 'uppercase' },
-  hero: { paddingVertical: space.md, gap: 6 },
+  house: { flex: 1, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.text, textTransform: 'uppercase' },
+  period: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.muted, textTransform: 'uppercase' },
+  hero: { backgroundColor: colors.card, borderRadius: 20, padding: 18, gap: 10 },
   helloRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  hello: { fontSize: 22, fontWeight: '600', color: colors.text, letterSpacing: -0.5, flex: 1 },
-  scoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 14 },
-  place: { fontSize: 17, fontWeight: '600', color: colors.text },
-  bar: { height: 2, backgroundColor: colors.line, borderRadius: 1, marginTop: 4, marginBottom: 2, overflow: 'hidden' },
-  barFill: { height: '100%', backgroundColor: colors.text },
+  hello: { fontSize: 18, fontWeight: '600', color: colors.text, flex: 1 },
+  scoreRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  score: { fontSize: 56, fontWeight: '700', color: colors.text, letterSpacing: -2, lineHeight: 62 },
+  scoreText: { fontSize: 16, color: colors.muted },
+  place: { color: colors.text, fontWeight: '600' },
+  bar: { height: 3, backgroundColor: colors.line, borderRadius: 2, overflow: 'hidden' },
+  barFill: { height: '100%', backgroundColor: colors.text, borderRadius: 2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  tile: {
+    width: '49%', minHeight: 108, borderRadius: 16, padding: 14, justifyContent: 'space-between',
+    backgroundColor: colors.card, gap: 8,
+  },
+  tileText: { fontSize: 15, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
+  tileSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
 });

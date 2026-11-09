@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
 import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
-import { DotNumber, Loading, Screen, Title } from '../../components/ui';
+import { BigNumber, Loading, Screen, Title } from '../../components/ui';
 import { Avatar } from '../../components/Avatar';
 import { colors, fonts, radius, space, type } from '../../components/theme';
 
@@ -40,7 +40,7 @@ export default function Leaderboard() {
             <Text style={styles.periodName}>{periodLabel(now, rule)}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <DotNumber value={String(daysLeft).padStart(2, '0')} size={40} />
+            <BigNumber value={daysLeft} size={36} />
             <Text style={type.label}>{daysLeft === 1 ? 'Day left' : 'Days left'}</Text>
           </View>
         </View>
@@ -64,7 +64,7 @@ export default function Leaderboard() {
           const me = m.uid === user.uid;
           return (
             <View key={m.uid} style={[styles.row, i > 0 && styles.divider, me && styles.meRow]}>
-              <Text style={[styles.posText, styles.pos]}>{String(position(i)).padStart(2, '0')}</Text>
+              <Text style={[styles.posText, styles.pos]}>{position(i)}</Text>
               <Avatar avatar={m.avatar} name={m.username} size={34} />
               <View style={{ flex: 1, gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -76,7 +76,7 @@ export default function Leaderboard() {
                 </View>
                 {nextUp?.uid === m.uid && <Text style={styles.next}>Next up for chores</Text>}
               </View>
-              <Text style={[styles.scoreText, styles.score]}>{String(m.totalCompleted).padStart(2, '0')}</Text>
+              <Text style={[styles.scoreText, styles.score]}>{m.totalCompleted}</Text>
             </View>
           );
         })}
@@ -110,5 +110,5 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', backgroundColor: colors.muted },
   next: { fontSize: 12, color: colors.muted },
   score: { width: 56, textAlign: 'right' },
-  scoreText: { fontSize: 30, fontFamily: fonts.dot, color: colors.text },
+  scoreText: { fontSize: 24, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
 });
