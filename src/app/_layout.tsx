@@ -19,6 +19,7 @@ export default function RootLayout() {
           <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'PHOTO' }} />
           <Stack.Screen name="offer/[id]" options={{ presentation: 'modal', headerShown: true, title: 'CHORE OFFER' }} />
           <Stack.Screen name="add-chore" options={{ presentation: 'modal', headerShown: true, title: '' }} />
+          <Stack.Screen name="privacy" options={{ presentation: 'modal', headerShown: true, title: 'PRIVACY' }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext';
 import { needsCheckBy } from '../../lib/review';
 import { colors } from '../../components/theme';
 import { haptics } from '../../lib/haptics';
+import { PRIVACY_VERSION } from '../../lib/legal';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 function icon(outline: IconName, filled: IconName) {
@@ -19,6 +20,8 @@ export default function TabsLayout() {
   const { ready, profile, logs, user, offers } = useApp();
   const insets = useSafeAreaInsets();
   if (ready && !profile?.houseId) return <Redirect href="/" />;
+  // Must have agreed to the current privacy policy.
+  if (profile && profile.privacyVersion !== PRIVACY_VERSION) return <Redirect href="/consent" />;
   const toCheck = user ? logs.filter((l) => needsCheckBy(l, user.uid)).length : 0;
   // Pay things waiting on you: counter offers to answer, someone to pay.
   const payToDo = user

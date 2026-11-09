@@ -19,6 +19,8 @@ export interface UserProfile {
   university: string | null;
   houseId: string | null;
   createdAt: number;
+  /** Which privacy policy they agreed to (see lib/legal.ts). */
+  privacyVersion: string | null;
 }
 
 export type ProfileDetails = Pick<UserProfile, 'username' | 'dob' | 'gender' | 'isStudent' | 'university'>;

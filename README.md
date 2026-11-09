@@ -30,6 +30,12 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 
 **Profile pictures:** everyone picks their own in Settings: a photo (cropped in a circle) or a drawn character.
 
+**Postcode:** creating a house asks for the postcode; only the area (e.g. "LS6 · Leeds") is saved, via postcodes.io.
+
+**Privacy:** sign-up has a tick-box to agree to the privacy policy (in the app at /privacy; the text is in `src/components/PrivacyPolicy.tsx`, and your name and contact email go in `src/lib/legal.ts`). Changing `PRIVACY_VERSION` there asks everyone to agree again.
+
+**Owner dashboard:** Settings → App owner → Dashboard (owners only; set up like the Feedback inbox). Users, houses, activity, chores, paid deals, sign-ups per week, age, gender, universities and house areas, plus an anonymous CSV download on the web.
+
 **Haptics:** gentle vibrations on taps (phone app only; Safari can't vibrate). Can be turned off in Settings.
 
 **Leaderboard resets:** every 2 months by default. The house admin can choose 1, 3 or 6 months, or custom dates (e.g. a uni term), in Settings → House details.

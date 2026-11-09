@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth'
 import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
-  clearRemovedHouse, setPushToken, toMember, watchHouse, watchMembers, watchOpenRequests, watchProfile,
+  clearRemovedHouse, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
   watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
 import { periodKey } from '../lib/period';
@@ -130,6 +130,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       unsubs.forEach((u) => u());
     };
   }, [houseId, uid, attempt]);
+
+  // 3b. Once per app open: mark yourself active (for the owner's dashboard).
+  useEffect(() => {
+    if (!houseId || !uid) return;
+    const t = setTimeout(() => touchLastSeen(houseId, uid).catch(() => {}), 3000);
+    return () => clearTimeout(t);
+  }, [houseId, uid]);
 
   // 4. Once in a house: if notifications are allowed, save this phone's
   // token. (If not, Home explains why and asks — see NotificationCard.)

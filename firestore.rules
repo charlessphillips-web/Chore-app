@@ -32,6 +32,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read, delete: if signedIn() && me() == uid;
+      // The app owner's dashboard (anonymous statistics).
+      allow read: if isOwner();
       allow create: if signedIn() && me() == uid
         && validProfile(request.resource.data)
         && request.resource.data.houseId == null;
@@ -84,8 +86,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Owner dashboard: counts across all houses.
+    match /{path=**}/members/{uid} { allow read: if isOwner(); }
+    match /{path=**}/logs/{logId} { allow read: if isOwner(); }
+    match /{path=**}/offers/{offerId} { allow read: if isOwner(); }
+
     match /houses/{houseId} {
-      allow read: if isMember(houseId);
+      allow read: if isMember(houseId) || isOwner();
       allow create: if signedIn()
         && request.resource.data.createdBy == me()
         && request.resource.data.adminUid == me()
@@ -117,7 +124,9 @@ service cloud.firestore {
         // Your own doc: name, push token, profile picture, and your score up by at most 1.
         allow update: if signedIn() && me() == uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar'])
+               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt'])
+          && (!('lastSeenAt' in request.resource.data) || request.resource.data.lastSeenAt == request.time
+              || request.resource.data.lastSeenAt == resource.data.get('lastSeenAt', null))
           && ownStatsOk()
           && validAvatar(request.resource.data.get('avatar', null));
         // A housemate rejecting your chore takes exactly 1 off that chore.

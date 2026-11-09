@@ -7,6 +7,7 @@ import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebas
 import {
   doc, collection, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, runTransaction,
   serverTimestamp, increment, getDocs, query, where, orderBy, deleteField, Timestamp,
+  collectionGroup, getCountFromServer, getAggregateFromServer, count, sum,
 } from 'firebase/firestore';
 
 let env;
@@ -496,6 +497,34 @@ test('house area: postcode area only, admin can change it', async () => {
   await assertFails(updateDoc(house('alice'), { area: { ...area, outcode: 'LS6 1AB' } }));
   await assertFails(updateDoc(house('alice'), { area: { ...area, street: '42 Hyde Park Rd' } }));
   await assertFails(updateDoc(house('sam'), { area }));
+});
+
+test('owner dashboard: only owners read totals; last seen is honest', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await logChore('alice', 'h1', 'bins');
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'owners', 'charlie'), { name: 'Charlie' }));
+  const o = db('charlie');
+  await assertSucceeds(getDocs(collection(o, 'users')));
+  await assertSucceeds(getDocs(collection(o, 'houses')));
+  assert.equal((await getCountFromServer(collectionGroup(o, 'members'))).data().count, 2);
+  assert.equal((await getCountFromServer(query(collectionGroup(o, 'logs'), where('at', '>=', Timestamp.fromMillis(0))))).data().count, 1);
+  await assertSucceeds(getAggregateFromServer(query(collectionGroup(o, 'offers'), where('paid', '==', true)), { n: count(), p: sum('agreedPrice') }));
+  // Not for anyone else.
+  await assertFails(getDocs(collection(db('sam'), 'users')));
+  await assertFails(getDocs(collection(db('sam'), 'houses')));
+  await assertFails(getCountFromServer(collectionGroup(db('sam'), 'members')));
+  await assertFails(getDocs(collectionGroup(db('alice'), 'logs')));
+  // Last seen: only "now", only yourself.
+  const me = doc(db('sam'), 'houses', 'h1', 'members', 'sam');
+  await assertSucceeds(updateDoc(me, { lastSeenAt: serverTimestamp() }));
+  await assertFails(updateDoc(me, { lastSeenAt: Timestamp.fromMillis(Date.now() + 86400000 * 30) }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1', 'members', 'sam'), { lastSeenAt: serverTimestamp() }));
+});
+
+test('profile can record which privacy policy was agreed', async () => {
+  await assertSucceeds(setDoc(doc(db('a'), 'users', 'a'), profile({ privacyVersion: '2026-11-09', privacyAcceptedAt: serverTimestamp() })));
+  await assertSucceeds(updateDoc(doc(db('a'), 'users', 'a'), { privacyVersion: '2026-12-01', privacyAcceptedAt: serverTimestamp() }));
 });
 
 test('sending back creates a redo for the chore-doer', async () => {

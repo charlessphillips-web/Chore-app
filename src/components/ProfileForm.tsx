@@ -12,10 +12,13 @@ export function ProfileForm({
   initial,
   submitLabel,
   onSubmit,
+  footer,
 }: {
   initial?: Partial<ProfileDetails>;
   submitLabel: string;
   onSubmit: (p: ProfileDetails) => Promise<void>;
+  /** Shown just above the button, e.g. the privacy tick-box. */
+  footer?: React.ReactNode;
 }) {
   const [username, setUsername] = useState(initial?.username ?? '');
   const [dob, setDob] = useState(initial?.dob ?? '');
@@ -77,6 +80,7 @@ export function ProfileForm({
         </>
       )}
 
+      {footer}
       <ErrorText>{error}</ErrorText>
       <Button title={submitLabel} onPress={submit} loading={saving} />
       <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>

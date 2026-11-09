@@ -3,6 +3,7 @@ import { Redirect } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { createHouse, joinHouse } from '../lib/db';
 import type { HouseArea } from '../lib/postcode';
+import { PRIVACY_VERSION } from '../lib/legal';
 import { PostcodeField } from '../components/PostcodeField';
 import { Button, Card, Chip, ChipRow, ErrorText, Input, Label, Screen, Subtitle, Title } from '../components/ui';
 import { colors } from '../components/theme';
@@ -20,6 +21,7 @@ export default function HouseSetup() {
 
   // Move on as soon as the profile update arrives (avoids racing the database).
   if (profile?.houseId) return <Redirect href="/" />;
+  if (profile && profile.privacyVersion !== PRIVACY_VERSION) return <Redirect href="/consent" />;
 
   async function go() {
     if (!user || !profile) return;

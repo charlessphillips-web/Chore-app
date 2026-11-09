@@ -12,6 +12,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="feedback" />
       <Stack.Screen name="inbox" options={{ title: 'FEEDBACK INBOX' }} />
       <Stack.Screen name="avatar" options={{ title: 'PROFILE PICTURE' }} />
+      <Stack.Screen name="dashboard" options={{ title: 'DASHBOARD' }} />
     </Stack>
   );
 }

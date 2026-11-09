@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { Loading, Screen, Title } from '../components/ui';
 import { colors } from '../components/theme';
+import { PRIVACY_VERSION } from '../lib/legal';
 
 /** Sends people to the right place: questions → house code → the app. */
 export default function Index() {
@@ -20,6 +21,8 @@ export default function Index() {
   if (!profile) return <Redirect href="/welcome" />;
   // An older account from before date of birth was asked.
   if (!profile.dob) return <Redirect href="/onboarding" />;
+  // Hasn't agreed to the current privacy policy yet.
+  if (profile.privacyVersion !== PRIVACY_VERSION) return <Redirect href="/consent" />;
   if (!profile.houseId) return <Redirect href="/house-setup" />;
   return <Redirect href="/home" />;
 }

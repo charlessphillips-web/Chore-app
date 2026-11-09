@@ -1,7 +1,8 @@
 import {
+  collectionGroup, count, getAggregateFromServer, getCountFromServer, getDocs, sum, Timestamp,
   collection, deleteDoc, deleteField, doc, getDoc, increment, limit, onSnapshot, orderBy, query,
   runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch,
-  type DocumentData, type FirestoreError, type Timestamp,
+  type DocumentData, type FirestoreError,
 } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
 import { Platform } from 'react-native';
@@ -17,6 +18,7 @@ import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails,
 import { formatPrice, type PayChoice } from './money';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
+import { PRIVACY_VERSION } from './legal';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -33,7 +35,15 @@ const wallpaperRef = (houseId: string) => doc(db, 'houses', houseId, 'wallpaper'
 // ---------- Profile ----------
 
 export async function createProfile(uid: string, p: ProfileDetails): Promise<void> {
-  await setDoc(userRef(uid), { ...p, houseId: null, createdAt: serverTimestamp() });
+  await setDoc(userRef(uid), {
+    ...p, houseId: null, createdAt: serverTimestamp(),
+    privacyVersion: PRIVACY_VERSION, privacyAcceptedAt: serverTimestamp(),
+  });
+}
+
+/** Records that you agreed to the current privacy policy. */
+export async function acceptPrivacy(uid: string): Promise<void> {
+  await updateDoc(userRef(uid), { privacyVersion: PRIVACY_VERSION, privacyAcceptedAt: serverTimestamp() });
 }
 
 /** Edits your details. Your housemates see your new username straight away. */
@@ -62,6 +72,7 @@ export function watchProfile(uid: string, cb: (p: UserProfile | null) => void) {
       university: d.university ?? null,
       houseId: d.houseId ?? null,
       createdAt: ms(d.createdAt) ?? Date.now(),
+      privacyVersion: typeof d.privacyVersion === 'string' ? d.privacyVersion : null,
     });
   });
 }
@@ -733,4 +744,65 @@ export async function markOfferPaid(house: House, offer: ChoreOffer, members: Me
   if (offer.doerUid && offer.agreedPrice) {
     await ping(members, [offer.doerUid], house.id, `${offer.fromName} paid you ${formatPrice(offer.agreedPrice)}`, `for ${offer.choreName}. Check your bank app.`);
   }
+}
+
+// ---------- Owner dashboard ----------
+
+/** Marks you as active (for the dashboard's "active" numbers). At most every few hours. */
+export async function touchLastSeen(houseId: string, uid: string) {
+  await updateDoc(memberRef(houseId, uid), { lastSeenAt: serverTimestamp() });
+}
+
+export interface DashboardData {
+  users: { dob: string | null; gender: string | null; isStudent: boolean | null; university: string | null; createdAt: number | null; houseId: string | null; agreed: boolean }[];
+  houses: { id: string; createdAt: number | null; area: HouseArea | null }[];
+  members: number;
+  active1d: number;
+  active7d: number;
+  chores: number;
+  chores7d: number;
+  sentBack: number;
+  deals: number;
+  dealPence: number;
+}
+
+/**
+ * Everything the owner dashboard shows. Profiles and houses are read in
+ * full (they're small); everything else uses server-side counts, so it
+ * stays cheap as the app grows.
+ */
+export async function loadDashboard(): Promise<DashboardData> {
+  const ago = (days: number) => Timestamp.fromMillis(Date.now() - days * 86_400_000);
+  const n = async (q: Parameters<typeof getCountFromServer>[0]) => (await getCountFromServer(q)).data().count;
+  const members = collectionGroup(db, 'members');
+  const logs = collectionGroup(db, 'logs');
+  const [usersSnap, housesSnap, memberCount, active1d, active7d, chores, chores7d, sentBack, deals] = await Promise.all([
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'houses')),
+    n(members),
+    n(query(members, where('lastSeenAt', '>=', ago(1)))),
+    n(query(members, where('lastSeenAt', '>=', ago(7)))),
+    n(logs),
+    n(query(logs, where('at', '>=', ago(7)))),
+    n(query(logs, where('status', '==', 'rejected'))),
+    getAggregateFromServer(query(collectionGroup(db, 'offers'), where('paid', '==', true)), { deals: count(), pence: sum('agreedPrice') }),
+  ]);
+  return {
+    users: usersSnap.docs.map((d) => {
+      const u = d.data();
+      return {
+        dob: u.dob ?? null, gender: u.gender ?? null, isStudent: typeof u.isStudent === 'boolean' ? u.isStudent : null,
+        university: u.university ?? null, createdAt: ms(u.createdAt), houseId: u.houseId ?? null, agreed: !!u.privacyVersion,
+      };
+    }),
+    houses: housesSnap.docs.map((d) => ({ id: d.id, createdAt: ms(d.data().createdAt), area: d.data().area ?? null })),
+    members: memberCount,
+    active1d,
+    active7d,
+    chores,
+    chores7d,
+    sentBack,
+    deals: deals.data().deals,
+    dealPence: deals.data().pence ?? 0,
+  };
 }

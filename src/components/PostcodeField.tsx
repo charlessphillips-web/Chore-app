@@ -64,10 +64,10 @@ export function PostcodeField({ value, onChange, onUnavailable }: {
           autoCorrect={false}
           maxLength={9}
           accessibilityLabel="Postcode"
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 0 }}
           onSubmitEditing={find}
         />
-        <Button title="Find" variant="secondary" onPress={find} loading={busy} disabled={!text.trim()} style={{ paddingHorizontal: 22 }} />
+        <Button title="Find" variant="secondary" onPress={find} loading={busy} disabled={!text.trim()} style={{ paddingHorizontal: 20, flexShrink: 0 }} />
       </View>
       <ErrorText>{error}</ErrorText>
       <Text style={type.small}>Only the area is saved (e.g. LS6 · Leeds), never your full address.</Text>

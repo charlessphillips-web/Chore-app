@@ -89,6 +89,7 @@ export default function SettingsIndex() {
         <>
           <Label>App owner</Label>
           <ListGroup>
+            <ListRow icon="stats-chart-outline" title="Dashboard" subtitle="Users, houses, activity, demographics" onPress={() => router.push('/settings/dashboard')} />
             <ListRow icon="mail-outline" title="Feedback inbox" subtitle="Bug reports and suggestions" onPress={() => router.push('/settings/inbox')} />
           </ListGroup>
         </>
@@ -136,6 +137,7 @@ export default function SettingsIndex() {
       <Label>Help</Label>
       <ListGroup>
         <ListRow icon="information-circle-outline" title="How Choreboard works" onPress={() => router.push('/how-it-works')} />
+        <ListRow icon="shield-checkmark-outline" title="Privacy policy" subtitle="What we collect and why" onPress={() => router.push('/privacy')} />
         <ListRow icon="bulb-outline" title="Show tips again" subtitle="The first-time tips on each tab" onPress={() => { resetTips(); notify('Done', 'Tips will show again on each tab.'); }} />
         <ListRow icon="bug-outline" title="Report a bug" subtitle="Something not working? Tell us" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'bug' } })} />
         <ListRow icon="bulb-outline" title="Make a suggestion" subtitle="Ideas to make Choreboard better" onPress={() => router.push({ pathname: '/settings/feedback', params: { type: 'suggestion' } })} />
