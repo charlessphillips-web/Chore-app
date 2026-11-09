@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { haptics } from '../lib/haptics';
 import { track } from '../lib/analytics';
 import { Button, Icon, Logo } from './ui';
@@ -74,6 +75,11 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
   return (
     <SafeAreaView style={[styles.root, noSelect]}>
       <View style={styles.topRow}>
+        {showWelcome ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Sign in" onPress={() => { haptics.tap(); router.push('/sign-in'); }} hitSlop={12}>
+            <Text style={styles.skip}>Sign in</Text>
+          </Pressable>
+        ) : <View />}
         {!last ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Skip" onPress={() => { haptics.tap(); if (showWelcome) track('intro_skip'); setDir(1); setI(slides - 1); }} hitSlop={12}>
             <Text style={styles.skip}>Skip</Text>
@@ -193,7 +199,7 @@ function HoldButton({ label, onDone }: { label: string; onDone: () => void }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  topRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: space.lg, paddingTop: space.md, minHeight: 40 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingTop: space.md, minHeight: 40 },
   skip: { fontSize: 16, color: colors.muted, fontWeight: '500' },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: space.xl, gap: space.md },
   tile: { width: 104, height: 104, borderRadius: 30, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', marginBottom: space.md },

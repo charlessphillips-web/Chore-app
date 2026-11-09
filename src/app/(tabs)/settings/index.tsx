@@ -99,6 +99,13 @@ export default function SettingsIndex() {
       <ListGroup>
         <ListRow icon="person-outline" title="Personal details" subtitle="Username, date of birth, university" onPress={() => router.push('/settings/personal')} />
         <ListRow
+          icon={user.isAnonymous ? 'key-outline' : 'checkmark-circle-outline'}
+          title="Your login"
+          subtitle={user.isAnonymous ? 'Not saved: add an email so you can sign in on another phone' : user.email ?? 'Saved'}
+          right={user.isAnonymous ? <View style={styles.dot} /> : undefined}
+          onPress={() => router.push('/settings/account')}
+        />
+        <ListRow
           icon="phone-portrait-outline"
           title="Haptics"
           subtitle="Gentle vibration when you tap (app only)"
@@ -156,4 +163,5 @@ export default function SettingsIndex() {
 
 const styles = StyleSheet.create({
   me: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.warning },
 });

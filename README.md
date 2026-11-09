@@ -30,6 +30,8 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 
 **Profile pictures:** everyone picks their own in Settings: a photo (cropped in a circle) or a drawn character.
 
+**Logins:** everyone starts without a login. Settings → Your login adds an email + password to the same account (keeps house, scores, picture), so you can sign in on another phone or browser ("Sign in" on the first intro screen). Needs Firebase → Authentication → Sign-in method → **Email/Password** switched on.
+
 **Postcode:** creating a house asks for the postcode; only the area (e.g. "LS6 · Leeds") is saved, via postcodes.io.
 
 **Privacy:** sign-up has a tick-box to agree to the privacy policy (in the app at /privacy; the text is in `src/components/PrivacyPolicy.tsx`, and your name and contact email go in `src/lib/legal.ts`). Changing `PRIVACY_VERSION` there asks everyone to agree again.
