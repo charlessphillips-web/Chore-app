@@ -611,6 +611,34 @@ test('two checks: each person once, completes on the second, one send-back is en
   await assertSucceeds(review('jo', 'h1', id2, 'rejected', 'Still dirty'));
 });
 
+test('cancelling: mistaken redos and no-longer-needed flags', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await joinHouse('jo');
+  const cancel = (uid, id) => updateDoc(doc(db(uid), 'houses', 'h1', 'requests', id), { status: 'cancelled', completedBy: uid, completedAt: serverTimestamp() });
+  await needsRequest('sam', 'jo', 'f1');
+  await assertFails(cancel('jo', 'f1')); // can't dodge a "needs doing" aimed at you
+  await assertSucceeds(cancel('sam', 'f1')); // whoever flagged it can
+  await needsRequest('sam', 'jo', 'f2');
+  await assertSucceeds(cancel('alice', 'f2')); // admin can
+  // A redo can be dismissed by the person it's for.
+  const id = await logChore('jo', 'h1', 'bins');
+  await review('sam', 'h1', id, 'rejected', 'Still dirty');
+  const redo = (await getDocs(query(collection(db('jo'), 'houses', 'h1', 'requests'), where('kind', '==', 'redo')))).docs[0].id;
+  await assertSucceeds(cancel('jo', redo));
+});
+
+test('check reminder: once, only after 12 hours', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const id = await logChore('alice', 'h1', 'bins');
+  const ref = (uid) => doc(db(uid), 'houses', 'h1', 'logs', id);
+  await assertFails(updateDoc(ref('sam'), { checkReminderSent: true })); // too early
+  await env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), 'houses', 'h1', 'logs', id), { at: Timestamp.fromMillis(Date.now() - 13 * 3600_000) }));
+  await assertSucceeds(updateDoc(ref('sam'), { checkReminderSent: true }));
+  await assertFails(updateDoc(ref('alice'), { checkReminderSent: true })); // only once
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

@@ -11,7 +11,7 @@ import { Avatar } from '../../components/Avatar';
 import { colors, fonts, space, type } from '../../components/theme';
 
 export default function HouseTab() {
-  const { user, house, members, logs } = useApp();
+  const { user, house, members, logs, isAdmin } = useApp();
   if (!user || !house) return <Loading />;
 
   const share = () =>
@@ -29,9 +29,17 @@ export default function HouseTab() {
         <Button title="Share code" icon="share-outline" variant="secondary" onPress={share} style={{ alignSelf: 'stretch' }} />
       </Card>
 
+      <Label>Bin days</Label>
+      {house.bins.length === 0 && (
+        <Card>
+          <Text style={type.small}>
+            {isAdmin ? 'No bin days yet. Add them in Settings → Bin days, and everyone gets a reminder the night before.' : 'No bin days yet. Ask your house admin to add them in Settings → Bin days.'}
+          </Text>
+          {isAdmin && <Button title="Set bin days" icon="trash-outline" variant="secondary" onPress={() => router.push('/settings/bins')} />}
+        </Card>
+      )}
       {house.bins.length > 0 && (
         <>
-          <Label>Bin days</Label>
           <Card style={{ paddingVertical: space.sm }}>
             {house.bins.map((b, i) => {
               const [n] = nextCollections(b, new Date(), 1);

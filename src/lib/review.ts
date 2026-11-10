@@ -50,7 +50,11 @@ export function timeLeft(at: number, now: number = Date.now()): string {
 }
 
 /** Reasons a checker can give for sending a chore back. */
-export const REDO_REASONS = ['Still dirty', 'Only half done', "Photo doesn't show it", 'Wrong chore'] as const;
+export const REDO_REASONS = ['Still dirty', 'Only half done', "Photo doesn't show it", 'Wrong chore', 'Logged twice'] as const;
+
+/** Reasons where the chore just doesn't count, with nothing to redo. */
+export const NO_REDO_REASONS: readonly string[] = ['Logged twice'];
+export const needsRedo = (reason: string) => !NO_REDO_REASONS.some((r) => reason === r || reason.startsWith(`${r}:`));
 
 /** "Still dirty" + optional note -> "Still dirty: the hob is greasy" (max 140 chars). */
 export function redoReason(reason: string, note: string): string {

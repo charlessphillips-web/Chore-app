@@ -79,6 +79,8 @@ export interface ChoreLog {
   checks: string[];
   checkNames: string[];
   checksNeeded: number;
+  /** The 12-hour "still needs checking" reminder has gone out. */
+  checkReminderSent: boolean;
   /** Done for someone else, who paid for it (see ChoreOffer): they get the point, not the doer. */
   offerId: string | null;
   creditTo: string | null;

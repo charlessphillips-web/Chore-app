@@ -61,7 +61,7 @@ export default function Home() {
         <Text style={type.small}>{s.hint}</Text>
       </View>
 
-      <BinBanner bins={house.bins} now={now} />
+      <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
       <GettingStarted />
       <NotificationCard />
 

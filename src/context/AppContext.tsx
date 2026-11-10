@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth'
 import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
-  clearRemovedHouse, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
+  CHECK_REMINDER_MS, clearRemovedHouse, sendCheckReminder, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
   watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
 import { periodEnd, periodKey } from '../lib/period';
@@ -180,6 +180,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
+
+  // 4b. Chores logged 12+ hours ago that still need checks: remind the people
+  // who haven't checked (once per chore, whichever phone gets there first).
+  const remindIds = (current?.logs ?? [])
+    .filter((l) => l.status === 'pending' && !l.checkReminderSent && l.checks.length < l.checksNeeded)
+    .filter((l) => { const age = new Date().getTime() - l.at; return age > CHECK_REMINDER_MS && age < 24 * 3_600_000; })
+    .map((l) => l.id)
+    .join(',');
+  useEffect(() => {
+    if (!remindIds || !houseId || !current) return;
+    for (const id of remindIds.split(',')) {
+      const log = current.logs.find((l) => l.id === id);
+      const members = current.members.map((m) => toMember(m.id, m.data, ''));
+      if (log) sendCheckReminder(houseId, log, members).catch(() => {});
+    }
+    // Only re-run when the set of chores needing a reminder changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remindIds]);
 
   // 5. Phone reminders (bin night, leaderboard reset, Sunday summary), redone whenever they change.
   const myPrefs = current?.members.find((m) => m.id === uid)?.data.notifPrefs;

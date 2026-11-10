@@ -12,7 +12,7 @@ import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
-import { checksNeededFor } from './review';
+import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
@@ -310,6 +310,7 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             checks: Array.isArray(d.checks) ? d.checks : [],
             checkNames: Array.isArray(d.checkNames) ? d.checkNames : [],
             checksNeeded: typeof d.checksNeeded === 'number' ? d.checksNeeded : 1,
+            checkReminderSent: d.checkReminderSent === true,
             offerId: d.offerId ?? null,
             creditTo: d.creditTo ?? null,
             creditToName: d.creditToName ?? null,
@@ -408,6 +409,28 @@ export async function getChorePhoto(houseId: string, logId: string): Promise<str
   return snap.exists() ? (snap.data().data as string) : null;
 }
 
+export const CHECK_REMINDER_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * 12 hours after a chore is logged, if it still isn't fully checked, remind
+ * everyone who hasn't checked it yet. Whichever phone opens the app first
+ * sends it; the rules make sure it only goes out once.
+ */
+export async function sendCheckReminder(houseId: string, log: ChoreLog, members: Member[]) {
+  await updateDoc(doc(db, 'houses', houseId, 'logs', log.id), { checkReminderSent: true });
+  const still = log.checksNeeded - log.checks.length;
+  const to = members
+    .filter((m) => m.uid !== log.userId && !log.checks.includes(m.uid) && m.pushToken && wants(m.notifPrefs, 'check'))
+    .map((m) => m.pushToken!);
+  if (to.length) {
+    await sendPush(to, {
+      title: `📸 ${log.choreName} still needs ${still} more check${still === 1 ? '' : 's'}`,
+      body: `${log.username}'s photo hasn't been fully checked yet. Can you take a look?`,
+      data: { type: 'chore_check', houseId },
+    }).catch(() => false);
+  }
+}
+
 /** One housemate verifies a chore photo. */
 /**
  * One housemate verifies a chore photo. It's fully verified once enough
@@ -457,11 +480,9 @@ export async function sendBackChore(
   track('chore_sendback');
   const owner = members.find((m) => m.uid === log.userId);
   if (owner?.pushToken && wants(owner.notifPrefs, 'redo')) {
-    await sendPush([owner.pushToken], {
-      title: `Redo: ${log.choreName}`,
-      body: `${reviewer.username} sent it back — ${reason}`,
-      data: { type: 'chore_redo', houseId: house.id },
-    });
+    await sendPush([owner.pushToken], needsRedo(reason)
+      ? { title: `Redo: ${log.choreName}`, body: `${reviewer.username} sent it back: ${reason}`, data: { type: 'chore_redo', houseId: house.id } }
+      : { title: `${log.choreName} wasn't counted`, body: `${reviewer.username} marked it as logged twice. Nothing to redo.`, data: { type: 'chore_redo', houseId: house.id } });
   }
 }
 
@@ -499,8 +520,8 @@ async function reviewChore(
           lastReviewAdjust: logId,
         });
       }
-      // Back on their list to redo.
-      tx.set(doc(collection(db, 'houses', houseId, 'requests')), {
+      // Back on their list to redo (not if it was just logged twice).
+      if (needsRedo(reason)) tx.set(doc(collection(db, 'houses', houseId, 'requests')), {
         kind: 'redo',
         reason,
         logId,
@@ -538,6 +559,17 @@ export async function nudgeChore(houseId: string, request: ChoreRequest, from: {
       data: { type: 'chore_nudge', houseId },
     }).catch(() => false);
   }
+}
+
+/**
+ * Closes a request without doing it: e.g. a redo that was a mistake, or a
+ * "needs doing" that's no longer needed. Allowed for whoever it's for (redos
+ * only), whoever made it, and the house admin.
+ */
+export async function cancelRequest(houseId: string, requestId: string, uid: string) {
+  await updateDoc(doc(db, 'houses', houseId, 'requests', requestId), {
+    status: 'cancelled', completedBy: uid, completedAt: serverTimestamp(),
+  });
 }
 
 /**

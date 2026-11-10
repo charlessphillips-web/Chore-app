@@ -5,7 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { haptics } from '../../lib/haptics';
 import { sendBackChore, verifyChore } from '../../lib/db';
 import { jpegUri } from '../../lib/photos';
-import { checkProgress, effectiveStatus, needsCheckBy, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
+import { checkProgress, effectiveStatus, needsCheckBy, needsRedo, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
 import type { ChoreLog } from '../../lib/types';
 import { Button, Card, Chip, ChipRow, Empty, Input, Label, Loading, notify, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
@@ -121,7 +121,9 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
             </ChipRow>
             <Input value={note} onChangeText={setNote} placeholder="Add a note (optional)" maxLength={100} />
             <Text style={type.small}>
-              It won&apos;t count, and goes back to {log.username} to redo.
+              {reason && !needsRedo(reason)
+                ? `It won't count, and there's nothing for ${log.username} to redo.`
+                : `It won't count, and goes back to ${log.username} to redo.`}
             </Text>
             <View style={{ flexDirection: 'row', gap: space.sm }}>
               <Button title="Cancel" variant="ghost" style={{ flex: 1 }} onPress={() => setSendingBack(false)} disabled={!!busy} />

@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
-import { logChore, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
+import { cancelRequest, logChore, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
 import { haptics } from '../../lib/haptics';
 import { pickAssignee } from '../../lib/assign';
 import { takeChorePhoto, type ChorePhoto } from '../../lib/photos';
 import { formatPrice } from '../../lib/money';
-import { Button, Card, ErrorText, Icon, Loading, notify, Screen, timeAgo, Title } from '../../components/ui';
+import { Button, Card, confirm, ErrorText, Icon, Loading, notify, Screen, timeAgo, Title } from '../../components/ui';
 import { colors, radius, space, type } from '../../components/theme';
 
 type Step = 'choose' | 'done' | 'needs';
@@ -15,7 +15,7 @@ type Step = 'choose' | 'done' | 'needs';
 /** Tap a chore on Home → "I've done it" (photo) or "Bins are full" (ask whoever's done least). */
 export default function ChoreScreen() {
   const { key, requestId } = useLocalSearchParams<{ key: string; requestId?: string }>();
-  const { user, profile, house, members, openRequests, offers } = useApp();
+  const { user, profile, house, members, openRequests, offers, isAdmin } = useApp();
   const [step, setStep] = useState<Step>(requestId ? 'done' : 'choose');
   const [photo, setPhoto] = useState<ChorePhoto | null>(null);
   const [busy, setBusy] = useState<'photo' | 'save' | 'nudge' | null>(null);
@@ -138,6 +138,17 @@ export default function ChoreScreen() {
               }}
             />
           )}
+          {request && (request.requestedBy === user.uid || isAdmin) && (
+            <Button
+              title={request.kind === 'redo' ? 'Cancel this redo' : 'Cancel this request'}
+              variant="ghost"
+              onPress={async () => {
+                if (await confirm('Cancel it?', `${request.assignedToName} won't need to do it any more.`, 'Cancel it')) {
+                  await cancelRequest(house.id, request.id, user.uid).then(() => router.back()).catch((e) => setError((e as Error).message));
+                }
+              }}
+            />
+          )}
           <ErrorText>{error}</ErrorText>
         </>
       )}
@@ -167,6 +178,15 @@ export default function ChoreScreen() {
           {request?.kind === 'redo' && request.assignedTo === user.uid && (
             <Card style={{ borderColor: colors.danger }}>
               <Text style={type.body}>{request.requestedByName} sent this back: {request.reason}</Text>
+              <Button
+                title="Dismiss this redo"
+                variant="ghost"
+                onPress={async () => {
+                  if (await confirm('Dismiss this redo?', 'Use this if it was a mistake, e.g. the chore was logged twice. The sent-back chore still won’t count.', 'Dismiss')) {
+                    await cancelRequest(house.id, request.id, user.uid).then(() => router.back()).catch((e) => setError((e as Error).message));
+                  }
+                }}
+              />
             </Card>
           )}
           <Text style={type.small}>Take a photo of the finished chore. Everyone in the house will see it.</Text>
