@@ -22,7 +22,7 @@ export function authError(e: unknown): string {
     case 'auth/invalid-credential':
     case 'auth/wrong-password':
     case 'auth/user-not-found': return 'Email or password is wrong.';
-    case 'auth/too-many-requests': return 'Too many tries. Wait a few minutes and try again.';
+    case 'auth/too-many-requests': return 'Too many tries. Wait about 10 minutes and try again.';
     case 'auth/network-request-failed': return 'No connection. Check your internet and try again.';
     case 'auth/requires-recent-login': return 'For safety, sign out and back in, then try again.';
     case 'auth/operation-not-allowed': return 'Email login isn’t switched on yet (Firebase → Authentication → Sign-in method → Email/Password).';
