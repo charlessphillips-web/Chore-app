@@ -639,6 +639,19 @@ test('check reminder: once, only after 12 hours', async () => {
   await assertFails(updateDoc(ref('alice'), { checkReminderSent: true })); // only once
 });
 
+test('full photos can be cleared once checked (thumbnail stays)', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const id = await logChore('alice', 'h1', 'bins');
+  const clear = (uid) => { const f = db(uid); const b = writeBatch(f); b.update(doc(f, 'houses', 'h1', 'logs', id), { photoDeleted: true }); b.delete(doc(f, 'houses', 'h1', 'photos', id)); return b.commit(); };
+  await assertFails(clear('sam')); // still waiting to be checked
+  await assertFails(deleteDoc(doc(db('sam'), 'houses', 'h1', 'photos', id))); // never without marking the chore
+  await review('sam', 'h1', id, 'verified');
+  await assertSucceeds(clear('sam'));
+  const log = (await getDoc(doc(db('alice'), 'houses', 'h1', 'logs', id))).data();
+  assert.equal(log.photoThumb, 'thumbdata');
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

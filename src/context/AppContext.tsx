@@ -4,7 +4,7 @@ import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth'
 import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
-  CHECK_REMINDER_MS, clearRemovedHouse, sendCheckReminder, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
+  CHECK_REMINDER_MS, clearFullPhoto, clearRemovedHouse, sendCheckReminder, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
   watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
 import { periodEnd, periodKey } from '../lib/period';
@@ -198,6 +198,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Only re-run when the set of chores needing a reminder changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remindIds]);
+
+  // 4c. Checked (or 24h-old) chores: delete the full photo, keep the thumbnail.
+  const clearIds = (current?.logs ?? [])
+    .filter((l) => !l.photoDeleted && (l.status !== 'pending' || new Date().getTime() - l.at > 24 * 3_600_000))
+    .map((l) => l.id)
+    .join(',');
+  useEffect(() => {
+    if (!clearIds || !houseId) return;
+    for (const id of clearIds.split(',')) clearFullPhoto(houseId, id).catch(() => {});
+  }, [clearIds, houseId]);
 
   // 5. Phone reminders (bin night, leaderboard reset, Sunday summary), redone whenever they change.
   const myPrefs = current?.members.find((m) => m.id === uid)?.data.notifPrefs;

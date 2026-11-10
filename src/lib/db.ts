@@ -311,6 +311,7 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             checkNames: Array.isArray(d.checkNames) ? d.checkNames : [],
             checksNeeded: typeof d.checksNeeded === 'number' ? d.checksNeeded : 1,
             checkReminderSent: d.checkReminderSent === true,
+            photoDeleted: d.photoDeleted === true,
             offerId: d.offerId ?? null,
             creditTo: d.creditTo ?? null,
             creditToName: d.creditToName ?? null,
@@ -407,6 +408,17 @@ export async function logChore(opts: {
 export async function getChorePhoto(houseId: string, logId: string): Promise<string | null> {
   const snap = await getDoc(doc(db, 'houses', houseId, 'photos', logId));
   return snap.exists() ? (snap.data().data as string) : null;
+}
+
+/**
+ * Deletes a checked chore's full-size photo (keeps the small thumbnail), so
+ * the free database doesn't fill up. Safe to call more than once.
+ */
+export async function clearFullPhoto(houseId: string, logId: string) {
+  const b = writeBatch(db);
+  b.update(doc(db, 'houses', houseId, 'logs', logId), { photoDeleted: true });
+  b.delete(doc(db, 'houses', houseId, 'photos', logId));
+  await b.commit();
 }
 
 export const CHECK_REMINDER_MS = 12 * 60 * 60 * 1000;

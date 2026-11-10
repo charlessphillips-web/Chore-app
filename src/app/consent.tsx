@@ -20,10 +20,10 @@ export default function Consent() {
     <Screen>
       <View style={{ alignItems: 'center', gap: space.md, marginTop: space.lg }}>
         <Logo size={64} />
-        <Title>Our privacy policy</Title>
+        <Title>Our terms and privacy policy</Title>
       </View>
       <Subtitle>
-        Before you carry on, please read how {APP_NAME} uses your information and agree to it. It only takes a minute.
+        Before you carry on, please read our terms and how {APP_NAME} uses your information, and agree to them. It only takes a minute.
       </Subtitle>
       <AgreeBox value={agreed} onChange={setAgreed} />
       <ErrorText>{error}</ErrorText>

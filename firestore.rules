@@ -331,6 +331,12 @@ service cloud.firestore {
           && resource.data.status == 'pending'
           && request.time < resource.data.at + duration.value(24, 'h')
           && checkUpdateOk(houseId, resource.data, request.resource.data);
+        // Marking the full photo as cleared (with the photo's delete, same write),
+        // once the chore is checked, sent back, or over 24 hours old.
+        allow update: if isMember(houseId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoDeleted'])
+          && request.resource.data.photoDeleted == true
+          && (resource.data.status != 'pending' || request.time > resource.data.at + duration.value(24, 'h'));
         // The one-off "still needs checking" reminder (12 hours in).
         allow update: if isMember(houseId)
           && resource.data.status == 'pending'
@@ -349,7 +355,10 @@ service cloud.firestore {
           && request.resource.data.data is string
           && request.resource.data.data.size() < 900000
           && getAfter(logPath(houseId, logId)).data.userId == me();
-        allow update, delete: if false;
+        allow update: if false;
+        // Once a chore is checked (or 24 hours have passed), the full photo is
+        // deleted to save space; the small thumbnail on the chore stays.
+        allow delete: if isMember(houseId) && getAfter(logPath(houseId, logId)).data.get('photoDeleted', false) == true;
       }
 
       // House wallpaper, set by the admin.

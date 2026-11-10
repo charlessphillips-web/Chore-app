@@ -26,6 +26,9 @@ export function AgreeBox({ value, onChange }: { value: boolean; onChange: (v: bo
       </Pressable>
       <Text style={[type.body, { flex: 1, fontSize: 15, lineHeight: 22 }]}>
         I&apos;m 13 or over and agree to the{' '}
+        <Text accessibilityRole="link" style={{ textDecorationLine: 'underline', fontWeight: '600' }} onPress={() => router.push('/terms')}>
+          terms
+        </Text>{' '}and{' '}
         <Text accessibilityRole="link" style={{ textDecorationLine: 'underline', fontWeight: '600' }} onPress={() => router.push('/privacy')}>
           privacy policy
         </Text>

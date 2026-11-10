@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
 import { GettingStarted } from '../../components/GettingStarted';
 import { BinBanner } from '../../components/BinBanner';
+import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
 import { choreIcon } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
@@ -61,6 +62,7 @@ export default function Home() {
         <Text style={type.small}>{s.hint}</Text>
       </View>
 
+      <VerifyEmailBanner />
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
       <GettingStarted />
       <NotificationCard />
@@ -96,7 +98,7 @@ export default function Home() {
                 subtitle={
                   r.kind === 'redo'
                     ? `${r.requestedByName} sent it back: ${r.reason ?? ''}`
-                    : `${r.requestedByName} flagged this · ${timeAgo(r.createdAt)}`
+                    : `Someone flagged this · ${timeAgo(r.createdAt)} · it's your turn`
                 }
                 onPress={() => openChore(r.choreKey, r.id)}
               />

@@ -81,6 +81,8 @@ export interface ChoreLog {
   checksNeeded: number;
   /** The 12-hour "still needs checking" reminder has gone out. */
   checkReminderSent: boolean;
+  /** The full-size photo has been deleted (only the thumbnail is kept). */
+  photoDeleted: boolean;
   /** Done for someone else, who paid for it (see ChoreOffer): they get the point, not the doer. */
   offerId: string | null;
   creditTo: string | null;

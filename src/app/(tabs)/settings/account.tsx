@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
-import { authError, checkLogin, saveAccount, signOutUser } from '../../../lib/account';
+import { authError, checkLogin, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
 import { haptics } from '../../../lib/haptics';
 import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { PasswordInput } from '../../../components/PasswordInput';
@@ -26,6 +26,9 @@ export default function AccountScreen() {
           <Text style={type.label}>Signed in as</Text>
           <Text style={type.heading}>{loginEmail}</Text>
           <Text style={type.small}>Use this email and your password to sign in on another phone, or at rotawise.org.</Text>
+          <Text style={[type.small, { color: user.emailVerified ? colors.success : colors.warning }]}>
+            {user.emailVerified ? '✓ Email confirmed' : 'Email not confirmed yet: check your inbox (see Home).'}
+          </Text>
         </Card>
         <Button
           title="Sign out"
@@ -48,6 +51,7 @@ export default function AccountScreen() {
     setBusy(true);
     try {
       const u = await saveAccount(email, password);
+      sendVerification().catch(() => {});
       haptics.success();
       setSavedAs(u.email);
       notify('Account saved', 'You can now sign in with this email and password on any phone or at rotawise.org.');

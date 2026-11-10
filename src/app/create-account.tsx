@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useApp } from '../context/AppContext';
-import { authError, checkLogin, saveAccount } from '../lib/account';
+import { authError, checkLogin, saveAccount, sendVerification } from '../lib/account';
 import { haptics } from '../lib/haptics';
 import { track } from '../lib/analytics';
 import { PasswordInput } from '../components/PasswordInput';
@@ -26,6 +26,7 @@ export default function CreateAccount() {
     setBusy(true);
     try {
       await saveAccount(email, password);
+      sendVerification().catch(() => {});
       track('account_created');
       haptics.success();
       router.replace('/onboarding');

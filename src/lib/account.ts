@@ -5,7 +5,7 @@
  * phone or browser later.
  */
 import {
-  EmailAuthProvider, linkWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, type User,
+  EmailAuthProvider, linkWithCredential, reload, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, type User,
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -47,6 +47,18 @@ export async function saveAccount(email: string, password: string): Promise<User
 /** Signs in to an existing saved account (replaces the anonymous one on this phone). */
 export async function signIn(email: string, password: string): Promise<void> {
   await signInWithEmailAndPassword(auth, email.trim(), password);
+}
+
+/** Emails a "confirm it's you" link. */
+export async function sendVerification(): Promise<void> {
+  if (auth.currentUser && !auth.currentUser.isAnonymous) await sendEmailVerification(auth.currentUser);
+}
+
+/** Re-checks with Firebase whether the email has been confirmed. */
+export async function isEmailVerified(): Promise<boolean> {
+  if (!auth.currentUser) return false;
+  await reload(auth.currentUser);
+  return auth.currentUser.emailVerified;
 }
 
 export async function resetPassword(email: string): Promise<void> {
