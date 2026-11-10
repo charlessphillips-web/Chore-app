@@ -19,6 +19,8 @@ import { formatPrice, type PayChoice } from './money';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
 import { PRIVACY_VERSION } from './legal';
+import { wants, type NotifyKind, type NotifyPrefs } from './notifyPrefs';
+import type { BinSchedule } from './bins';
 import { track } from './analytics';
 
 // Firestore stores server timestamps; the app works in millis.
@@ -173,7 +175,7 @@ export async function makeAdmin(houseId: string, uid: string): Promise<void> {
 
 export async function updateHouse(
   houseId: string,
-  patch: { name?: string; chores?: HouseChore[]; area?: HouseArea | null },
+  patch: { name?: string; chores?: HouseChore[]; area?: HouseArea | null; bins?: BinSchedule[] },
 ): Promise<void> {
   await updateDoc(houseRef(houseId), patch);
 }
@@ -215,6 +217,7 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
         chores: Array.isArray(d.chores) ? d.chores : DEFAULT_CHORES,
         reset: toResetRule(d.resetMonths, d.customStart, d.customEnd),
         area: d.area && typeof d.area.outcode === 'string' ? (d.area as HouseArea) : null,
+        bins: Array.isArray(d.bins) ? (d.bins as BinSchedule[]) : [],
         createdAt: ms(d.createdAt) ?? Date.now(),
       });
     },
@@ -234,6 +237,7 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     joinedAt: ms(d.joinedAt) ?? Date.now(),
     pushToken: d.pushToken ?? null,
     avatar: toAvatar(d.avatar),
+    notifPrefs: d.notifPrefs && typeof d.notifPrefs === 'object' ? (d.notifPrefs as NotifyPrefs) : {},
   };
 };
 
@@ -316,6 +320,11 @@ export async function setPushToken(houseId: string, uid: string, token: string |
   await updateDoc(memberRef(houseId, uid), { pushToken: token });
 }
 
+/** Which notifications you want (only your own). */
+export async function setNotifPrefs(houseId: string, uid: string, prefs: NotifyPrefs) {
+  await updateDoc(memberRef(houseId, uid), { notifPrefs: prefs });
+}
+
 /** Your profile picture (only you can change yours). null = back to your initial. */
 export async function setAvatar(houseId: string, uid: string, avatar: Avatar | null) {
   await updateDoc(memberRef(houseId, uid), { avatar });
@@ -378,7 +387,7 @@ export async function logChore(opts: {
   track('chore_log');
   if (!offer && !opts.members.find((m) => m.uid === uid)?.lastCompletedAt) track('first_chore');
 
-  const others = opts.members.filter((m) => m.uid !== uid && m.pushToken).map((m) => m.pushToken!);
+  const others = opts.members.filter((m) => m.uid !== uid && m.pushToken && wants(m.notifPrefs, 'check')).map((m) => m.pushToken!);
   if (others.length) {
     await sendPush(others, {
       title: offer ? `${username} did: ${name} (for ${offer.fromName})` : `${username} did: ${name}`,
@@ -415,7 +424,7 @@ export async function sendBackChore(
   const log = await reviewChore(house.id, logId, reviewer, reason);
   track('chore_sendback');
   const owner = members.find((m) => m.uid === log.userId);
-  if (owner?.pushToken) {
+  if (owner?.pushToken && wants(owner.notifPrefs, 'redo')) {
     await sendPush([owner.pushToken], {
       title: `Redo: ${log.choreName}`,
       body: `${reviewer.username} sent it back — ${reason}`,
@@ -488,7 +497,8 @@ export const NUDGE_EVERY_MS = 3 * 60 * 60 * 1000;
 export async function nudgeChore(houseId: string, request: ChoreRequest, from: { uid: string; username: string }, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'requests', request.id), { lastNudgedAt: serverTimestamp(), lastNudgedBy: from.uid });
   track('chore_nudge');
-  const to = members.find((m) => m.uid === request.assignedTo)?.pushToken;
+  const who = members.find((m) => m.uid === request.assignedTo);
+  const to = who && wants(who.notifPrefs, 'nudge') ? who.pushToken : null;
   if (to) {
     await sendPush([to], {
       title: `${from.username} nudged you 👋`,
@@ -531,10 +541,10 @@ export async function requestChore(opts: {
   track('chore_flag');
 
   let notified = false;
-  if (assignee.pushToken) {
+  if (assignee.pushToken && wants(assignee.notifPrefs, 'turn')) {
     notified = await sendPush([assignee.pushToken], {
-      title: `${house.name}: ${chore.needs}`,
-      body: "You've done the fewest chores in the house — your turn!",
+      title: `${chore.needs}!`,
+      body: "It's your turn to do it. You've done the fewest chores in the house.",
       data: { type: 'chore_request', houseId: house.id },
     });
   }
@@ -667,11 +677,11 @@ export function watchOffers(houseId: string, cb: (o: ChoreOffer[]) => void, onEr
   );
 }
 
-const tokensOf = (members: Member[], uids: string[]) =>
-  members.filter((m) => uids.includes(m.uid) && m.pushToken).map((m) => m.pushToken!);
+const tokensOf = (members: Member[], uids: string[], kind: NotifyKind) =>
+  members.filter((m) => uids.includes(m.uid) && m.pushToken && wants(m.notifPrefs, kind)).map((m) => m.pushToken!);
 
-async function ping(members: Member[], uids: string[], houseId: string, title: string, body: string) {
-  const to = tokensOf(members, uids);
+async function ping(members: Member[], uids: string[], houseId: string, title: string, body: string, kind: NotifyKind = 'offers') {
+  const to = tokensOf(members, uids, kind);
   if (to.length) await sendPush(to, { title, body, data: { type: 'chore_offer', houseId } }).catch(() => false);
 }
 
@@ -752,6 +762,7 @@ export async function remindPayer(houseId: string, offer: ChoreOffer, members: M
     members, [offer.fromUid], houseId,
     `Reminder: pay ${offer.doerName} ${formatPrice(offer.agreedPrice ?? offer.price)}`,
     `for ${offer.choreName}. Open Rotawise → Pay.`,
+    'payments',
   );
 }
 
@@ -777,7 +788,7 @@ export async function markOfferPaid(house: House, offer: ChoreOffer, members: Me
   await batch.commit();
   track('offer_paid');
   if (offer.doerUid && offer.agreedPrice) {
-    await ping(members, [offer.doerUid], house.id, `${offer.fromName} paid you ${formatPrice(offer.agreedPrice)}`, `for ${offer.choreName}. Check your bank app.`);
+    await ping(members, [offer.doerUid], house.id, `${offer.fromName} paid you ${formatPrice(offer.agreedPrice)}`, `for ${offer.choreName}. Check your bank app.`, 'payments');
   }
 }
 

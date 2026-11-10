@@ -571,6 +571,19 @@ test('nudge: housemates can remind whoever it is, at most every 3 hours', async 
   await assertSucceeds(updateDoc(r('sam'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'sam' }));
 });
 
+test('notification settings are your own; bin days are the admin\'s', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const m = (uid, who = uid) => doc(db(uid), 'houses', 'h1', 'members', who);
+  await assertSucceeds(updateDoc(m('sam'), { notifPrefs: { check: false, weekly: false } }));
+  await assertFails(updateDoc(m('sam'), { notifPrefs: { spam: true } }));
+  await assertFails(updateDoc(m('alice', 'sam'), { notifPrefs: { check: true } }));
+  const bins = [{ id: 'a', name: 'General waste', every: 1, anchor: '2026-11-17' }];
+  await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { bins }));
+  await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1'), { bins }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { bins: Array(7).fill(bins[0]) }));
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

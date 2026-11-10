@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
+import { GettingStarted } from '../../components/GettingStarted';
+import { BinBanner } from '../../components/BinBanner';
 import { Avatar } from '../../components/Avatar';
 import { choreIcon } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
@@ -29,6 +31,7 @@ export default function Home() {
   // Chores you agreed to do for someone (the rest is in the Pay tab).
   const toDo = offers.filter((o) => o.status === 'agreed' && o.doerUid === user.uid);
   const total = me?.totalCompleted ?? 0;
+  const now = new Date();
 
   return (
     <Screen background={wallpaper}>
@@ -58,6 +61,8 @@ export default function Home() {
         <Text style={type.small}>{s.hint}</Text>
       </View>
 
+      <BinBanner bins={house.bins} now={now} />
+      <GettingStarted />
       <NotificationCard />
 
       {mine.length + toDo.length > 0 && (

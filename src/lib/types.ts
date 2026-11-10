@@ -5,6 +5,8 @@ import type { ResetRule } from './period';
 import type { PayChoice } from './money';
 import type { Avatar } from './avatar';
 import type { HouseArea } from './postcode';
+import type { NotifyPrefs } from './notifyPrefs';
+import type { BinSchedule } from './bins';
 
 export type Gender = 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
 export const GENDERS: Gender[] = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'];
@@ -38,6 +40,8 @@ export interface House {
   reset: ResetRule;
   /** Rough location from the postcode (area only, never the address). */
   area: HouseArea | null;
+  /** Bin collection days, set by the admin. */
+  bins: BinSchedule[];
   createdAt: number;
 }
 
@@ -49,6 +53,8 @@ export interface Member extends MemberStats {
   pushToken: string | null;
   /** Profile picture: photo or drawn character (null = their initial). */
   avatar: Avatar | null;
+  /** Notification types they've switched off (missing = on). */
+  notifPrefs: NotifyPrefs;
 }
 
 /** houses/{houseId}/logs/{id} — a completed chore. */

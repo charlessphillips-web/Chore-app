@@ -7,7 +7,8 @@ import {
   clearRemovedHouse, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
   watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
 } from '../lib/db';
-import { periodKey } from '../lib/period';
+import { periodEnd, periodKey } from '../lib/period';
+import { scheduleReminders } from '../lib/reminders';
 import { track } from '../lib/analytics';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
@@ -179,6 +180,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
+
+  // 5. Phone reminders (bin night, leaderboard reset, Sunday summary), redone whenever they change.
+  const myPrefs = current?.members.find((m) => m.id === uid)?.data.notifPrefs;
+  const reminderKey = house && notifStatus === 'granted'
+    ? JSON.stringify([house.bins, myPrefs ?? {}, periodEnd(new Date(), house.reset).getTime()])
+    : null;
+  useEffect(() => {
+    if (!reminderKey) return;
+    const [bins, prefs, end] = JSON.parse(reminderKey);
+    scheduleReminders({ bins, prefs, periodEnd: new Date(end) }).catch(() => {});
+  }, [reminderKey]);
   // Scores for the current period, using the house's reset setting.
   const period = periodKey(new Date(), house?.reset);
   const members: Member[] = (current?.members ?? []).map((m) => toMember(m.id, m.data, period));

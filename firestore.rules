@@ -273,7 +273,8 @@ service cloud.firestore {
       // housemate.
       allow update: if isAdmin(houseId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd', 'area'])
+             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd', 'area', 'bins'])
+        && (!('bins' in request.resource.data) || (request.resource.data.bins is list && request.resource.data.bins.size() <= 6))
         && validReset(request.resource.data)
         && validArea(request.resource.data.get('area', null))
         && request.resource.data.name is string && request.resource.data.name.size() > 0
@@ -294,7 +295,9 @@ service cloud.firestore {
         // Your own doc: name, push token, profile picture, and your score up by at most 1.
         allow update: if signedIn() && me() == uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt'])
+               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt', 'notifPrefs'])
+          && (!('notifPrefs' in request.resource.data) || (request.resource.data.notifPrefs is map
+              && request.resource.data.notifPrefs.keys().hasOnly(['turn', 'nudge', 'check', 'redo', 'offers', 'payments', 'bins', 'reset', 'weekly'])))
           && (!('lastSeenAt' in request.resource.data) || request.resource.data.lastSeenAt == request.time
               || request.resource.data.lastSeenAt == resource.data.get('lastSeenAt', null))
           && ownStatsOk()

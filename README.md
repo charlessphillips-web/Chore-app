@@ -36,6 +36,12 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 
 **App icons:** `assets/app-icons/` has the logo in 6 colours, ready for a "change app icon" setting in the phone app.
 
+**Bin days:** the house admin adds bins in Settings → Bin days (name, every 1 or 2 weeks, next date). Everyone gets a phone reminder at 8pm the night before, and Home shows "Bins go out tonight".
+
+**Notifications:** Settings → Notifications has a switch for each type (your turn, nudges, photos to check, sent back, offers, payments, bin day, leaderboard reset, weekly summary). Reminders (bins, reset, weekly) are scheduled by the phone itself, so they need the phone app.
+
+**Getting started:** new houses see a tutorial checklist on Home that ticks itself off as you do each thing.
+
 **Postcode:** creating a house asks for the postcode; only the area (e.g. "LS6 · Leeds") is saved, via postcodes.io.
 
 **Privacy:** sign-up has a tick-box to agree to the privacy policy (in the app at /privacy; the text is in `src/components/PrivacyPolicy.tsx`, and your name and contact email go in `src/lib/legal.ts`). Changing `PRIVACY_VERSION` there asks everyone to agree again.

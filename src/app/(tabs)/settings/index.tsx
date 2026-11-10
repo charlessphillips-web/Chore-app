@@ -105,6 +105,7 @@ export default function SettingsIndex() {
           right={user.isAnonymous ? <View style={styles.dot} /> : undefined}
           onPress={() => router.push('/settings/account')}
         />
+        <ListRow icon="notifications-outline" title="Notifications" subtitle="Choose what you're told about" onPress={() => router.push('/settings/notifications')} />
         <ListRow
           icon="phone-portrait-outline"
           title="Haptics"
@@ -132,6 +133,7 @@ export default function SettingsIndex() {
           <ListGroup>
             <ListRow icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
             <ListRow icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
+            <ListRow icon="trash-outline" title="Bin days" subtitle={house.bins.length ? `${house.bins.length} bin${house.bins.length > 1 ? 's' : ''} set · reminders the night before` : 'Set them up for night-before reminders'} onPress={() => router.push('/settings/bins')} />
             <ListRow icon="options-outline" title="House details" subtitle="Name, leaderboard reset, wallpaper" onPress={() => router.push('/settings/house-details')} />
           </ListGroup>
         </>

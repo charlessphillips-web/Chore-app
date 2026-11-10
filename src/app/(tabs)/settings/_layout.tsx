@@ -14,6 +14,8 @@ export default function SettingsLayout() {
       <Stack.Screen name="avatar" options={{ title: 'PROFILE PICTURE' }} />
       <Stack.Screen name="dashboard" options={{ title: 'DASHBOARD' }} />
       <Stack.Screen name="account" options={{ title: 'YOUR LOGIN' }} />
+      <Stack.Screen name="notifications" options={{ title: 'NOTIFICATIONS' }} />
+      <Stack.Screen name="bins" options={{ title: 'BIN DAYS' }} />
     </Stack>
   );
 }

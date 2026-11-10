@@ -2,6 +2,7 @@ import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { WEB_URL } from '../../lib/legal';
+import { nextCollections, scheduleLabel } from '../../lib/bins';
 import { jpegUri } from '../../lib/photos';
 import { Button, Card, Empty, HouseName, Icon, Label, Loading, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
@@ -27,6 +28,26 @@ export default function HouseTab() {
         <Text style={styles.code} selectable accessibilityLabel={house.code}>{house.code}</Text>
         <Button title="Share code" icon="share-outline" variant="secondary" onPress={share} style={{ alignSelf: 'stretch' }} />
       </Card>
+
+      {house.bins.length > 0 && (
+        <>
+          <Label>Bin days</Label>
+          <Card style={{ paddingVertical: space.sm }}>
+            {house.bins.map((b, i) => {
+              const [n] = nextCollections(b, new Date(), 1);
+              return (
+                <View key={b.id} style={[styles.row, i < house.bins.length - 1 && styles.divider]}>
+                  <Icon name="trash-outline" size={18} color={colors.muted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={type.body}>{b.name}</Text>
+                    <Text style={type.small}>{scheduleLabel(b)}{n ? ` · next ${n.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </Card>
+        </>
+      )}
 
       <Label>Housemates ({members.length})</Label>
       <Card style={{ paddingVertical: space.sm }}>
