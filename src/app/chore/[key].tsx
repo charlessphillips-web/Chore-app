@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
-import { logChore, requestChore } from '../../lib/db';
+import { logChore, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
+import { haptics } from '../../lib/haptics';
 import { pickAssignee } from '../../lib/assign';
 import { takeChorePhoto, type ChorePhoto } from '../../lib/photos';
 import { formatPrice } from '../../lib/money';
-import { Button, Card, ErrorText, Icon, Loading, notify, Screen, Title } from '../../components/ui';
+import { Button, Card, ErrorText, Icon, Loading, notify, Screen, timeAgo, Title } from '../../components/ui';
 import { colors, radius, space, type } from '../../components/theme';
 
 type Step = 'choose' | 'done' | 'needs';
@@ -17,7 +18,8 @@ export default function ChoreScreen() {
   const { user, profile, house, members, openRequests, offers } = useApp();
   const [step, setStep] = useState<Step>(requestId ? 'done' : 'choose');
   const [photo, setPhoto] = useState<ChorePhoto | null>(null);
-  const [busy, setBusy] = useState<'photo' | 'save' | null>(null);
+  const [busy, setBusy] = useState<'photo' | 'save' | 'nudge' | null>(null);
+  const [now] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
 
   const chore = house?.chores.find((c) => c.key === key);
@@ -115,6 +117,28 @@ export default function ChoreScreen() {
             }
             onPress={() => setStep('needs')}
           />
+          {request && request.assignedTo !== user.uid && (
+            <NudgeCard
+              name={request.assignedToName}
+              flaggedAt={request.createdAt}
+              lastNudgedAt={request.lastNudgedAt}
+              now={now}
+              busy={busy === 'nudge'}
+              onNudge={async () => {
+                setBusy('nudge');
+                try {
+                  await nudgeChore(house.id, request, { uid: user.uid, username: profile.username }, members);
+                  haptics.success();
+                  notify('Nudged 👋', `${request.assignedToName} has been reminded it's their turn.`);
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setBusy(null);
+                }
+              }}
+            />
+          )}
+          <ErrorText>{error}</ErrorText>
         </>
       )}
 
@@ -195,6 +219,27 @@ export default function ChoreScreen() {
         </>
       )}
     </Screen>
+  );
+}
+
+/** "Waiting on Alice · flagged 3h ago [Nudge Alice]", at most every 3 hours. */
+function NudgeCard({ name, flaggedAt, lastNudgedAt, now, busy, onNudge }: {
+  name: string; flaggedAt: number; lastNudgedAt: number | null; now: number; busy: boolean; onNudge: () => void;
+}) {
+  const wait = lastNudgedAt ? lastNudgedAt + NUDGE_EVERY_MS - now : 0;
+  const hours = Math.max(1, Math.round(wait / 3_600_000));
+  return (
+    <Card>
+      <Text style={type.body}>Waiting on {name}</Text>
+      <Text style={type.small}>
+        Flagged {timeAgo(flaggedAt)}{lastNudgedAt ? ` · last nudged ${timeAgo(lastNudgedAt)}` : ''}
+      </Text>
+      {wait > 0 ? (
+        <Text style={type.small}>You can nudge again in {hours} hour{hours === 1 ? '' : 's'}.</Text>
+      ) : (
+        <Button title={`Nudge ${name}`} icon="hand-left-outline" variant="secondary" onPress={onNudge} loading={busy} />
+      )}
+    </Card>
   );
 }
 

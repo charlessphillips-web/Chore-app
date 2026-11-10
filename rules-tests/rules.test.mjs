@@ -556,6 +556,21 @@ test('university must be a real one from the list', async () => {
   await assertFails(updateDoc(doc(db('old'), 'users', 'old'), { university: 'still made up' }));
 });
 
+test('nudge: housemates can remind whoever it is, at most every 3 hours', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await joinHouse('jo');
+  await needsRequest('sam', 'alice', 'n1');
+  const r = (uid) => doc(db(uid), 'houses', 'h1', 'requests', 'n1');
+  await assertFails(updateDoc(r('alice'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'alice' })); // not your own
+  await assertFails(updateDoc(r('jo'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'sam' })); // as yourself
+  await assertFails(updateDoc(r('jo'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'jo', assignedTo: 'jo' }));
+  await assertSucceeds(updateDoc(r('jo'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'jo' }));
+  await assertFails(updateDoc(r('sam'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'sam' })); // too soon
+  await env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), 'houses', 'h1', 'requests', 'n1'), { lastNudgedAt: Timestamp.fromMillis(Date.now() - 4 * 3600_000) }));
+  await assertSucceeds(updateDoc(r('sam'), { lastNudgedAt: serverTimestamp(), lastNudgedBy: 'sam' }));
+});
+
 test('sending back creates a redo for the chore-doer', async () => {
   await createHouse('alice');
   await joinHouse('sam');

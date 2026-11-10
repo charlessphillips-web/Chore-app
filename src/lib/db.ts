@@ -270,6 +270,7 @@ export function watchOpenRequests(houseId: string, cb: (r: ChoreRequest[]) => vo
             kind: d.kind === 'redo' ? 'redo' : 'needs',
             reason: d.reason ?? null,
             offerId: d.offerId ?? null,
+            lastNudgedAt: ms(d.lastNudgedAt),
             createdAt: ms(d.createdAt) ?? Date.now(),
             completedAt: ms(d.completedAt),
           };
@@ -479,6 +480,22 @@ async function reviewChore(
     }
     return { userId: log.userId as string, choreName: log.choreName as string };
   });
+}
+
+export const NUDGE_EVERY_MS = 3 * 60 * 60 * 1000;
+
+/** Reminds whoever's turn it is (at most every 3 hours per chore). */
+export async function nudgeChore(houseId: string, request: ChoreRequest, from: { uid: string; username: string }, members: Member[]) {
+  await updateDoc(doc(db, 'houses', houseId, 'requests', request.id), { lastNudgedAt: serverTimestamp(), lastNudgedBy: from.uid });
+  track('chore_nudge');
+  const to = members.find((m) => m.uid === request.assignedTo)?.pushToken;
+  if (to) {
+    await sendPush([to], {
+      title: `${from.username} nudged you 👋`,
+      body: `${request.needs}. It's your turn.`,
+      data: { type: 'chore_nudge', houseId },
+    }).catch(() => false);
+  }
 }
 
 /**

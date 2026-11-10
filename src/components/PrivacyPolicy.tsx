@@ -7,7 +7,7 @@ const contact = CONTACT_EMAIL ? `email ${CONTACT_EMAIL}` : 'use Settings → Rep
 
 const ROWS: [string, string, string][] = [
   ['Username and profile picture', 'So housemates know who did what', 'Your housemates'],
-  ['Email and password (only if you save a login)', 'So you can sign in on another phone or reset your password. Passwords are stored securely by Google Firebase, and we can never see them', 'Nobody, not even your housemates'],
+  ['Email and password', 'Your login: so you can sign in on another phone and reset your password. Passwords are stored securely by Google Firebase, and we can never see them', 'Nobody, not even your housemates'],
   ['Date of birth, gender, student or not, university', 'Anonymous statistics about who uses the app', 'Only the app owner. Never your housemates'],
   ['House name and area (e.g. "LS6 · Leeds")', 'Statistics on where the app is used. We never store your full postcode or address', 'Your housemates; the area only by the app owner'],
   ['Chores you log, with photos', 'So housemates can check chores were done', 'Your housemates'],
@@ -42,8 +42,7 @@ export function PrivacyPolicy() {
         </View>
       ))}
       <P>
-        We don&apos;t collect your real name, phone number, contacts or exact location. You start without a login (your
-        account is tied to the app on your phone), and can add an email and password whenever you like.
+        We don&apos;t collect your real name, phone number, contacts or exact location.
       </P>
 
       <Label>Where it&apos;s stored</Label>

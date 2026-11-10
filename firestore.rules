@@ -217,7 +217,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['day', 'event', 'n'])
         && request.resource.data.day is string && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && request.resource.data.event in ['app_open', 'intro_start', 'intro_skip', 'intro_finish', 'signup', 'house_create', 'house_join', 'first_chore', 'chore_log', 'chore_flag', 'chore_verify', 'chore_sendback', 'offer_create', 'offer_counter', 'offer_accept', 'offer_paid', 'avatar_set', 'feedback_sent', 'tab_home', 'tab_checks', 'tab_leaderboard', 'tab_pay', 'tab_house', 'tab_settings']
+        && request.resource.data.event in ['app_open', 'intro_start', 'intro_skip', 'intro_finish', 'account_created', 'signup', 'house_create', 'house_join', 'first_chore', 'chore_log', 'chore_flag', 'chore_nudge', 'chore_verify', 'chore_sendback', 'offer_create', 'offer_counter', 'offer_accept', 'offer_paid', 'avatar_set', 'feedback_sent', 'tab_home', 'tab_checks', 'tab_leaderboard', 'tab_pay', 'tab_house', 'tab_settings']
         && id == request.resource.data.day + '_' + request.resource.data.event
         && request.resource.data.n == 1;
       allow update: if signedIn()
@@ -398,6 +398,15 @@ service cloud.firestore {
                .hasOnly(['status', 'completedBy', 'completedAt'])
           && request.resource.data.status == 'done'
           && request.resource.data.completedBy == me();
+        // Any housemate can nudge whoever's turn it is, at most every 3 hours.
+        allow update: if isMember(houseId)
+          && resource.data.status == 'open'
+          && resource.data.assignedTo != me()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastNudgedAt', 'lastNudgedBy'])
+          && request.resource.data.lastNudgedBy == me()
+          && request.resource.data.lastNudgedAt == request.time
+          && (resource.data.get('lastNudgedAt', null) == null
+              || request.time > resource.data.lastNudgedAt + duration.value(3, 'h'));
         allow delete: if false;
       }
     }

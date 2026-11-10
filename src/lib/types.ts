@@ -95,6 +95,8 @@ export interface ChoreRequest {
   completedAt: number | null;
   /** A redo of a chore someone was paid to do. */
   offerId: string | null;
+  /** When someone last nudged the person whose turn it is. */
+  lastNudgedAt: number | null;
 }
 
 /**

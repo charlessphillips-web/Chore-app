@@ -7,7 +7,7 @@ import { PRIVACY_VERSION } from '../lib/legal';
 
 /** Sends people to the right place: questions → house code → the app. */
 export default function Index() {
-  const { ready, error, profile } = useApp();
+  const { ready, error, profile, user } = useApp();
   if (error) {
     return (
       <Screen>
@@ -18,7 +18,8 @@ export default function Index() {
   }
   if (!ready) return <Loading />;
   // Brand new: explain the app first, then the questions.
-  if (!profile) return <Redirect href="/welcome" />;
+  // (Already made a login but not answered the questions yet: straight to them.)
+  if (!profile) return <Redirect href={user && !user.isAnonymous ? '/onboarding' : '/welcome'} />;
   // An older account from before date of birth was asked.
   if (!profile.dob) return <Redirect href="/onboarding" />;
   // Hasn't agreed to the current privacy policy yet.

@@ -15,6 +15,8 @@ export default function Onboarding() {
 
   // Move on as soon as the saved profile arrives.
   if (profile?.dob) return <Redirect href="/" />;
+  // New people make a login first.
+  if (!profile && user?.isAnonymous) return <Redirect href="/create-account" />;
   const updating = !!profile; // older account missing a date of birth
 
   return (
