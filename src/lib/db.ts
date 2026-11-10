@@ -12,6 +12,7 @@ import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
+import { checksNeededFor } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
@@ -306,6 +307,9 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             reviewedBy: d.reviewedBy ?? null,
             reviewedByName: d.reviewedByName ?? null,
             rejectReason: d.rejectReason ?? null,
+            checks: Array.isArray(d.checks) ? d.checks : [],
+            checkNames: Array.isArray(d.checkNames) ? d.checkNames : [],
+            checksNeeded: typeof d.checksNeeded === 'number' ? d.checksNeeded : 1,
             offerId: d.offerId ?? null,
             creditTo: d.creditTo ?? null,
             creditToName: d.creditToName ?? null,
@@ -363,6 +367,7 @@ export async function logChore(opts: {
   batch.set(logRef, {
     choreKey: key, choreName: name, userId: uid, username, at: serverTimestamp(), period, requestId,
     photoThumb: photo.thumb, status: 'pending', reviewedBy: null, reviewedByName: null,
+    checks: [], checkNames: [], checksNeeded: checksNeededFor(opts.members.length),
     offerId: offer?.id ?? null, creditTo: offer?.fromUid ?? null, creditToName: offer?.fromName ?? null,
   });
   batch.set(doc(db, 'houses', house.id, 'photos', logRef.id), { userId: uid, data: photo.full });
@@ -404,9 +409,36 @@ export async function getChorePhoto(houseId: string, logId: string): Promise<str
 }
 
 /** One housemate verifies a chore photo. */
+/**
+ * One housemate verifies a chore photo. It's fully verified once enough
+ * people have (2, or 1 in a 2-person house). Returns how many have checked.
+ */
 export async function verifyChore(houseId: string, logId: string, reviewer: { uid: string; username: string }) {
-  await reviewChore(houseId, logId, reviewer, null);
+  const logRef = doc(db, 'houses', houseId, 'logs', logId);
+  const result = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(logRef);
+    if (!snap.exists()) throw new Error('That chore no longer exists.');
+    const log = snap.data();
+    if (log.userId === reviewer.uid) throw new Error("You can't check your own chore.");
+    if (log.status !== 'pending') throw new Error('This one has already been checked.');
+    const checks: string[] = Array.isArray(log.checks) ? log.checks : [];
+    const names: string[] = Array.isArray(log.checkNames) ? log.checkNames : [];
+    if (checks.includes(reviewer.uid)) throw new Error('You’ve already checked this one.');
+    const needed = typeof log.checksNeeded === 'number' ? log.checksNeeded : 1;
+    const nextChecks = [...checks, reviewer.uid];
+    const nextNames = [...names, reviewer.username];
+    if (nextChecks.length >= needed) {
+      tx.update(logRef, {
+        checks: nextChecks, checkNames: nextNames, status: 'verified', reviewedBy: reviewer.uid,
+        reviewedByName: nextNames.join(' and '), reviewedAt: serverTimestamp(), rejectReason: null,
+      });
+    } else {
+      tx.update(logRef, { checks: nextChecks, checkNames: nextNames });
+    }
+    return { done: nextChecks.length, needed };
+  });
   track('chore_verify');
+  return result;
 }
 
 /**

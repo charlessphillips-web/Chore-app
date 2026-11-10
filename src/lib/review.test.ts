@@ -29,3 +29,17 @@ test('redo reason text', () => {
   assert.equal(redoReason('Still dirty', '  the   hob is greasy '), 'Still dirty: the hob is greasy');
   assert.equal(redoReason('Other', 'x'.repeat(300)).length, 140);
 });
+
+test('two checks: needed count, progress, and who still has to check', async () => {
+  const { checksNeededFor, checkProgress, needsCheckBy } = await import('./review.ts');
+  assert.equal(checksNeededFor(2), 1);
+  assert.equal(checksNeededFor(3), 2);
+  assert.equal(checksNeededFor(6), 2);
+  assert.deepEqual(checkProgress({ checks: ['sam'], checksNeeded: 2 }), { done: 1, needed: 2 });
+  assert.deepEqual(checkProgress({}), { done: 0, needed: 1 }); // older chores
+  const now = Date.now();
+  const log = { status: 'pending' as const, at: now - 1000, userId: 'alice', checks: ['sam'] };
+  assert.equal(needsCheckBy(log, 'sam', now), false); // already checked
+  assert.equal(needsCheckBy(log, 'jo', now), true);
+  assert.equal(needsCheckBy(log, 'alice', now), false); // own chore
+});

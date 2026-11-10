@@ -90,6 +90,7 @@ async function review(uid, houseId, logId, decision, reason = 'Still dirty') {
     tx.update(logRef, {
       status: decision, reviewedBy: uid, reviewedByName: uid, reviewedAt: serverTimestamp(),
       rejectReason: back ? reason : null,
+      ...(back ? {} : { checks: [...(log.checks ?? []), uid], checkNames: [...(log.checkNames ?? []), uid] }),
     });
     if (back && owner.exists()) {
       tx.update(ownerRef, {
@@ -582,6 +583,32 @@ test('notification settings are your own; bin days are the admin\'s', async () =
   await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { bins }));
   await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1'), { bins }));
   await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { bins: Array(7).fill(bins[0]) }));
+});
+
+test('two checks: each person once, completes on the second, one send-back is enough', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await joinHouse('jo');
+  const f = db('alice');
+  const ref = doc(collection(f, 'houses', 'h1', 'logs'));
+  const b = writeBatch(f);
+  b.set(ref, { ...logData('alice', 'bins'), checks: [], checkNames: [], checksNeeded: 2 });
+  b.set(doc(f, 'houses', 'h1', 'photos', ref.id), { userId: 'alice', data: 'x' });
+  b.update(doc(f, 'houses', 'h1', 'members', 'alice'), { currentPeriod: P, [`stats.${P}.total`]: increment(1), [`stats.${P}.chores.bins`]: increment(1) });
+  await assertSucceeds(b.commit());
+  const log = (uid) => doc(db(uid), 'houses', 'h1', 'logs', ref.id);
+  const done = (uid, checks) => ({ status: 'verified', reviewedBy: uid, reviewedByName: uid, reviewedAt: serverTimestamp(), rejectReason: null, checks, checkNames: checks });
+  // Can't finish with only one check, or check twice, or check your own.
+  await assertFails(updateDoc(log('sam'), done('sam', ['sam'])));
+  await assertFails(updateDoc(log('alice'), { checks: ['alice'], checkNames: ['alice'] }));
+  await assertSucceeds(updateDoc(log('sam'), { checks: ['sam'], checkNames: ['Sam'] }));
+  await assertFails(updateDoc(log('sam'), { checks: ['sam', 'sam'], checkNames: ['Sam', 'Sam'] }));
+  await assertFails(updateDoc(log('jo'), { checks: ['jo'], checkNames: ['Jo'] })); // can't remove Sam's check
+  await assertSucceeds(updateDoc(log('jo'), done('jo', ['sam', 'jo'])));
+  assert.equal((await getDoc(log('alice'))).data().status, 'verified');
+  // A fresh chore: one person can send it back on their own.
+  const id2 = await logChore('alice', 'h1', 'bins');
+  await assertSucceeds(review('jo', 'h1', id2, 'rejected', 'Still dirty'));
 });
 
 test('sending back creates a redo for the chore-doer', async () => {

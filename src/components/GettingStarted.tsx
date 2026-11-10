@@ -38,7 +38,7 @@ export function GettingStarted() {
     { key: 'log', title: 'Log your first chore', desc: 'Tap a chore below → "I’ve done it" → take a photo.',
       done: !!me?.lastCompletedAt || logs.some((l) => l.userId === user.uid) },
     { key: 'check', title: 'Check a housemate’s photo', desc: 'When someone logs a chore, verify it (or send it back) in Checks.',
-      done: logs.some((l) => l.reviewedBy === user.uid), action: () => router.push('/checks'), actionLabel: 'Checks' },
+      done: logs.some((l) => l.reviewedBy === user.uid || l.checks.includes(user.uid)), action: () => router.push('/checks'), actionLabel: 'Checks' },
     ...(Platform.OS !== 'web' ? [{ key: 'notif', title: 'Turn on notifications', desc: 'So you know when it’s your turn and when bins go out.',
       done: notifStatus === 'granted', action: () => router.push('/settings/notifications'), actionLabel: 'Open' }] : []),
   ];

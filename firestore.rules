@@ -319,22 +319,18 @@ service cloud.firestore {
           && request.resource.data.photoThumb is string
           && request.resource.data.photoThumb.size() < 100000
           && existsAfter(/databases/$(database)/documents/houses/$(houseId)/photos/$(logId))
-          && creditOk(houseId, logId, request.resource.data);
-        // One housemate (not the chore-doer) checks it, within 24 hours.
-        // Rejecting must take it off the chore-doer's score in the same write.
+          && creditOk(houseId, logId, request.resource.data)
+          && request.resource.data.get('checksNeeded', 1) in [1, 2]
+          && request.resource.data.get('checks', []) == [];
+        // Housemates (not the chore-doer) check it within 24 hours: it needs
+        // checksNeeded verifications (2, or 1 in a 2-person house), each person
+        // once. Any one checker can send it back, which must take it off the
+        // chore-doer's score in the same write.
         allow update: if isMember(houseId)
           && resource.data.userId != me()
           && resource.data.status == 'pending'
           && request.time < resource.data.at + duration.value(24, 'h')
-          && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectReason'])
-          && request.resource.data.reviewedBy == me()
-          && request.resource.data.status in ['verified', 'rejected']
-          && (request.resource.data.status == 'verified'
-              || resource.data.get('creditTo', null) != null
-              || scoreDropped(houseId, resource.data))
-          && (request.resource.data.get('rejectReason', null) == null
-              || (request.resource.data.rejectReason is string && request.resource.data.rejectReason.size() <= 140));
+          && checkUpdateOk(houseId, resource.data, request.resource.data);
         allow delete: if false;
       }
 
@@ -444,6 +440,32 @@ service cloud.firestore {
             && part(a.mouth, 4) && part(a.extra, 4) && part(a.bg, 6));
     }
     function part(v, n) { return v is int && v >= 0 && v < n; }
+
+    // ---- Photo checks ----
+
+    function addsMyCheck(o, n) {
+      let before = o.get('checks', []);
+      return n.checks is list && n.checks.size() == before.size() + 1 && n.checks.hasAll(before)
+        && me() in n.checks && !(me() in before)
+        && n.checkNames is list && n.checkNames.size() == n.checks.size();
+    }
+
+    function checkUpdateOk(houseId, o, n) {
+      let keys = n.diff(o).affectedKeys();
+      let needed = o.get('checksNeeded', 1);
+      return
+        // A verification that still leaves it waiting for the next person.
+        (keys.hasOnly(['checks', 'checkNames']) && addsMyCheck(o, n) && n.checks.size() < needed)
+        // The verification that completes it.
+        || (keys.hasOnly(['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectReason', 'checks', 'checkNames'])
+            && addsMyCheck(o, n) && n.checks.size() >= needed
+            && n.status == 'verified' && n.reviewedBy == me())
+        // Sent back by any one checker.
+        || (keys.hasOnly(['status', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectReason'])
+            && n.status == 'rejected' && n.reviewedBy == me()
+            && (o.get('creditTo', null) != null || scoreDropped(houseId, o))
+            && (n.get('rejectReason', null) == null || (n.rejectReason is string && n.rejectReason.size() <= 140)));
+    }
 
     // ---- Chore offers ----
 

@@ -12,7 +12,7 @@ type IconName = React.ComponentProps<typeof Icon>['name'];
 const STEPS: { icon: IconName; title: string; body: string }[] = [
   { icon: 'camera-outline', title: 'Done a chore?\nLog it.', body: 'Tap the chore and snap a photo. It counts towards your score.' },
   { icon: 'notifications-outline', title: 'Spotted a job?\nFlag it.', body: 'Say it needs doing, and whoever has done the fewest chores gets asked.' },
-  { icon: 'checkmark-done-outline', title: 'Check each\nother.', body: 'A housemate checks every photo. Not done properly? It gets sent back to redo.' },
+  { icon: 'checkmark-done-outline', title: 'Check each\nother.', body: 'Two housemates check every photo. Not done properly? Anyone can send it back to redo.' },
   { icon: 'trash-outline', title: 'Never miss\nbin day.', body: 'Add your bin days once, and everyone gets a reminder at 8pm the night before.' },
   { icon: 'wallet-outline', title: 'No time?\nPay to skip.', body: 'Offer your chore to a housemate for money. They do it, you pay them, and you keep the point.' },
 ];

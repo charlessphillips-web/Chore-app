@@ -1,10 +1,10 @@
 /**
- * Photo checks. Each chore photo is checked by ONE housemate (not the person
- * who did it), who either verifies or rejects it. If nobody checks it within
- * 24 hours it counts as verified automatically.
+ * Photo checks. Each chore photo needs TWO housemates to verify it (just one
+ * in a 2-person house). Any ONE checker can send it back. If it isn't fully
+ * checked within 24 hours it counts as verified automatically.
  *
- *   pending  -> still counts, shown in everyone else's Checks tab
- *   verified -> counts
+ *   pending  -> still counts, shown in Checks for anyone who hasn't checked it
+ *   verified -> counts (enough people verified)
  *   rejected -> taken off the chore-doer's score
  *
  * Kept free of Firebase so it can be tested; mirrored in firestore.rules.
@@ -12,6 +12,16 @@
 export type ReviewStatus = 'pending' | 'verified' | 'rejected';
 
 export const AUTO_VERIFY_MS = 24 * 60 * 60 * 1000;
+
+/** How many verifications a chore needs: 2, or 1 if there's only one other person. */
+export function checksNeededFor(memberCount: number): 1 | 2 {
+  return memberCount >= 3 ? 2 : 1;
+}
+
+/** Who has verified it so far, and how many are needed. Older chores needed 1. */
+export function checkProgress(log: { checks?: string[] | null; checksNeeded?: number | null }) {
+  return { done: log.checks?.length ?? 0, needed: log.checksNeeded ?? 1 };
+}
 
 /** What the status really is right now, taking the 24-hour rule into account. */
 export function effectiveStatus(
@@ -22,13 +32,13 @@ export function effectiveStatus(
   return log.status;
 }
 
-/** Should this chore be in `uid`'s Checks list? */
+/** Should this chore be in `uid`'s Checks list? (Not theirs, not already verified by them.) */
 export function needsCheckBy(
-  log: { status: ReviewStatus; at: number; userId: string },
+  log: { status: ReviewStatus; at: number; userId: string; checks?: string[] | null },
   uid: string,
   now: number = Date.now(),
 ): boolean {
-  return log.userId !== uid && effectiveStatus(log, now) === 'pending';
+  return log.userId !== uid && effectiveStatus(log, now) === 'pending' && !(log.checks ?? []).includes(uid);
 }
 
 /** Hours and minutes left before auto-verification, e.g. "23h left". */

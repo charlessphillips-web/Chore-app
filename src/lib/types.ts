@@ -75,6 +75,10 @@ export interface ChoreLog {
   reviewedByName: string | null;
   /** Why it was sent back, e.g. "Still dirty: the hob is greasy". */
   rejectReason: string | null;
+  /** Who has verified it so far (uids and names), and how many it needs (2, or 1 in a 2-person house). */
+  checks: string[];
+  checkNames: string[];
+  checksNeeded: number;
   /** Done for someone else, who paid for it (see ChoreOffer): they get the point, not the doer. */
   offerId: string | null;
   creditTo: string | null;

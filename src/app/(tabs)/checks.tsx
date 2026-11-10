@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
+import { haptics } from '../../lib/haptics';
 import { sendBackChore, verifyChore } from '../../lib/db';
 import { jpegUri } from '../../lib/photos';
-import { effectiveStatus, needsCheckBy, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
+import { checkProgress, effectiveStatus, needsCheckBy, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
 import type { ChoreLog } from '../../lib/types';
 import { Button, Card, Chip, ChipRow, Empty, Input, Label, Loading, notify, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
@@ -22,9 +23,10 @@ export default function Checks() {
     <Screen>
       <Title>Checks</Title>
       <Subtitle>
-        Only one person needs to check each photo. Anything not checked within 24 hours is verified automatically.
+        Each photo needs two housemates to verify it (one in a 2-person house). Anyone can send it back. Anything not
+        fully checked within 24 hours counts automatically.
       </Subtitle>
-      <Tip id="checks">Look at each photo: tap Verify if it&apos;s done properly, or Send back with a reason if it isn&apos;t. Sent-back chores don&apos;t count until they&apos;re redone.</Tip>
+      <Tip id="checks">Look at each photo: tap Verify if it&apos;s done properly (it needs two of you), or Send back with a reason if it isn&apos;t. Sent-back chores don&apos;t count until they&apos;re redone.</Tip>
 
       {toCheck.length === 0 ? (
         <Card>
@@ -41,7 +43,7 @@ export default function Checks() {
             {minePending.map((l) => (
               <View key={l.id} style={styles.mineRow}>
                 <Text style={type.body}>{l.choreName}</Text>
-                <Text style={type.small}>{timeLeft(l.at)}</Text>
+                <Text style={type.small}>{checkProgress(l).done} of {checkProgress(l).needed} checks · {timeLeft(l.at)}</Text>
               </View>
             ))}
           </Card>
@@ -61,7 +63,9 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
   async function verify() {
     setBusy('verify');
     try {
-      await verifyChore(house!.id, log.id, reviewer);
+      const r = await verifyChore(house!.id, log.id, reviewer);
+      haptics.success();
+      if (r.done < r.needed) notify('Thanks!', `${r.needed - r.done} more housemate needs to check it before it's verified.`);
     } catch (e) {
       notify('Could not save', (e as Error).message);
       setBusy(null);
@@ -93,6 +97,11 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
       </Pressable>
       <View style={{ padding: space.md, gap: space.sm }}>
         <Text style={type.heading}>{log.choreName}</Text>
+        {checkProgress(log).needed > 1 && (
+          <Text style={[type.small, { color: colors.text }]}>
+            {checkProgress(log).done} of {checkProgress(log).needed} checks{log.checkNames.length ? ` · ${log.checkNames.join(', ')} verified` : ''}
+          </Text>
+        )}
         <Text style={type.small}>
           {log.username}{log.creditToName ? ` (paid by ${log.creditToName})` : ''} · {timeAgo(log.at)} · {timeLeft(log.at)} to check · tap photo to enlarge
         </Text>
