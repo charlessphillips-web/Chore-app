@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { dobError } from '../lib/dob';
+import { isAllowedUniversity } from '../lib/universities';
 import { GENDERS, type Gender, type ProfileDetails } from '../lib/types';
 import { DobPicker } from './DobPicker';
 import { UniversityInput } from './UniversityInput';
@@ -34,7 +35,9 @@ export function ProfileForm({
     if (dErr) return setError(dErr);
     if (!gender) return setError('Choose a gender option (or "Prefer not to say").');
     if (isStudent === null) return setError('Let us know if you are a university student.');
-    if (isStudent && university.trim().length < 2) return setError('Which university are you at?');
+    if (isStudent && !isAllowedUniversity(university)) {
+      return setError('Pick your university from the list (or tap "My university isn\'t listed").');
+    }
     setError(null);
     setSaving(true);
     try {
@@ -43,7 +46,7 @@ export function ProfileForm({
         dob,
         gender,
         isStudent,
-        university: isStudent ? university.trim() : null,
+        university: isStudent ? university : null,
       });
     } catch (e) {
       setError((e as Error).message);
@@ -76,7 +79,7 @@ export function ProfileForm({
       {isStudent && (
         <>
           <Label>University</Label>
-          <UniversityInput value={university} onChange={setUniversity} />
+          <UniversityInput value={university} onChange={(v) => { setUniversity(v); setError(null); }} />
         </>
       )}
 

@@ -14,7 +14,7 @@ let env;
 const P = 'p2026_11';
 const db = (uid) => env.authenticatedContext(uid).firestore();
 const profile = (over = {}) => ({
-  username: 'Alex', dob: '2004-03-07', gender: 'Female', isStudent: true, university: 'Leeds',
+  username: 'Alex', dob: '2004-03-07', gender: 'Female', isStudent: true, university: 'University of Leeds',
   houseId: null, createdAt: serverTimestamp(), ...over,
 });
 const member = (username, joinCode) => ({
@@ -539,6 +539,21 @@ test('analytics: anonymous +1 counters, only owners read', async () => {
   await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'owners', 'charlie'), { name: 'Charlie' }));
   const snap = await getDocs(query(collection(db('charlie'), 'analytics'), where('day', '>=', '2026-11-01')));
   assert.equal(snap.docs[0].data().n, 2);
+});
+
+test('university must be a real one from the list', async () => {
+  const me = doc(db('u1'), 'users', 'u1');
+  await assertFails(setDoc(me, profile({ university: 'Hogwarts' })));
+  await assertFails(setDoc(me, profile({ university: 'leeds' })));
+  await assertSucceeds(setDoc(doc(db('u2'), 'users', 'u2'), profile({ university: "King's College London" })));
+  await assertSucceeds(setDoc(doc(db('u3'), 'users', 'u3'), profile({ university: 'Other UK university (not listed)' })));
+  await assertSucceeds(setDoc(doc(db('u4'), 'users', 'u4'), profile({ isStudent: false, university: null })));
+  await assertSucceeds(setDoc(me, profile()));
+  await assertFails(updateDoc(me, { university: 'My Mum’s House' }));
+  // Older accounts that typed something before the list was enforced can still update other things.
+  await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'users', 'old'), profile({ university: 'leeds uni lol' })));
+  await assertSucceeds(updateDoc(doc(db('old'), 'users', 'old'), { username: 'Oldie' }));
+  await assertFails(updateDoc(doc(db('old'), 'users', 'old'), { university: 'still made up' }));
 });
 
 test('sending back creates a redo for the chore-doer', async () => {

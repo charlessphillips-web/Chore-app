@@ -5,6 +5,7 @@ import { useApp } from '../../../context/AppContext';
 import { authError, checkLogin, saveAccount, signOutUser } from '../../../lib/account';
 import { haptics } from '../../../lib/haptics';
 import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
+import { PasswordInput } from '../../../components/PasswordInput';
 import { colors, type } from '../../../components/theme';
 
 /** Your login: save an email + password so you can sign in on another phone. */
@@ -68,7 +69,7 @@ export default function AccountScreen() {
       <Input value={email} onChangeText={setEmail} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false}
         keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />
       <Label>Password (8+ characters)</Label>
-      <Input value={password} onChangeText={setPassword} placeholder="Choose a password" secureTextEntry autoComplete="new-password"
+      <PasswordInput value={password} onChangeText={setPassword} placeholder="Choose a password" autoComplete="new-password"
         textContentType="newPassword" accessibilityLabel="Password" />
       <ErrorText>{error}</ErrorText>
       <Button title="Save my account" onPress={save} loading={busy} disabled={!email.trim() || !password} />

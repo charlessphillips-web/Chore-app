@@ -30,3 +30,17 @@ test('too short or nonsense gives nothing', () => {
   assert.deepEqual(searchUniversities('l'), []);
   assert.deepEqual(searchUniversities('zzzz'), []);
 });
+
+test('only listed universities are allowed, and firestore.rules has the same list', async () => {
+  const { ALLOWED_UNIVERSITIES, isAllowedUniversity } = await import('./universities.ts');
+  const { readFileSync } = await import('node:fs');
+  assert.ok(isAllowedUniversity('University of Exeter'));
+  assert.ok(isAllowedUniversity('Other UK university (not listed)'));
+  assert.ok(!isAllowedUniversity('exeter'));
+  assert.ok(!isAllowedUniversity('Hogwarts'));
+  assert.ok(!isAllowedUniversity(''));
+  const rules = readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+  const block = rules.split('// UNIVERSITIES-START')[1].split('// UNIVERSITIES-END')[0];
+  const inRules = [...block.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => JSON.parse(`"${m[1]}"`));
+  assert.deepEqual(inRules, ALLOWED_UNIVERSITIES, 'run: node scripts/sync-universities.mjs');
+});

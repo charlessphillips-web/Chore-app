@@ -1,7 +1,8 @@
 /**
- * UK universities, for suggestions while typing. Picking from the list also
- * keeps the demographic data tidy ("UCL", "University College London" and
- * "ucl london" all become one name). Anything not listed can still be typed.
+ * UK universities. Students must pick one from this list (so the data stays
+ * real and tidy: "UCL", "University College London" and "ucl london" all
+ * become one name), or one of the two "not listed" options below.
+ * firestore.rules has the same list; a unit test checks they match.
  * [name, ...short names people use]
  */
 const LIST: [string, ...string[]][] = [
@@ -150,6 +151,18 @@ const LIST: [string, ...string[]][] = [
 ];
 
 export const UNIVERSITIES = LIST.map(([name]) => name);
+
+/** For students at a university that isn't on the list. */
+export const NOT_LISTED_UK = 'Other UK university (not listed)';
+export const OUTSIDE_UK = 'University outside the UK';
+export const UNIVERSITY_FALLBACKS = [NOT_LISTED_UK, OUTSIDE_UK];
+
+/** Every value a student's university can be. */
+export const ALLOWED_UNIVERSITIES = [...UNIVERSITIES, ...UNIVERSITY_FALLBACKS];
+
+export function isAllowedUniversity(name: string | null | undefined): boolean {
+  return !!name && ALLOWED_UNIVERSITIES.includes(name);
+}
 
 const norm = (s: string) =>
   s.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();

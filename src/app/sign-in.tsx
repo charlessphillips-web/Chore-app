@@ -4,6 +4,7 @@ import { router, Stack } from 'expo-router';
 import { authError, resetPassword, signIn } from '../lib/account';
 import { haptics } from '../lib/haptics';
 import { Button, ErrorText, Input, Label, Screen, Subtitle, Title } from '../components/ui';
+import { PasswordInput } from '../components/PasswordInput';
 import { colors, type } from '../components/theme';
 
 /** Sign in to a saved Rotawise account (e.g. on a new phone or the new web address). */
@@ -52,7 +53,7 @@ export default function SignIn() {
       <Input value={email} onChangeText={setEmail} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false}
         keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />
       <Label>Password</Label>
-      <Input value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry autoComplete="current-password"
+      <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" autoComplete="current-password"
         textContentType="password" accessibilityLabel="Password" onSubmitEditing={go} />
       <ErrorText>{error}</ErrorText>
       {info && <Text style={[type.small, { color: colors.success }]}>{info}</Text>}

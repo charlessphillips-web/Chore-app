@@ -32,6 +32,10 @@ Open app ─► Questions (username, date of birth, gender, student? which uni?)
 
 **Logins:** everyone starts without a login. Settings → Your login adds an email + password to the same account (keeps house, scores, picture), so you can sign in on another phone or browser ("Sign in" on the first intro screen). Needs Firebase → Authentication → Sign-in method → **Email/Password** switched on.
 
+**Universities:** students must pick from the list in `src/lib/universities.ts` (or "not listed"). The database rules have the same list; after editing it run `node scripts/sync-universities.mjs`, then deploy the rules. A test fails if the two lists differ.
+
+**App icons:** `assets/app-icons/` has the logo in 6 colours, ready for a "change app icon" setting in the phone app.
+
 **Postcode:** creating a house asks for the postcode; only the area (e.g. "LS6 · Leeds") is saved, via postcodes.io.
 
 **Privacy:** sign-up has a tick-box to agree to the privacy policy (in the app at /privacy; the text is in `src/components/PrivacyPolicy.tsx`, and your name and contact email go in `src/lib/legal.ts`). Changing `PRIVACY_VERSION` there asks everyone to agree again.
