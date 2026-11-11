@@ -47,17 +47,19 @@ export default function Home() {
           <Avatar avatar={me?.avatar} name={profile?.username ?? '?'} size={34} />
           <Text style={styles.hello} numberOfLines={1}>Hey {profile?.username ?? ''}</Text>
         </View>
-        <View style={styles.scoreRow}>
-          <Text style={styles.score}>{total}</Text>
-          <Text style={styles.scoreText}>
-            {total === 1 ? 'chore' : 'chores'}
-            {s.place ? <Text style={styles.place}>{` · ${s.place}`}</Text> : ' this period'}
-          </Text>
-        </View>
-        {s.progress !== null && (
-          <View style={styles.bar}>
-            <View style={[styles.barFill, { width: `${Math.round(s.progress * 100)}%` }]} />
-          </View>
+        {s.active ? (
+          <>
+            <View style={styles.scoreRow}>
+              <Text style={styles.score}>{s.sharePct}%</Text>
+              <Text style={styles.scoreText}>of the house&apos;s chores</Text>
+            </View>
+            <FairBar share={s.sharePct} fair={s.fairPct} />
+            <Text style={styles.fairLine}>
+              Fair share: {s.fairPct}% · you: {me?.points ?? total} point{(me?.points ?? total) === 1 ? '' : 's'} from {total} chore{total === 1 ? '' : 's'}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.scoreText}>{s.headline}</Text>
         )}
         <Text style={type.small}>{s.hint}</Text>
       </View>
@@ -118,7 +120,7 @@ export default function Home() {
       )}
 
       <Label>Chores</Label>
-      <Tip id="home">Tap a chore to log it with a photo, or to say it needs doing. Whoever has done the fewest gets asked.</Tip>
+      <Tip id="home">Tap a chore to log it with a photo, or to say it needs doing. Whoever is furthest below their fair share gets asked.</Tip>
       {chores.length > 0 || isAdmin ? (
         <View style={styles.grid}>
           {chores.map((c) => {
@@ -168,6 +170,19 @@ export default function Home() {
   );
 }
 
+/** Your share, with a tick mark where a fair share is. Scaled so small shares are still visible. */
+function FairBar({ share, fair }: { share: number; fair: number }) {
+  const max = Math.min(100, Math.max(fair * 2, share + 10));
+  return (
+    <View style={styles.fairWrap} accessibilityLabel={`Your share ${share}%, fair share ${fair}%`}>
+      <View style={styles.bar}>
+        <View style={[styles.barFill, { width: `${(share / max) * 100}%`, backgroundColor: share >= fair ? colors.text : colors.muted }]} />
+      </View>
+      <View style={[styles.fairMark, { left: `${(fair / max) * 100}%` }]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   house: { flex: 1, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.text, textTransform: 'uppercase' },
@@ -179,7 +194,10 @@ const styles = StyleSheet.create({
   score: { fontSize: 56, fontWeight: '700', color: colors.text, letterSpacing: -2, lineHeight: 62 },
   scoreText: { fontSize: 16, color: colors.muted },
   place: { color: colors.text, fontWeight: '600' },
-  bar: { height: 3, backgroundColor: colors.line, borderRadius: 2, overflow: 'hidden' },
+  bar: { height: 6, backgroundColor: colors.line, borderRadius: 3, overflow: 'hidden' },
+  fairWrap: { justifyContent: 'center', marginVertical: 4 },
+  fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.you, borderRadius: 1 },
+  fairLine: { fontSize: 12, color: colors.muted },
   barFill: { height: '100%', backgroundColor: colors.text, borderRadius: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
   tile: {

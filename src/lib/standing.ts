@@ -1,15 +1,20 @@
 /**
- * "Where am I on the leaderboard?" for the purple card on Home.
+ * "Where am I?" for Home and Ranks, framed as fair share: what share of the
+ * house's chore points you've done, against an equal share (100% ÷ people).
  * Pure function so it can be unit tested.
  */
 export interface Standing {
-  /** Big line, e.g. "You're 2nd with 3 chores". */
+  /** e.g. "22%". */
+  sharePct: number;
+  /** An equal share, e.g. 25 in a 4-person house. */
+  fairPct: number;
+  /** Big line under the number. */
   headline: string;
-  /** Small line under the bar, e.g. "2 more to overtake Sam". */
+  /** Small line under the bar. */
   hint: string;
-  /** 0–1 for the progress bar, or null to hide it (no one to race). */
-  progress: number | null;
-  /** e.g. "2nd", "joint 1st", or null if alone / nobody has scored. */
+  /** Is there anyone to compare with (and any chores yet)? */
+  active: boolean;
+  /** e.g. "2nd", "joint 1st" (by points), or null. */
   place: string | null;
 }
 
@@ -17,6 +22,7 @@ interface Scored {
   uid: string;
   username: string;
   totalCompleted: number;
+  points?: number;
 }
 
 export function ordinal(n: number): string {
@@ -25,61 +31,49 @@ export function ordinal(n: number): string {
   return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;
 }
 
-const chores = (n: number) => `${n} chore${n === 1 ? '' : 's'}`;
+const pts = (m: Scored) => m.points ?? m.totalCompleted;
 
-function names(list: Scored[]): string {
-  const n = list.map((m) => m.username).sort((a, b) => a.localeCompare(b));
-  if (n.length <= 2) return n.join(' and ');
-  return `${n[0]}, ${n[1]} and ${n.length - 2} more`;
+/** Points you'd need to do (alone) to reach an equal share. */
+export function pointsToFairShare(mine: number, total: number, people: number): number {
+  if (people <= 1) return 0;
+  const fair = 1 / people;
+  if (total > 0 && mine / total >= fair) return 0;
+  return Math.max(1, Math.ceil((fair * total - mine) / (1 - fair)));
 }
 
 export function standing(members: Scored[], uid: string): Standing {
+  const people = members.length;
   const me = members.find((m) => m.uid === uid);
-  const mine = me?.totalCompleted ?? 0;
-  const others = members.filter((m) => m.uid !== uid);
+  const mine = me ? pts(me) : 0;
+  const total = members.reduce((n, m) => n + pts(m), 0);
+  const fairPct = people > 0 ? Math.round(100 / people) : 100;
 
-  if (others.length === 0) {
+  if (people <= 1) {
     return {
-      headline: `You've done ${chores(mine)} this period`,
-      hint: 'Share the house code to get your housemates on the board',
-      progress: null,
-      place: null,
+      sharePct: 100, fairPct: 100, active: false, place: null,
+      headline: 'Just you so far',
+      hint: 'Share the house code to get your housemates on board',
     };
   }
-
-  const best = Math.max(mine, ...others.map((m) => m.totalCompleted));
-  if (best === 0) {
-    return { headline: 'Nobody’s on the board yet', hint: 'Log a chore to take the lead', progress: 0, place: null };
-  }
-
-  const ahead = others.filter((m) => m.totalCompleted > mine);
-  const rank = ahead.length + 1;
-
-  if (rank === 1) {
-    const tied = others.filter((m) => m.totalCompleted === mine);
-    if (tied.length > 0) {
-      return { headline: `You're joint 1st with ${chores(mine)}`, hint: `1 more to beat ${names(tied)}`, progress: 1, place: 'joint 1st' };
-    }
-    const second = Math.max(...others.map((m) => m.totalCompleted));
-    const runnersUp = others.filter((m) => m.totalCompleted === second);
+  if (total === 0) {
     return {
-      headline: `You're top with ${chores(mine)}`,
-      hint: `${mine - second} ahead of ${names(runnersUp)}`,
-      progress: 1,
-      place: '1st',
+      sharePct: 0, fairPct, active: false, place: null,
+      headline: `Your fair share is ${fairPct}% of the chores`,
+      hint: 'Nobody’s done a chore yet. Log one to get started',
     };
   }
-
-  // The next person up (lowest score that's still above mine).
-  const target = Math.min(...ahead.map((m) => m.totalCompleted));
-  const targets = ahead.filter((m) => m.totalCompleted === target);
-  const tiedWithMe = others.some((m) => m.totalCompleted === mine);
+  const sharePct = Math.round((mine / total) * 100);
+  const need = pointsToFairShare(mine, total, people);
+  const rank = members.filter((m) => pts(m) > mine).length + 1;
+  const tied = members.filter((m) => m.uid !== uid && pts(m) === mine).length > 0;
   return {
-    headline: mine === 0
-      ? 'You haven’t logged a chore yet'
-      : `You're ${tiedWithMe ? 'joint ' : ''}${ordinal(rank)} with ${chores(mine)}`,
-    hint: `${target - mine + 1} more to overtake ${names(targets)}`,
-    progress: mine / best,
-    place: `${tiedWithMe ? 'joint ' : ''}${ordinal(rank)}`,
+    sharePct,
+    fairPct,
+    active: true,
+    place: `${tied ? 'joint ' : ''}${ordinal(rank)}`,
+    headline: `of the house's chores · fair share ${fairPct}%`,
+    hint: need > 0
+      ? `${need} point${need === 1 ? '' : 's'} to reach your fair share`
+      : sharePct > fairPct + 5 ? 'You’re doing more than your fair share 👏' : 'You’re doing your fair share 👍',
   };
 }

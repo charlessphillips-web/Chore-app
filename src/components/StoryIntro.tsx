@@ -10,8 +10,9 @@ import { colors, space } from './theme';
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
 const STEPS: { icon: IconName; title: string; body: string }[] = [
-  { icon: 'notifications-outline', title: 'Whose turn?\nRotawise knows.', body: 'Bins full? Flag it, and Rotawise notifies whoever has done the fewest chores: "Bins are full! It\'s your turn."' },
-  { icon: 'camera-outline', title: 'Done a chore?\nLog it.', body: 'Tap the chore and snap a photo. Every chore counts towards your score on the leaderboard.' },
+  { icon: 'pie-chart-outline', title: 'Everyone does\ntheir fair share.', body: 'In a house of 4, your fair share is 25% of the chores. Rotawise shows everyone how close they are, so nobody carries the house.' },
+  { icon: 'notifications-outline', title: 'Whose turn?\nRotawise knows.', body: 'Bins full? Flag it, and Rotawise asks whoever is furthest below their fair share: "Bins are full! It\'s your turn."' },
+  { icon: 'camera-outline', title: 'Done a chore?\nLog it.', body: 'Tap the chore and snap a photo. Quick jobs are worth 1 point, medium 2, big 3, so cleaning the oven counts for more than the bins.' },
   { icon: 'checkmark-done-outline', title: 'Check each\nother.', body: 'Two housemates check every photo. Not done properly? Anyone can send it back to redo.' },
   { icon: 'trash-outline', title: 'Never miss\nbin day.', body: 'Add your bin days once, and everyone gets a reminder at 8pm the night before.' },
   { icon: 'wallet-outline', title: 'No time?\nPay to skip.', body: 'Offer your chore to a housemate for money. They do it, you pay them, and you keep the point.' },
@@ -102,7 +103,7 @@ export function StoryIntro({ onFinish, finishLabel = 'Hold to\nget started', sho
             <>
               <Logo size={96} />
               <Text style={styles.title}>Rotawise</Text>
-              <Text style={styles.text}>Sharing chores fairly in your house.</Text>
+              <Text style={styles.text}>Your house, fairly shared.</Text>
             </>
           )}
         </Animated.View>

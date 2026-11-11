@@ -37,7 +37,7 @@ export default function Housemates() {
         others.map((m) => (
           <Card key={m.uid}>
             <Text style={type.heading}>{m.username}</Text>
-            <Text style={type.small}>{m.totalCompleted} chores this period</Text>
+            <Text style={type.small}>{m.points ?? m.totalCompleted} points · {m.totalCompleted} chore{m.totalCompleted === 1 ? '' : 's'} this period</Text>
             <View style={styles.actions}>
               <Button title="Make admin" variant="secondary" style={{ flex: 1 }} onPress={() => handOver(m.uid, m.username)} />
               <Button title="Remove" variant="danger" style={{ flex: 1 }} onPress={() => remove(m.uid, m.username)} />

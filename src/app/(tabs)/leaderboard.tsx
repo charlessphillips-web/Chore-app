@@ -23,17 +23,22 @@ export default function Leaderboard() {
   const elapsed = (now.getTime() - start.getTime()) / (end.getTime() - start.getTime());
   const resets = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 
-  const ranked = [...members].sort((a, b) => b.totalCompleted - a.totalCompleted || a.username.localeCompare(b.username));
-  const top = Math.max(1, ...ranked.map((m) => m.totalCompleted));
+  const pts = (m: (typeof members)[number]) => m.points ?? m.totalCompleted;
+  const ranked = [...members].sort((a, b) => pts(b) - pts(a) || a.username.localeCompare(b.username));
+  const houseTotal = ranked.reduce((n, m) => n + pts(m), 0);
+  const fairPct = members.length ? 100 / members.length : 100;
+  const share = (m: (typeof members)[number]) => (houseTotal ? (pts(m) / houseTotal) * 100 : 0);
+  // Bars are scaled so a fair share sits in the middle-ish and nobody's bar is tiny.
+  const scale = Math.min(100, Math.max(fairPct * 2, ...ranked.map(share)));
   // Who'd get the next "needs doing" (if someone other than them reported it).
   const nextUp = members.length > 1 ? pickAssignee(members, '', 'overall', '') : null;
   // Same score = same position.
-  const position = (i: number) => ranked.findIndex((m) => m.totalCompleted === ranked[i].totalCompleted) + 1;
+  const position = (i: number) => ranked.findIndex((m) => pts(m) === pts(ranked[i])) + 1;
 
   return (
     <Screen>
       <Title>Leaderboard</Title>
-      <Tip id="ranks">Every checked chore is a point. Whoever has the fewest gets the next &quot;needs doing&quot;, so staying near the top means fewer requests.</Tip>
+      <Tip id="ranks">Everyone&apos;s fair share is an equal split of the chores. Bigger jobs are worth more points (Quick 1 · Medium 2 · Big 3). Whoever is furthest below their fair share gets the next &quot;needs doing&quot;.</Tip>
 
       <View style={styles.period}>
         <View style={styles.periodTop}>
@@ -60,7 +65,7 @@ export default function Leaderboard() {
         <View style={[styles.row, styles.head]}>
           <Text style={[styles.headText, styles.pos]}>#</Text>
           <Text style={[styles.headText, { flex: 1, marginLeft: 46 }]}>Housemate</Text>
-          <Text style={[styles.headText, styles.score]}>Chores</Text>
+          <Text style={[styles.headText, styles.score]}>Share</Text>
         </View>
         {ranked.map((m, i) => {
           const me = m.uid === user.uid;
@@ -73,20 +78,27 @@ export default function Leaderboard() {
                   <Text style={styles.name} numberOfLines={1}>{m.username}</Text>
                   {me && <View style={styles.youDot} accessibilityLabel="You" />}
                 </View>
-                <View style={styles.bar}>
-                  <View style={[styles.barFill, { width: `${(m.totalCompleted / top) * 100}%` }, me && { backgroundColor: colors.text }]} />
+                <View style={{ justifyContent: 'center' }}>
+                  <View style={styles.bar}>
+                    <View style={[styles.barFill, { width: `${(share(m) / scale) * 100}%` }, (me || share(m) >= fairPct) && { backgroundColor: colors.text }]} />
+                  </View>
+                  <View style={[styles.fairMark, { left: `${(fairPct / scale) * 100}%` }]} />
                 </View>
-                {nextUp?.uid === m.uid && <Text style={styles.next}>Next up for chores</Text>}
+                <Text style={styles.next}>
+                  {pts(m)} point{pts(m) === 1 ? '' : 's'} · {m.totalCompleted} chore{m.totalCompleted === 1 ? '' : 's'}
+                  {nextUp?.uid === m.uid ? ' · next up for chores' : ''}
+                </Text>
               </View>
-              <Text style={[styles.scoreText, styles.score]}>{m.totalCompleted}</Text>
+              <Text style={[styles.scoreText, styles.score]}>{houseTotal ? `${Math.round(share(m))}%` : '–'}</Text>
             </View>
           );
         })}
       </View>
 
       <Text style={type.small}>
-        Only checked chores count. Sent-back chores count again once they&apos;re redone. Whoever has the fewest gets the
-        next &quot;needs doing&quot; request.
+        The purple line on each bar is a fair share ({Math.round(fairPct)}% each). Bigger jobs are worth more points, and
+        whoever is furthest below their fair share gets the next &quot;needs doing&quot; request. Sent-back chores don&apos;t
+        count until they&apos;re redone.
       </Text>
     </Screen>
   );
@@ -108,7 +120,8 @@ const styles = StyleSheet.create({
   pos: { width: 24 },
   posText: { fontSize: 13, fontFamily: fonts.mono, color: colors.muted },
   name: { fontSize: 16, fontWeight: '600', color: colors.text },
-  bar: { height: 2, borderRadius: 1, backgroundColor: colors.line, overflow: 'hidden' },
+  bar: { height: 5, borderRadius: 3, backgroundColor: colors.line, overflow: 'hidden' },
+  fairMark: { position: 'absolute', width: 2, height: 12, marginLeft: -1, backgroundColor: colors.you, borderRadius: 1 },
   barFill: { height: '100%', backgroundColor: colors.muted },
   next: { fontSize: 12, color: colors.muted },
   score: { width: 56, textAlign: 'right' },

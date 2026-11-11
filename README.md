@@ -1,6 +1,6 @@
 # Rotawise
 
-A chore app for uni houses. Log chores with a photo, flag chores that need doing, and the app asks whoever has done the least.
+**Your house, fairly shared.** A chore app for uni houses. Everyone can see their share of the chores against a fair share (an equal split). Log chores with a photo, flag chores that need doing, and the app asks whoever is furthest below their fair share. Chores are Quick (1 point), Medium (2) or Big (3).
 
 ![Screens](docs/screens-1.png)
 ![Screens](docs/screens-2.png)
@@ -13,10 +13,10 @@ A chore app for uni houses. Log chores with a photo, flag chores that need doing
 Open app ─► Questions (username, date of birth, gender, student? which uni?)
           ─► Create a house (you become ADMIN, get a 6-letter code)  OR  join with a code
           ─► Home: house name + list of chores
-               Tap a chore (e.g. Bins) ─┬─► "I've done it"  ─► photo ─► +1 on your score
+               Tap a chore (e.g. Bins) ─┬─► "I've done it"  ─► photo ─► +1/2/3 points (chore size)
                                          │                       ─► housemates notified to check it
-                                         └─► "Bins are full"  ─► sent to whoever has done the
-                                                                  fewest chores this period
+                                         └─► "Bins are full"  ─► sent to whoever is furthest
+                                                                  below their fair share
 ```
 
 **Bottom menu:** Home · Checks · Leaderboard · House · Settings

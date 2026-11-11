@@ -112,7 +112,7 @@ export default function ChoreScreen() {
               request
                 ? `Already flagged — waiting on ${request.assignedToName}`
                 : assignee
-                  ? `We'll ask ${assignee.username} (fewest chores this period)`
+                  ? `We'll ask ${assignee.username} (furthest below their fair share)`
                   : 'Nobody else in the house yet'
             }
             onPress={() => setStep('needs')}
@@ -229,7 +229,7 @@ export default function ChoreScreen() {
             <Text style={type.heading}>{assignee ? assignee.username : 'Nobody yet'}</Text>
             <Text style={type.small}>
               {assignee
-                ? `${assignee.totalCompleted} chore${assignee.totalCompleted === 1 ? '' : 's'} this period — the fewest in the house`
+                ? `${assignee.points ?? assignee.totalCompleted} points this period: furthest below their fair share`
                 : 'Share your house code from the House tab first.'}
             </Text>
           </Card>
