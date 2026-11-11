@@ -18,9 +18,11 @@ export default function HouseSetup() {
   const [lookupDown, setLookupDown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set once this screen creates/joins a house, so we go on to the set-up step.
+  const [joined, setJoined] = useState(false);
 
   // Move on as soon as the profile update arrives (avoids racing the database).
-  if (profile?.houseId) return <Redirect href="/" />;
+  if (profile?.houseId) return <Redirect href={joined ? '/house-start' : '/'} />;
   if (profile && profile.privacyVersion !== PRIVACY_VERSION) return <Redirect href="/consent" />;
 
   async function go() {
@@ -28,6 +30,7 @@ export default function HouseSetup() {
     setError(null);
     setBusy(true);
     clearNotice();
+    setJoined(true);
     try {
       if (mode === 'create') {
         if (name.trim().length < 1) throw new Error('Give your house a name or number, e.g. "42".');
@@ -40,6 +43,7 @@ export default function HouseSetup() {
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
+      setJoined(false);
     }
   }
 

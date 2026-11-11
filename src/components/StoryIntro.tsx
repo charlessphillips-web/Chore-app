@@ -15,6 +15,7 @@ const STEPS: { icon: IconName; title: string; body: string }[] = [
   { icon: 'camera-outline', title: 'Done a chore?\nLog it.', body: 'Tap the chore and snap a photo. Quick jobs are worth 1 point, medium 2, big 3, so cleaning the oven counts for more than the bins.' },
   { icon: 'checkmark-done-outline', title: 'Check each\nother.', body: 'Two housemates check every photo. Not done properly? Anyone can send it back to redo.' },
   { icon: 'trash-outline', title: 'Never miss\nbin day.', body: 'Add your bin days once, and everyone gets a reminder at 8pm the night before.' },
+  { icon: 'trophy-outline', title: 'Play for\nstakes.', body: 'Optional: your house votes on a prize for whoever does the most, and a forfeit for whoever does the least. Loser cooks the roast.' },
   { icon: 'wallet-outline', title: 'No time?\nPay to skip.', body: 'Offer your chore to a housemate for money. They do it, you pay them, and you keep the point.' },
 ];
 
