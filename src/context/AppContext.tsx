@@ -5,9 +5,10 @@ import type { FirestoreError } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
 import {
   CHECK_REMINDER_MS, clearFullPhoto, clearRemovedHouse, sendCheckReminder, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
-  watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc,
+  watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc, watchStakes,
 } from '../lib/db';
-import { periodEnd, periodKey } from '../lib/period';
+import { periodEnd, periodKey, previousPeriodKey } from '../lib/period';
+import type { Stake } from '../lib/stakes';
 import { scheduleReminders } from '../lib/reminders';
 import { track } from '../lib/analytics';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
@@ -31,6 +32,10 @@ interface AppState {
   offers: ChoreOffer[];
   /** House wallpaper as a data URI, if the admin set one. */
   wallpaper: string | null;
+  /** House stakes suggestions for this period and the last one. */
+  stakes: Stake[];
+  /** Everyone's scores in another period (e.g. the last one). */
+  membersIn: (period: string) => Member[];
   /** Whether this phone has notifications on. */
   notifStatus: NotificationStatus | null;
   /** Shows the phone's "allow notifications" pop-up and saves the token. */
@@ -181,6 +186,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
 
+  // 3b. House stakes for this period and the last one (only if switched on).
+  const stakePeriods = house?.stakes ? [periodKey(new Date(), house.reset), previousPeriodKey(new Date(), house.reset)].join(',') : '';
+  const [stakesData, setStakesData] = useState<{ key: string; stakes: Stake[] } | null>(null);
+  useEffect(() => {
+    if (!stakePeriods || !houseId) return;
+    const key = `${houseId}|${stakePeriods}`;
+    return watchStakes(houseId, stakePeriods.split(','), (stakes) => setStakesData({ key, stakes }), () => {});
+  }, [houseId, stakePeriods]);
+  const stakes = stakesData && stakesData.key === `${houseId}|${stakePeriods}` ? stakesData.stakes : [];
+
   // 4b. Chores logged 12+ hours ago that still need checks: remind the people
   // who haven't checked (once per chore, whichever phone gets there first).
   const remindIds = (current?.logs ?? [])
@@ -236,6 +251,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     logs: current?.logs ?? [],
     offers: current?.offers ?? [],
     wallpaper: current?.wallpaper ?? null,
+    stakes,
+    membersIn: (p: string) => (current?.members ?? []).map((m) => toMember(m.id, m.data, p)),
     notifStatus,
     enableNotifications,
   };

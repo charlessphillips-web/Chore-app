@@ -42,6 +42,8 @@ export interface House {
   area: HouseArea | null;
   /** Bin collection days, set by the admin. */
   bins: BinSchedule[];
+  /** House stakes (prize for the top, forfeit for the bottom) switched on by the admin. */
+  stakes: boolean;
   createdAt: number;
 }
 

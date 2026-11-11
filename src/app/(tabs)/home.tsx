@@ -8,7 +8,8 @@ import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
 import { choreIcon } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
-import { periodLabel } from '../../lib/period';
+import { periodLabel, periodStart, previousPeriodKey } from '../../lib/period';
+import { lastResult } from '../../lib/stakes';
 import { standing } from '../../lib/standing';
 import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
@@ -18,7 +19,7 @@ import { colors, fonts, type } from '../../components/theme';
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
 export default function Home() {
-  const { user, profile, house, members, openRequests, offers, wallpaper, isAdmin } = useApp();
+  const { user, profile, house, members, openRequests, offers, wallpaper, isAdmin, stakes, membersIn } = useApp();
   if (!user || !house) return <Loading />;
 
   const mine = openRequests.filter((r) => r.assignedTo === user.uid);
@@ -33,6 +34,11 @@ export default function Home() {
   const toDo = offers.filter((o) => o.status === 'agreed' && o.doerUid === user.uid);
   const total = me?.totalCompleted ?? 0;
   const now = new Date();
+  // First week of a new period: show how last period's house stakes ended.
+  const prev = previousPeriodKey(now, house.reset);
+  const stakesNews = house.stakes && now.getTime() - periodStart(now, house.reset).getTime() < 7 * 24 * 3_600_000
+    ? lastResult(stakes, prev, membersIn(prev).map((m) => ({ username: m.username, points: m.points ?? m.totalCompleted })))
+    : null;
 
   return (
     <Screen background={wallpaper}>
@@ -64,6 +70,9 @@ export default function Home() {
         <Text style={type.small}>{s.hint}</Text>
       </View>
 
+      {stakesNews && (
+        <RowButton icon="trophy-outline" title="Last period's stakes" subtitle={stakesNews} onPress={() => router.push('/leaderboard')} />
+      )}
       <VerifyEmailBanner />
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
       <GettingStarted />

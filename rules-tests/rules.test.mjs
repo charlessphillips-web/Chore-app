@@ -7,7 +7,7 @@ import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebas
 import {
   doc, collection, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, runTransaction,
   serverTimestamp, increment, getDocs, query, where, orderBy, deleteField, Timestamp,
-  collectionGroup, getCountFromServer, getAggregateFromServer, count, sum,
+  collectionGroup, getCountFromServer, getAggregateFromServer, count, sum, arrayUnion, arrayRemove,
 } from 'firebase/firestore';
 
 let env;
@@ -699,4 +699,37 @@ test('cannot fake a redo request for a chore you did not send back', async () =>
     requestedBy: 'sam', requestedByName: 'Sam', assignedTo: 'alice', assignedToName: 'Alex',
     status: 'open', createdAt: serverTimestamp(), completedBy: null, completedAt: null,
   }));
+});
+
+test('house stakes: admin switches on, members suggest and vote only for themselves', async () => {
+  await createHouse('alice');
+  await joinHouse('bob');
+  await joinHouse('carl');
+  const stake = (uid, over = {}) => ({ kind: 'prize', text: 'Pint', period: P, byUid: uid, byName: uid, votes: [uid], createdAt: serverTimestamp(), ...over });
+  // Off by default: no suggestions.
+  await assertFails(setDoc(doc(db('bob'), 'houses', 'h1', 'stakes', 's0'), stake('bob')));
+  await assertFails(updateDoc(doc(db('bob'), 'houses', 'h1'), { stakes: true }));
+  await assertFails(updateDoc(doc(db('alice'), 'houses', 'h1'), { stakes: 'yes' }));
+  await assertSucceeds(updateDoc(doc(db('alice'), 'houses', 'h1'), { stakes: true }));
+
+  const s1 = doc(db('bob'), 'houses', 'h1', 'stakes', 's1');
+  await assertFails(setDoc(s1, stake('alice')));
+  await assertFails(setDoc(s1, stake('bob', { votes: ['bob', 'carl'] })));
+  await assertFails(setDoc(s1, stake('bob', { kind: 'bribe' })));
+  await assertFails(setDoc(s1, stake('bob', { text: 'x'.repeat(81) })));
+  await assertSucceeds(setDoc(s1, stake('bob')));
+
+  // Carl adds his own vote, can take it back, can't add or remove someone else's.
+  const c1 = doc(db('carl'), 'houses', 'h1', 'stakes', 's1');
+  await assertSucceeds(updateDoc(c1, { votes: arrayUnion('carl') }));
+  await assertFails(updateDoc(c1, { votes: arrayRemove('bob') }));
+  await assertFails(updateDoc(c1, { votes: arrayUnion('alice') }));
+  await assertFails(updateDoc(c1, { text: 'Two pints' }));
+  await assertSucceeds(updateDoc(c1, { votes: arrayRemove('carl') }));
+  assert.deepEqual((await getDoc(c1)).data().votes, ['bob']);
+
+  // Only the author or the admin can delete; outsiders can't read.
+  await assertFails(deleteDoc(c1));
+  await assertSucceeds(deleteDoc(doc(db('alice'), 'houses', 'h1', 'stakes', 's1')));
+  await assertFails(getDoc(doc(db('stranger'), 'houses', 'h1', 'stakes', 's1')));
 });

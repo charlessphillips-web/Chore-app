@@ -1,7 +1,7 @@
 import {
   collectionGroup, count, getAggregateFromServer, getCountFromServer, getDocs, sum, Timestamp,
   collection, deleteDoc, deleteField, doc, getDoc, increment, limit, onSnapshot, orderBy, query,
-  runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch,
+  arrayRemove, arrayUnion, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch,
   type DocumentData, type FirestoreError,
 } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
@@ -23,6 +23,7 @@ import { PRIVACY_VERSION } from './legal';
 import { wants, type NotifyKind, type NotifyPrefs } from './notifyPrefs';
 import type { BinSchedule } from './bins';
 import { track } from './analytics';
+import { STAKE_MAX, type Stake, type StakeKind } from './stakes';
 
 // Firestore stores server timestamps; the app works in millis.
 const ms = (v: unknown): number | null =>
@@ -176,7 +177,7 @@ export async function makeAdmin(houseId: string, uid: string): Promise<void> {
 
 export async function updateHouse(
   houseId: string,
-  patch: { name?: string; chores?: HouseChore[]; area?: HouseArea | null; bins?: BinSchedule[] },
+  patch: { name?: string; chores?: HouseChore[]; area?: HouseArea | null; bins?: BinSchedule[]; stakes?: boolean },
 ): Promise<void> {
   await updateDoc(houseRef(houseId), patch);
 }
@@ -219,6 +220,7 @@ export function watchHouse(houseId: string, cb: (h: House | null) => void, onErr
         reset: toResetRule(d.resetMonths, d.customStart, d.customEnd),
         area: d.area && typeof d.area.outcode === 'string' ? (d.area as HouseArea) : null,
         bins: Array.isArray(d.bins) ? (d.bins as BinSchedule[]) : [],
+        stakes: d.stakes === true,
         createdAt: ms(d.createdAt) ?? Date.now(),
       });
     },
@@ -963,4 +965,73 @@ export async function loadDashboard(): Promise<DashboardData> {
     usage: usageSnap ? usageSnap.docs.map((d) => d.data() as { day: string; event: string; n: number }) : [],
     partial,
   };
+}
+
+// ---- House stakes: suggestions for a prize / forfeit, voted on by the house.
+
+const stakesCol = (houseId: string) => collection(db, 'houses', houseId, 'stakes');
+
+/** This period's and last period's suggestions, live. */
+export function watchStakes(houseId: string, periods: string[], cb: (s: Stake[]) => void, onError?: OnError) {
+  return onSnapshot(
+    query(stakesCol(houseId), where('period', 'in', periods)),
+    (snap) =>
+      cb(
+        snap.docs.map((s) => {
+          const d = s.data();
+          return {
+            id: s.id,
+            kind: d.kind,
+            text: d.text,
+            period: d.period,
+            byUid: d.byUid,
+            byName: d.byName,
+            votes: Array.isArray(d.votes) ? d.votes : [],
+            createdAt: ms(d.createdAt) ?? 0,
+          } as Stake;
+        }),
+      ),
+    onError,
+  );
+}
+
+/** One vote per kind: take my vote off any other suggestion of the same kind. */
+function moveMyVote(batch: ReturnType<typeof writeBatch>, houseId: string, uid: string, all: Stake[], kind: StakeKind, period: string, keepId: string | null) {
+  for (const s of all) {
+    if (s.kind === kind && s.period === period && s.id !== keepId && s.votes.includes(uid)) {
+      batch.update(doc(db, 'houses', houseId, 'stakes', s.id), { votes: arrayRemove(uid) });
+    }
+  }
+}
+
+/** Suggest a prize or forfeit. Suggesting it counts as your vote. */
+export async function suggestStake(houseId: string, me: Member, kind: StakeKind, rawText: string, period: string, all: Stake[]) {
+  const text = rawText.trim().replace(/\s+/g, ' ');
+  if (!text) throw new Error(kind === 'prize' ? 'Write a prize first.' : 'Write a forfeit first.');
+  if (text.length > STAKE_MAX) throw new Error(`Keep it under ${STAKE_MAX} characters.`);
+  if (all.some((s) => s.kind === kind && s.period === period && s.text.toLowerCase() === text.toLowerCase())) {
+    throw new Error('Someone already suggested that. Vote for it instead.');
+  }
+  const batch = writeBatch(db);
+  const ref = doc(stakesCol(houseId));
+  moveMyVote(batch, houseId, me.uid, all, kind, period, ref.id);
+  batch.set(ref, { kind, text, period, byUid: me.uid, byName: me.username, votes: [me.uid], createdAt: serverTimestamp() });
+  await batch.commit();
+}
+
+/** Vote for a suggestion (or take your vote back). */
+export async function voteStake(houseId: string, uid: string, stake: Stake, all: Stake[]) {
+  const batch = writeBatch(db);
+  const ref = doc(db, 'houses', houseId, 'stakes', stake.id);
+  if (stake.votes.includes(uid)) {
+    batch.update(ref, { votes: arrayRemove(uid) });
+  } else {
+    moveMyVote(batch, houseId, uid, all, stake.kind, stake.period, stake.id);
+    batch.update(ref, { votes: arrayUnion(uid) });
+  }
+  await batch.commit();
+}
+
+export async function deleteStake(houseId: string, id: string) {
+  await deleteDoc(doc(db, 'houses', houseId, 'stakes', id));
 }

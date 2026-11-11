@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Switch, Text, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { setResetRule, setWallpaper, updateHouse } from '../../../lib/db';
 import { pickFromLibrary } from '../../../lib/photos';
@@ -134,6 +134,21 @@ export default function HouseDetails() {
           />
         </Card>
       )}
+
+      <Label>House stakes</Label>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={[type.small, { flex: 1 }]}>
+            Optional: a prize for whoever does the most this period and a forfeit for whoever does the least. Everyone
+            suggests and votes on Ranks.
+          </Text>
+          <Switch
+            accessibilityLabel="House stakes"
+            value={house.stakes}
+            onValueChange={(on) => updateHouse(house.id, { stakes: on }).catch((e) => setError((e as Error).message))}
+          />
+        </View>
+      </Card>
 
       <Label>Wallpaper</Label>
       <Subtitle>Shown faintly behind everyone&apos;s Home screen.</Subtitle>

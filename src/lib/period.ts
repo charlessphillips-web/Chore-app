@@ -125,3 +125,8 @@ export function periodStart(date: Date = new Date(), rule: ResetRule = DEFAULT_R
 export function periodEnd(date: Date = new Date(), rule: ResetRule = DEFAULT_RESET_MONTHS): Date {
   return bounds(date, rule).end;
 }
+
+/** Key of the period before the current one. */
+export function previousPeriodKey(now: Date, rule: ResetRule): string {
+  return periodKey(new Date(periodStart(now, rule).getTime() - 12 * 3_600_000), rule);
+}

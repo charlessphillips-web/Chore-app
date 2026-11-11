@@ -273,7 +273,8 @@ service cloud.firestore {
       // housemate.
       allow update: if isAdmin(houseId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd', 'area', 'bins'])
+             .hasOnly(['name', 'chores', 'adminUid', 'resetMonths', 'customStart', 'customEnd', 'area', 'bins', 'stakes'])
+        && request.resource.data.get('stakes', false) is bool
         && (!('bins' in request.resource.data) || (request.resource.data.bins is list && request.resource.data.bins.size() <= 6))
         && validReset(request.resource.data)
         && validArea(request.resource.data.get('area', null))
@@ -373,6 +374,31 @@ service cloud.firestore {
 
       // "I'll pay £3 for someone to do my chore." ID = the request's ID.
       // The app never holds money; people pay each other directly.
+      // House stakes: anyone suggests a prize (top of the house) or forfeit
+      // (bottom), everyone votes. You can only add or take back your own vote.
+      match /stakes/{stakeId} {
+        allow read: if isMember(houseId);
+        allow create: if isMember(houseId)
+          && get(/databases/$(database)/documents/houses/$(houseId)).data.get('stakes', false) == true
+          && request.resource.data.keys().hasOnly(['kind', 'text', 'period', 'byUid', 'byName', 'votes', 'createdAt'])
+          && request.resource.data.byUid == me()
+          && request.resource.data.kind in ['prize', 'forfeit']
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 80
+          && request.resource.data.byName is string && request.resource.data.byName.size() <= 40
+          && request.resource.data.period is string && request.resource.data.period.size() <= 40
+          && request.resource.data.votes == [me()]
+          && request.resource.data.createdAt == request.time;
+        allow update: if isMember(houseId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+          && request.resource.data.votes is list
+          && request.resource.data.votes.size() == request.resource.data.votes.toSet().size()
+          && request.resource.data.votes.size() <= 50
+          && (request.resource.data.votes.toSet() == resource.data.votes.toSet().union([me()].toSet())
+              || request.resource.data.votes.toSet() == resource.data.votes.toSet().difference([me()].toSet()));
+        allow delete: if isMember(houseId) && (resource.data.byUid == me() || isAdmin(houseId));
+      }
+
       match /offers/{offerId} {
         allow read: if isMember(houseId);
         allow create: if isMember(houseId)
