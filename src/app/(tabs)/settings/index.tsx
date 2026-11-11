@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
 import { deleteAccount, isAppOwner, leaveHouse } from '../../../lib/db';
+import { signOutUser } from '../../../lib/account';
 import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Screen, Title } from '../../../components/ui';
 import { resetTips, Tip } from '../../../components/Tip';
 import { Avatar } from '../../../components/Avatar';
@@ -42,6 +43,26 @@ export default function SettingsIndex() {
     } catch (e) {
       notify('Could not leave', (e as Error).message);
       setBusy(null);
+    }
+  }
+
+  async function logOut() {
+    if (user!.isAnonymous) {
+      // No login saved yet: logging out would lose the account for good.
+      const save = await confirm(
+        'Save a login first',
+        'You haven’t added an email and password yet, so if you log out you can’t get back into this account. Add one now?',
+        'Add login',
+      );
+      if (save) router.push('/settings/account');
+      return;
+    }
+    if (!(await confirm('Log out?', `You can log back in any time with ${user!.email}.`, 'Log out'))) return;
+    try {
+      await signOutUser();
+      router.replace('/');
+    } catch (e) {
+      notify('Could not log out', (e as Error).message);
     }
   }
 
@@ -154,6 +175,7 @@ export default function SettingsIndex() {
       </ListGroup>
 
       <Label>Account</Label>
+      <Button title="Log out" icon="log-out-outline" variant="secondary" onPress={logOut} disabled={!!busy} />
       <Button title="Leave house" icon="exit-outline" variant="secondary" onPress={leave} loading={busy === 'leave'} disabled={!!busy} />
       <Button title="Delete my account" icon="trash-outline" variant="danger" onPress={del} loading={busy === 'delete'} disabled={!!busy} />
 
