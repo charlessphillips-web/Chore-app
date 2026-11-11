@@ -10,7 +10,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
-import { choreKey, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
+import { choreKey, choreSize, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
 import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
@@ -233,6 +233,8 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     uid: id,
     username: d.username,
     totalCompleted: p.total ?? 0,
+    // Older chores (before sizes) were worth 1 point each.
+    points: p.points ?? p.total ?? 0,
     choreCounts: p.chores ?? {},
     lastCompletedAt: ms(d.lastCompletedAt),
     joinedAt: ms(d.joinedAt) ?? Date.now(),
@@ -363,13 +365,14 @@ export async function logChore(opts: {
   if (!key) throw new Error('Pick a chore.');
   if (!photo?.thumb || !photo?.full) throw new Error('Take a photo of the finished chore first.');
   const period = periodKey(new Date(), house.reset);
+  const points = choreSize(house.chores.find((c) => c.key === key) ?? { key });
 
   const batch = writeBatch(db);
   const logRef = doc(collection(db, 'houses', house.id, 'logs'));
   batch.set(logRef, {
     choreKey: key, choreName: name, userId: uid, username, at: serverTimestamp(), period, requestId,
     photoThumb: photo.thumb, status: 'pending', reviewedBy: null, reviewedByName: null,
-    checks: [], checkNames: [], checksNeeded: checksNeededFor(opts.members.length),
+    checks: [], checkNames: [], checksNeeded: checksNeededFor(opts.members.length), points,
     offerId: offer?.id ?? null, creditTo: offer?.fromUid ?? null, creditToName: offer?.fromName ?? null,
   });
   batch.set(doc(db, 'houses', house.id, 'photos', logRef.id), { userId: uid, data: photo.full });
@@ -381,6 +384,8 @@ export async function logChore(opts: {
     batch.update(memberRef(house.id, uid), {
       currentPeriod: period,
       [`stats.${period}.total`]: increment(1),
+      // Set (not increment) so chores from before points existed count as 1 each.
+      [`stats.${period}.points`]: (opts.members.find((m) => m.uid === uid)?.points ?? 0) + points,
       [`stats.${period}.chores.${key}`]: increment(1),
       lastCompletedAt: serverTimestamp(),
     });
@@ -526,8 +531,10 @@ async function reviewChore(
     if (reason && owner.exists()) {
       // Paid-for chores never added to the doer's score, so nothing to take off.
       if (log.period && !log.creditTo) {
+        const was = owner.data().stats?.[log.period] ?? {};
         tx.update(ownerRef, {
           [`stats.${log.period}.total`]: increment(-1),
+          [`stats.${log.period}.points`]: (was.points ?? was.total ?? 0) - (log.points ?? 1),
           [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
           lastReviewAdjust: logId,
         });
@@ -858,6 +865,8 @@ export async function markOfferPaid(house: House, offer: ChoreOffer, members: Me
   batch.update(memberRef(house.id, offer.fromUid), {
     currentPeriod: period,
     [`stats.${period}.total`]: increment(1),
+    [`stats.${period}.points`]: (members.find((m) => m.uid === offer.fromUid)?.points ?? 0)
+      + choreSize(house.chores.find((c) => c.key === offer.choreKey) ?? { key: offer.choreKey }),
     [`stats.${period}.chores.${offer.choreKey}`]: increment(1),
     lastCompletedAt: serverTimestamp(),
   });

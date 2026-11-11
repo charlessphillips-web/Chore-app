@@ -11,6 +11,8 @@ export interface MemberStats {
   uid: string;
   username: string;
   totalCompleted: number;
+  /** Points this period (chores weighted Quick 1 / Medium 2 / Big 3). Falls back to totalCompleted. */
+  points?: number;
   /** Completions per chore, keyed by normalised chore key. */
   choreCounts: Record<string, number>;
   /** Millis since epoch of their most recent completion, or null if never. */
@@ -25,7 +27,7 @@ export interface MemberStats {
  *
  * Rules:
  *  - The person reporting the chore is never chosen (they've passed on it).
- *  - mode 'overall': fewest chores completed in total.
+ *  - mode 'overall': fewest points (chores weighted by size), i.e. furthest below their fair share.
  *  - mode 'chore':   fewest completions of this specific chore, then fewest overall.
  *  - Ties: whoever has gone longest without doing a chore (never counts as
  *    longest), then whoever has been in the house longest (more chances to
@@ -49,7 +51,7 @@ export function pickAssignee(
       const diff = choreCount(a) - choreCount(b);
       if (diff !== 0) return diff;
     }
-    const total = a.totalCompleted - b.totalCompleted;
+    const total = (a.points ?? a.totalCompleted) - (b.points ?? b.totalCompleted);
     if (total !== 0) return total;
     const idle = last(a) - last(b);
     if (idle !== 0) return idle;

@@ -47,7 +47,7 @@ export interface House {
 
 /**
  * houses/{houseId}/members/{uid} — visible to everyone in the house.
- * totalCompleted / choreCounts are for the CURRENT 2-month period.
+ * totalCompleted / points / choreCounts are for the CURRENT period.
  */
 export interface Member extends MemberStats {
   pushToken: string | null;

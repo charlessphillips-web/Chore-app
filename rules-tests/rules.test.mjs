@@ -93,8 +93,10 @@ async function review(uid, houseId, logId, decision, reason = 'Still dirty') {
       ...(back ? {} : { checks: [...(log.checks ?? []), uid], checkNames: [...(log.checkNames ?? []), uid] }),
     });
     if (back && owner.exists()) {
+      const was = owner.data().stats?.[log.period] ?? {};
       tx.update(ownerRef, {
         [`stats.${log.period}.total`]: increment(-1), [`stats.${log.period}.chores.${log.choreKey}`]: increment(-1),
+        [`stats.${log.period}.points`]: (was.points ?? was.total ?? 0) - (log.points ?? 1),
         lastReviewAdjust: logId,
       });
       tx.set(doc(collection(f, 'houses', houseId, 'requests')), {
@@ -650,6 +652,28 @@ test('full photos can be cleared once checked (thumbnail stays)', async () => {
   await assertSucceeds(clear('sam'));
   const log = (await getDoc(doc(db('alice'), 'houses', 'h1', 'logs', id))).data();
   assert.equal(log.photoThumb, 'thumbdata');
+});
+
+test('points: 1-3 per chore, carried over from old counts, taken off when sent back', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  const me = (uid) => doc(db(uid), 'houses', 'h1', 'members', uid);
+  // An old-style chore: count only, no points yet.
+  await logChore('alice', 'h1', 'bins');
+  // A Big (3-point) chore now: points start from the old count (1) + 3.
+  const f = db('alice');
+  const ref = doc(collection(f, 'houses', 'h1', 'logs'));
+  const b = writeBatch(f);
+  b.set(ref, { ...logData('alice', 'cleaning oven'), points: 3 });
+  b.set(doc(f, 'houses', 'h1', 'photos', ref.id), { userId: 'alice', data: 'x' });
+  b.update(doc(f, 'houses', 'h1', 'members', 'alice'), { currentPeriod: P, [`stats.${P}.total`]: increment(1), [`stats.${P}.points`]: 4, [`stats.${P}.chores.cleaning oven`]: increment(1) });
+  await assertSucceeds(b.commit());
+  // Can't award yourself more than 3 points at once.
+  await assertFails(updateDoc(me('alice'), { currentPeriod: P, [`stats.${P}.points`]: 8 }));
+  await assertFails(setDoc(doc(collection(db('alice'), 'houses', 'h1', 'logs')), { ...logData('alice', 'bins'), points: 5 }));
+  // Sent back: the 3 points come off.
+  await assertSucceeds(review('sam', 'h1', ref.id, 'rejected', 'Still dirty'));
+  assert.equal((await stats('alice')).points, 1);
 });
 
 test('sending back creates a redo for the chore-doer', async () => {

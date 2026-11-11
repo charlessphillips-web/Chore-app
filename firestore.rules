@@ -321,6 +321,7 @@ service cloud.firestore {
           && existsAfter(/databases/$(database)/documents/houses/$(houseId)/photos/$(logId))
           && creditOk(houseId, logId, request.resource.data)
           && request.resource.data.get('checksNeeded', 1) in [1, 2]
+          && request.resource.data.get('points', 1) in [1, 2, 3]
           && request.resource.data.get('checks', []) == [];
         // Housemates (not the chore-doer) check it within 24 hours: it needs
         // checksNeeded verifications (2, or 1 in a 2-person house), each person
@@ -563,7 +564,11 @@ service cloud.firestore {
       return changed.size() == 0
         || (changed.hasOnly([p])
             && after[p].total >= before.get([p, 'total'], 0)
-            && after[p].total <= before.get([p, 'total'], 0) + 1);
+            && after[p].total <= before.get([p, 'total'], 0) + 1
+            // Points: a chore is worth 1 (Quick) to 3 (Big).
+            // (No points recorded yet = 1 point per chore, as before sizes existed.)
+            && after[p].get('points', after[p].total) >= before.get([p, 'points'], before.get([p, 'total'], 0))
+            && after[p].get('points', after[p].total) <= before.get([p, 'points'], before.get([p, 'total'], 0)) + 3);
     }
 
     // When a housemate rejects a chore, the chore-doer's score for that
@@ -588,6 +593,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats', 'lastReviewAdjust'])
         && newStats.diff(oldStats).affectedKeys().hasOnly([p])
         && newStats[p].total == oldStats.get([p, 'total'], 0) - 1
+        && newStats[p].get('points', newStats[p].total) == oldStats.get([p, 'points'], oldStats.get([p, 'total'], 0)) - after.get('points', 1)
         && newStats[p].get(['chores', k], 0) == oldStats.get([p, 'chores', k], 0) - 1;
     }
   }
