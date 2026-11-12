@@ -13,7 +13,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /** A league table: position, name, chores this period. */
 export default function Leaderboard() {
-  const { user, house, members, stakes, membersIn } = useApp();
+  const { user, house, members, stakes, membersIn, isAdmin } = useApp();
   if (!user || !house) return <Loading />;
 
   const rule = house.reset;
@@ -87,6 +87,19 @@ export default function Leaderboard() {
           </Pressable>
         );
       })()}
+
+      {!house.stakes && isAdmin && (
+        <Pressable accessibilityRole="button" accessibilityLabel="Switch on house stakes" onPress={() => router.push('/settings/house-details')} style={({ pressed }) => [styles.stakes, pressed && { opacity: 0.8 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={type.label}>House stakes · off</Text>
+            <Text style={styles.stakesLink}>Switch on ›</Text>
+          </View>
+          <View style={styles.stakeRow}>
+            <Icon name="trophy-outline" size={18} color={colors.you} />
+            <Text style={[type.small, { flex: 1 }]}>Optional: the house votes on a prize for the top and a forfeit for the bottom.</Text>
+          </View>
+        </Pressable>
+      )}
 
       <View style={styles.table}>
         <View style={[styles.row, styles.head]}>
