@@ -1,10 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
-import { DEFAULT_RESET_MONTHS, periodEnd, periodKey, periodLabel, periodStart, previousPeriodKey, resetLabel } from '../../lib/period';
-import { lastResult, topStake } from '../../lib/stakes';
-import { BigNumber, Icon, Loading, Screen, Title } from '../../components/ui';
+import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
+import { StakesCard } from '../../components/StakesCard';
+import { BigNumber, Loading, Screen, Title } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { Avatar } from '../../components/Avatar';
 import { colors, fonts, radius, space, type } from '../../components/theme';
@@ -13,7 +12,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /** A league table: position, name, chores this period. */
 export default function Leaderboard() {
-  const { user, house, members, stakes, membersIn, isAdmin } = useApp();
+  const { user, house, members } = useApp();
   if (!user || !house) return <Loading />;
 
   const rule = house.reset;
@@ -40,6 +39,7 @@ export default function Leaderboard() {
   return (
     <Screen>
       <Title>Ranks</Title>
+      <StakesCard />
       <Tip id="ranks">Everyone&apos;s fair share is an equal split of the chores. Bigger jobs are worth more points (Quick 1 · Medium 2 · Big 3). Whoever is furthest below their fair share gets the next &quot;needs doing&quot;.</Tip>
 
       <View style={styles.period}>
@@ -62,44 +62,6 @@ export default function Leaderboard() {
             : `Resets ${resetLabel(rule)}${rule === DEFAULT_RESET_MONTHS ? ' (the default)' : ', set by the house admin'} · next reset ${resets}`}
         </Text>
       </View>
-
-      {house.stakes && (() => {
-        const p = periodKey(now, rule);
-        const prev = previousPeriodKey(now, rule);
-        const prize = topStake(stakes, 'prize', p);
-        const forfeit = topStake(stakes, 'forfeit', p);
-        const last = lastResult(stakes, prev, membersIn(prev).map((m) => ({ username: m.username, points: m.points ?? m.totalCompleted })));
-        return (
-          <Pressable accessibilityRole="button" accessibilityLabel="House stakes: suggest and vote" onPress={() => router.push('/stakes')} style={({ pressed }) => [styles.stakes, pressed && { opacity: 0.8 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={type.label}>House stakes</Text>
-              <Text style={styles.stakesLink}>Suggest &amp; vote ›</Text>
-            </View>
-            <View style={styles.stakeRow}>
-              <Icon name="trophy-outline" size={18} color={colors.you} />
-              <Text style={styles.stakeText}>Top: {prize ? prize.text : 'no prize voted yet'}</Text>
-            </View>
-            <View style={styles.stakeRow}>
-              <Icon name="sad-outline" size={18} color={colors.muted} />
-              <Text style={styles.stakeText}>Bottom: {forfeit ? forfeit.text : 'no forfeit voted yet'}</Text>
-            </View>
-            {last && <Text style={type.small}>Last period: {last}</Text>}
-          </Pressable>
-        );
-      })()}
-
-      {!house.stakes && isAdmin && (
-        <Pressable accessibilityRole="button" accessibilityLabel="Switch on house stakes" onPress={() => router.push('/settings/house-details')} style={({ pressed }) => [styles.stakes, pressed && { opacity: 0.8 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={type.label}>House stakes · off</Text>
-            <Text style={styles.stakesLink}>Switch on ›</Text>
-          </View>
-          <View style={styles.stakeRow}>
-            <Icon name="trophy-outline" size={18} color={colors.you} />
-            <Text style={[type.small, { flex: 1 }]}>Optional: the house votes on a prize for the top and a forfeit for the bottom.</Text>
-          </View>
-        </Pressable>
-      )}
 
       <View style={styles.table}>
         <View style={[styles.row, styles.head]}>
@@ -165,9 +127,5 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', backgroundColor: colors.muted },
   next: { fontSize: 12, color: colors.muted },
   score: { width: 72, textAlign: 'right' },
-  stakes: { borderRadius: radius, backgroundColor: colors.card, padding: 14, gap: 10 },
-  stakesLink: { fontSize: 13, color: colors.you, fontWeight: '600' },
-  stakeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  stakeText: { flex: 1, fontSize: 15, color: colors.text },
   scoreText: { fontSize: 22, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
 });

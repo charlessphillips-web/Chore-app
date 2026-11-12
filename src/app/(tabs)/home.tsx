@@ -10,6 +10,7 @@ import { choreIcon } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
 import { periodLabel, periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
+import { needsStakeVote } from '../../components/StakesCard';
 import { standing } from '../../lib/standing';
 import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
@@ -27,6 +28,7 @@ export default function Home() {
   const chores = house.chores.filter((c) => c.active);
   const me = members.find((m) => m.uid === user.uid);
   const s = standing(members, user.uid);
+  const needsVote = needsStakeVote(user.uid, house, stakes);
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
   const openOffer = (id: string) => router.push({ pathname: '/offer/[id]', params: { id } });
@@ -72,6 +74,9 @@ export default function Home() {
 
       {stakesNews && (
         <RowButton icon="trophy-outline" title="Last period's stakes" subtitle={stakesNews} onPress={() => router.push('/leaderboard')} />
+      )}
+      {needsVote && (
+        <RowButton icon="trophy-outline" highlight title="Vote on this period's stakes" subtitle="Pick the prize for the top and the forfeit for the bottom" onPress={() => router.push('/stakes')} />
       )}
       <VerifyEmailBanner />
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
