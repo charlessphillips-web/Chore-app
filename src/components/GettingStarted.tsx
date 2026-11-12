@@ -27,6 +27,7 @@ export function GettingStarted() {
   if (!user || !house || hidden !== false) return null;
 
   const me = members.find((m) => m.uid === user.uid);
+  const firstChore = house.chores.find((c) => c.active)?.key;
   const share = () => Share.share({ message: `Join our house "${house.name}" on Rotawise with code: ${house.code}\n${WEB_URL}` });
   const steps: Step[] = [
     { key: 'pic', title: 'Add a profile picture', desc: 'A photo or a character, so housemates know who did what.', done: !!me?.avatar,
@@ -35,7 +36,8 @@ export function GettingStarted() {
       action: share, actionLabel: 'Share' },
     ...(isAdmin ? [{ key: 'bins', title: 'Set your bin days', desc: 'Everyone gets a reminder at 8pm the night before.', done: house.bins.length > 0,
       action: () => router.push('/settings/bins'), actionLabel: 'Set' }] : []),
-    { key: 'log', title: 'Log your first chore', desc: 'Tap a chore below → "I’ve done it" → take a photo.',
+    { key: 'log', title: 'Log your first chore', desc: 'Tap a chore → "I’ve done it" → take a photo.',
+      action: firstChore ? () => router.push({ pathname: '/chore/[key]', params: { key: firstChore } }) : undefined, actionLabel: 'Log',
       done: !!me?.lastCompletedAt || logs.some((l) => l.userId === user.uid) },
     { key: 'check', title: 'Check a housemate’s photo', desc: 'When someone logs a chore, verify it (or send it back) in Checks.',
       done: logs.some((l) => l.reviewedBy === user.uid || l.checks.includes(user.uid)), action: () => router.push('/checks'), actionLabel: 'Checks' },
@@ -58,21 +60,25 @@ export function GettingStarted() {
         <Text style={styles.count}>{done} of {steps.length}</Text>
       </View>
       <View style={styles.bar}><View style={[styles.fill, { width: `${(done / steps.length) * 100}%` }]} /></View>
-      {steps.map((s) => (
-        <View key={s.key} style={styles.row}>
-          <View style={[styles.tick, s.done && styles.tickOn]}>{s.done && <Icon name="checkmark" size={14} color={colors.inverse} />}</View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[styles.title, s.done && styles.titleDone]}>{s.title}</Text>
-            {!s.done && <Text style={type.small}>{s.desc}</Text>}
-          </View>
-          {!s.done && s.action && (
-            <Pressable accessibilityRole="button" accessibilityLabel={`${s.actionLabel}: ${s.title}`} hitSlop={8}
-              onPress={() => { haptics.tap(); s.action!(); }} style={styles.btn}>
-              <Text style={styles.btnText}>{s.actionLabel}</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
+      {steps.map((s, i) => {
+        const tappable = !s.done && !!s.action;
+        return (
+          <Pressable
+            key={s.key}
+            accessibilityRole={tappable ? 'button' : undefined}
+            accessibilityLabel={s.done ? `${s.title}, done` : s.title}
+            disabled={!tappable}
+            onPress={() => { haptics.tap(); s.action!(); }}
+            style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}
+          >
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={[styles.title, s.done && styles.titleDone]}>{s.title}</Text>
+              {!s.done && <Text style={type.small}>{s.desc}</Text>}
+            </View>
+            {s.done ? <Icon name="checkmark" size={20} color={colors.you} /> : tappable && <Icon name="chevron-forward" size={18} color={colors.muted} />}
+          </Pressable>
+        );
+      })}
       <Pressable accessibilityRole="button" accessibilityLabel="Hide getting started" onPress={hide} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
         <Text style={type.small}>Hide</Text>
       </Pressable>
@@ -81,16 +87,13 @@ export function GettingStarted() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 18, gap: 12 },
+  card: { backgroundColor: colors.card, borderRadius: 20, padding: 18, gap: 10 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   count: { fontFamily: fonts.mono, fontSize: 11, color: colors.muted },
   bar: { height: 3, backgroundColor: colors.line, borderRadius: 2, overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: colors.text },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  tick: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  tickOn: { backgroundColor: colors.text, borderColor: colors.text },
-  title: { fontSize: 15, fontWeight: '600', color: colors.text },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  title: { fontSize: 16, fontWeight: '600', color: colors.text },
   titleDone: { color: colors.muted, textDecorationLine: 'line-through', fontWeight: '400' },
-  btn: { backgroundColor: colors.text, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
-  btnText: { color: colors.inverse, fontSize: 13, fontWeight: '600' },
 });
