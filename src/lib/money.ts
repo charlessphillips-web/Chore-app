@@ -66,3 +66,20 @@ export function checkPayChoice(method: PayMethod, linkText: string): PayChoice |
   }
   return { method, link: n };
 }
+
+/** Money in and out from paid deals since `since` (ms): what you earned doing chores, and spent having them done. */
+export function wallet(
+  paid: { fromUid: string; doerUid: string | null; agreedPrice: number | null; price: number; paidAt?: number | null; createdAt: number }[],
+  uid: string,
+  since: number,
+): { earned: number; spent: number } {
+  let earned = 0;
+  let spent = 0;
+  for (const o of paid) {
+    if ((o.paidAt ?? o.createdAt) < since) continue;
+    const p = o.agreedPrice ?? o.price;
+    if (o.doerUid === uid) earned += p;
+    if (o.fromUid === uid) spent += p;
+  }
+  return { earned, spent };
+}

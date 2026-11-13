@@ -7,9 +7,13 @@ import { sendBackChore, verifyChore } from '../../lib/db';
 import { jpegUri } from '../../lib/photos';
 import { checkProgress, effectiveStatus, needsCheckBy, needsRedo, redoReason, REDO_REASONS, timeLeft } from '../../lib/review';
 import type { ChoreLog } from '../../lib/types';
-import { Button, Card, Chip, ChipRow, Empty, Input, Label, Loading, notify, Screen, Subtitle, Title, timeAgo } from '../../components/ui';
-import { Tip } from '../../components/Tip';
+import { Button, Card, Chip, ChipRow, Icon, Input, Label, Loading, notify, Screen, Title, timeAgo } from '../../components/ui';
+import { Avatar } from '../../components/Avatar';
+import { choreIcon } from '../../lib/chores';
+import { periodStart } from '../../lib/period';
 import { colors, radius, space, type } from '../../components/theme';
+
+type IconName = React.ComponentProps<typeof Icon>['name'];
 
 /** Photos waiting for a check. One housemate's decision is enough; then it disappears. */
 export default function Checks() {
@@ -19,37 +23,75 @@ export default function Checks() {
   const toCheck = logs.filter((l) => needsCheckBy(l, user.uid));
   const minePending = logs.filter((l) => l.userId === user.uid && effectiveStatus(l) === 'pending');
 
+  const since = periodStart(new Date(), house.reset).getTime();
+  const checkedByMe = logs.filter((l) => l.at >= since && l.checks.includes(user.uid)).length;
+
   return (
     <Screen>
-      <Title>Checks</Title>
-      <Subtitle>
-        Each photo needs two housemates to verify it (one in a 2-person house). Anyone can send it back. Anything not
-        fully checked within 24 hours counts automatically.
-      </Subtitle>
-      <Tip id="checks">Look at each photo: tap Verify if it&apos;s done properly (it needs two of you), or Send back with a reason if it isn&apos;t. Sent-back chores don&apos;t count until they&apos;re redone.</Tip>
+      <View style={styles.head}>
+        <Title>Checks</Title>
+        {toCheck.length > 0 && <Text style={styles.count}>{toCheck.length} to check</Text>}
+      </View>
 
       {toCheck.length === 0 ? (
-        <Card>
-          <Empty icon="checkmark-done-outline">Nothing to check right now.</Empty>
-        </Card>
+        <>
+          <View style={styles.empty}>
+            <Text style={{ fontSize: 44 }}>✨</Text>
+            <Text style={styles.emptyTitle}>All caught up</Text>
+            <Text style={[type.small, { textAlign: 'center' }]}>
+              {checkedByMe > 0
+                ? <>You&apos;ve checked <Text style={{ color: colors.you, fontWeight: '600' }}>{checkedByMe}</Text> chore{checkedByMe === 1 ? '' : 's'} this period. The house thanks you.</>
+                : 'Nothing to check right now.'}
+            </Text>
+          </View>
+          <Label>How checks work</Label>
+          <Card style={{ gap: 8 }}>
+            <HowRow icon="camera-outline" text="Someone logs a chore with a photo" />
+            <HowRow icon="eye-outline" text="Two housemates check it (one in a 2-person house)" />
+            <HowRow icon="checkmark" text="Then it counts" />
+            <HowRow icon="time-outline" text="No check in 24 hours? It counts anyway" />
+          </Card>
+        </>
       ) : (
         toCheck.map((l) => <CheckCard key={l.id} log={l} reviewer={{ uid: user.uid, username: profile.username }} />)
       )}
 
       {minePending.length > 0 && (
         <>
-          <Label>Your chores waiting for a check</Label>
+          <Label>Yours, waiting for a check</Label>
           <Card>
-            {minePending.map((l) => (
-              <View key={l.id} style={styles.mineRow}>
-                <Text style={type.body}>{l.choreName}</Text>
-                <Text style={type.small}>{checkProgress(l).done} of {checkProgress(l).needed} checks · {timeLeft(l.at)}</Text>
+            {minePending.map((l, i) => (
+              <View key={l.id} style={[styles.mineRow, i > 0 && styles.divider]}>
+                <Icon name={choreIcon(l.choreKey) as IconName} size={18} color={colors.text} />
+                <View style={{ flex: 1 }}>
+                  <Text style={type.body} numberOfLines={1}>{l.choreName}</Text>
+                  <Text style={type.small}>{timeLeft(l.at)}</Text>
+                </View>
+                <Dots done={checkProgress(l).done} needed={checkProgress(l).needed} />
               </View>
             ))}
           </Card>
         </>
       )}
     </Screen>
+  );
+}
+
+function HowRow({ icon, text }: { icon: IconName; text: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Icon name={icon} size={18} color={colors.muted} />
+      <Text style={[type.body, { fontSize: 14, flex: 1 }]}>{text}</Text>
+    </View>
+  );
+}
+
+/** ▬ ▭  = 1 of 2 checks. */
+function Dots({ done, needed }: { done: number; needed: number }) {
+  return (
+    <View style={styles.dots} accessibilityLabel={`${done} of ${needed} checks`}>
+      {Array.from({ length: needed }, (_, i) => <View key={i} style={[styles.dot, i < done && styles.dotOn]} />)}
+    </View>
   );
 }
 
@@ -82,8 +124,10 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
     }
   }
 
+  const who = members.find((m) => m.uid === log.userId);
+  const prog = checkProgress(log);
   return (
-    <Card style={{ padding: 0, overflow: 'hidden' }}>
+    <Card style={{ padding: 10 }}>
       <Pressable
         onPress={() => router.push({ pathname: '/photo/[logId]', params: { logId: log.id } })}
         accessibilityRole="imagebutton"
@@ -94,22 +138,29 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
         ) : (
           <View style={[styles.photo, { backgroundColor: colors.cardRaised }]} />
         )}
+        <Text style={styles.enlarge}>tap to enlarge</Text>
       </Pressable>
-      <View style={{ padding: space.md, gap: space.sm }}>
-        <Text style={type.heading}>{log.choreName}</Text>
-        {checkProgress(log).needed > 1 && (
-          <Text style={[type.small, { color: colors.text }]}>
-            {checkProgress(log).done} of {checkProgress(log).needed} checks{log.checkNames.length ? ` · ${log.checkNames.join(', ')} verified` : ''}
-          </Text>
+      <View style={{ padding: 6, paddingTop: 12, gap: space.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Avatar avatar={who?.avatar} name={log.username} size={32} />
+          <View style={{ flex: 1 }}>
+            <Text style={type.heading} numberOfLines={1}>{log.choreName}</Text>
+            <Text style={type.small}>
+              {log.username}{log.creditToName ? ` (for ${log.creditToName})` : ''} · {timeAgo(log.at)} · {timeLeft(log.at)}
+            </Text>
+          </View>
+        </View>
+        {prog.needed > 1 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Dots done={prog.done} needed={prog.needed} />
+            <Text style={type.small}>{prog.done} of {prog.needed}{log.checkNames.length ? ` · ${log.checkNames.join(', ')} ✓` : ''}</Text>
+          </View>
         )}
-        <Text style={type.small}>
-          {log.username}{log.creditToName ? ` (paid by ${log.creditToName})` : ''} · {timeAgo(log.at)} · {timeLeft(log.at)} to check · tap photo to enlarge
-        </Text>
 
         {!sendingBack ? (
           <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <Button title="Send back" icon="arrow-undo" variant="danger" style={{ flex: 1 }} onPress={() => setSendingBack(true)} disabled={!!busy} />
-            <Button title="Verify" icon="checkmark" style={{ flex: 1 }} onPress={verify} loading={busy === 'verify'} disabled={!!busy} />
+            <Button title="Send back" icon="arrow-undo" variant="secondary" style={{ flex: 1, paddingHorizontal: 10 }} onPress={() => setSendingBack(true)} disabled={!!busy} />
+            <Button title="Looks good" icon="checkmark" style={{ flex: 1, paddingHorizontal: 10 }} onPress={verify} loading={busy === 'verify'} disabled={!!busy} />
           </View>
         ) : (
           <View style={{ gap: space.sm }}>
@@ -137,6 +188,18 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
 }
 
 const styles = StyleSheet.create({
-  photo: { width: '100%', aspectRatio: 4 / 3, borderTopLeftRadius: radius, borderTopRightRadius: radius },
-  mineRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  count: { fontSize: 12, color: colors.text, backgroundColor: colors.cardRaised, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 9, overflow: 'hidden' },
+  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius - 4 },
+  enlarge: {
+    position: 'absolute', left: 10, top: 10, fontSize: 11, color: colors.text, backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, overflow: 'hidden',
+  },
+  empty: { backgroundColor: colors.card, borderRadius: 20, alignItems: 'center', paddingVertical: 32, paddingHorizontal: 18, gap: 6 },
+  emptyTitle: { fontSize: 20, fontWeight: '600', color: colors.text },
+  mineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  dots: { flexDirection: 'row', gap: 4 },
+  dot: { width: 18, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  dotOn: { backgroundColor: colors.text },
 });

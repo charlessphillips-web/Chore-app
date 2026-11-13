@@ -727,37 +727,43 @@ export async function setFeedbackDone(id: string, done: boolean): Promise<void> 
 const offerRef = (houseId: string, id: string) => doc(db, 'houses', houseId, 'offers', id);
 
 /** Offers still in progress (not cancelled or paid). */
+function toOffer(id: string, d: DocumentData): ChoreOffer {
+  return {
+    id,
+    requestId: d.requestId,
+    choreKey: d.choreKey,
+    choreName: d.choreName,
+    fromUid: d.fromUid,
+    fromName: d.fromName,
+    price: d.price,
+    status: d.status,
+    counters: d.counters ?? {},
+    declined: d.declined ?? [],
+    doerUid: d.doerUid ?? null,
+    doerName: d.doerName ?? null,
+    agreedPrice: d.agreedPrice ?? null,
+    doerPay: d.doerPay ?? null,
+    remindedAt: ms(d.remindedAt),
+    logId: d.logId ?? null,
+    paid: d.paid === true,
+    paidAt: ms(d.paidAt),
+    createdAt: ms(d.createdAt) ?? Date.now(),
+  };
+}
+
 export function watchOffers(houseId: string, cb: (o: ChoreOffer[]) => void, onError?: OnError) {
   return onSnapshot(
     query(collection(db, 'houses', houseId, 'offers'), where('closed', '==', false)),
-    (snap) =>
-      cb(
-        snap.docs
-          .map((s) => {
-            const d = s.data();
-            return {
-              id: s.id,
-              requestId: d.requestId,
-              choreKey: d.choreKey,
-              choreName: d.choreName,
-              fromUid: d.fromUid,
-              fromName: d.fromName,
-              price: d.price,
-              status: d.status,
-              counters: d.counters ?? {},
-              declined: d.declined ?? [],
-              doerUid: d.doerUid ?? null,
-              doerName: d.doerName ?? null,
-              agreedPrice: d.agreedPrice ?? null,
-              doerPay: d.doerPay ?? null,
-              remindedAt: ms(d.remindedAt),
-              logId: d.logId ?? null,
-              paid: d.paid === true,
-              createdAt: ms(d.createdAt) ?? Date.now(),
-            } as ChoreOffer;
-          })
-          .sort((a, b) => b.createdAt - a.createdAt),
-      ),
+    (snap) => cb(snap.docs.map((s) => toOffer(s.id, s.data())).sort((a, b) => b.createdAt - a.createdAt)),
+    onError,
+  );
+}
+
+/** Paid deals (for the earned / spent totals on Pay). */
+export function watchPaidOffers(houseId: string, cb: (o: ChoreOffer[]) => void, onError?: OnError) {
+  return onSnapshot(
+    query(collection(db, 'houses', houseId, 'offers'), where('paid', '==', true)),
+    (snap) => cb(snap.docs.map((s) => toOffer(s.id, s.data()))),
     onError,
   );
 }

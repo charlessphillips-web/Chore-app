@@ -145,5 +145,7 @@ export interface ChoreOffer {
   remindedAt: number | null;
   logId: string | null;
   paid: boolean;
+  /** When it was marked paid (null for older deals). */
+  paidAt?: number | null;
   createdAt: number;
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkPayChoice, formatPrice, normalisePayLink, parsePrice, payUrl, priceError } from './money.ts';
+import { checkPayChoice, formatPrice, normalisePayLink, parsePrice, payUrl, priceError, wallet } from './money.ts';
 
 test('prices', () => {
   assert.equal(parsePrice('3'), 300);
@@ -33,4 +33,11 @@ test('pay choice per deal', () => {
   assert.deepEqual(checkPayChoice('monzo', 'monzo.me/sam'), { method: 'monzo', link: 'https://monzo.me/sam' });
   assert.deepEqual(checkPayChoice('monzo', ''), { error: 'Add your Monzo link, e.g. monzo.me/yourname' });
   assert.deepEqual(checkPayChoice('paypal', 'monzo.me/sam'), { error: "That's not a PayPal link." });
+});
+
+test('wallet: earned and spent this period', () => {
+  const o = (fromUid: string, doerUid: string, price: number, paidAt: number) => ({ fromUid, doerUid, price, agreedPrice: null, paidAt, createdAt: 0 });
+  const paid = [o('a', 'me', 300, 100), o('me', 'b', 500, 100), o('a', 'me', 250, 5)];
+  assert.deepEqual(wallet(paid, 'me', 50), { earned: 300, spent: 500 });
+  assert.deepEqual(wallet(paid, 'me', 0), { earned: 550, spent: 500 });
 });
