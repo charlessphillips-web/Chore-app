@@ -4,6 +4,9 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { cancelRequest, logChore, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
 import { haptics } from '../../lib/haptics';
+import { celebration } from '../../lib/celebrate';
+import { choreSize } from '../../lib/chores';
+import { celebrate, toast } from '../../components/Celebration';
 import { pickAssignee } from '../../lib/assign';
 import { takeChorePhoto, type ChorePhoto } from '../../lib/photos';
 import { formatPrice } from '../../lib/money';
@@ -66,6 +69,20 @@ export default function ChoreScreen() {
         chore: chore!, photo, requestId: request?.id ?? null, offer: doingForSomeone,
       });
       router.back();
+      if (doingForSomeone) {
+        haptics.success();
+        toast(`Done for ${doingForSomeone.fromName}. You get paid once it's checked.`);
+      } else {
+        const pts = (m: { points?: number; totalCompleted: number }) => m.points ?? m.totalCompleted;
+        const me = members.find((m) => m.uid === user!.uid);
+        celebrate(celebration({
+          mine: me ? pts(me) : 0,
+          total: members.reduce((n, m) => n + pts(m), 0),
+          people: members.length,
+          points: choreSize(chore!),
+          choreKey: chore!.key,
+        }));
+      }
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);

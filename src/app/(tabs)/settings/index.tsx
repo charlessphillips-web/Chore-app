@@ -8,11 +8,13 @@ import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Scre
 import { resetTips, Tip } from '../../../components/Tip';
 import { Avatar } from '../../../components/Avatar';
 import { haptics } from '../../../lib/haptics';
+import { celebrations } from '../../../components/Celebration';
 import { colors, fonts, space, type } from '../../../components/theme';
 
 export default function SettingsIndex() {
   const { user, profile, house, members, isAdmin } = useApp();
   const [hapticsOn, setHapticsOn] = useState(haptics.isEnabled());
+  const [partyOn, setPartyOn] = useState(celebrations.isEnabled());
   const [busy, setBusy] = useState<'leave' | 'delete' | null>(null);
   // Owner = you (the app's creator). Shows the Feedback inbox. Set up in the Firebase console.
   const [ownerOf, setOwnerOf] = useState<string | null>(null);
@@ -143,6 +145,25 @@ export default function SettingsIndex() {
               thumbColor={hapticsOn ? colors.inverse : colors.muted}
               {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
               accessibilityLabel="Haptics"
+            />
+          }
+        />
+        <ListRow
+          icon="sparkles-outline"
+          title="Celebrations"
+          subtitle="Pop-up and confetti when you log a chore"
+          right={
+            <Switch
+              value={partyOn}
+              onValueChange={(v) => {
+                celebrations.setEnabled(v);
+                setPartyOn(v);
+                haptics.select();
+              }}
+              trackColor={{ true: colors.text, false: colors.line }}
+              thumbColor={partyOn ? colors.inverse : colors.muted}
+              {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
+              accessibilityLabel="Celebrations"
             />
           }
         />

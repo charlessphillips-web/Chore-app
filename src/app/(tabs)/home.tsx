@@ -190,7 +190,7 @@ function FairBar({ share, fair }: { share: number; fair: number }) {
   return (
     <View style={styles.fairWrap} accessibilityLabel={`Your share ${share}%, fair share ${fair}%`}>
       <View style={styles.bar}>
-        <View style={[styles.barFill, { width: `${(share / max) * 100}%`, backgroundColor: share >= fair ? colors.text : colors.muted }]} />
+        <View style={[styles.barFill, { width: `${(share / max) * 100}%`, backgroundColor: colors.you }]} />
       </View>
       <View style={[styles.fairMark, { left: `${(fair / max) * 100}%` }]} />
     </View>
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   place: { color: colors.text, fontWeight: '600' },
   bar: { height: 6, backgroundColor: colors.line, borderRadius: 3, overflow: 'hidden' },
   fairWrap: { justifyContent: 'center', marginVertical: 4 },
-  fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.you, borderRadius: 1 },
+  fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.text, borderRadius: 1 },
   fairLine: { fontSize: 12, color: colors.muted },
   barFill: { height: '100%', backgroundColor: colors.text, borderRadius: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },

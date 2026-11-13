@@ -77,12 +77,11 @@ export default function Leaderboard() {
               <Avatar avatar={m.avatar} name={m.username} size={34} />
               <View style={{ flex: 1, gap: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.name} numberOfLines={1}>{m.username}</Text>
-                  {me && <View style={styles.youDot} accessibilityLabel="You" />}
+                  <Text style={[styles.name, me && { color: colors.you }]} numberOfLines={1}>{me ? 'You' : m.username}</Text>
                 </View>
                 <View style={{ justifyContent: 'center' }}>
                   <View style={styles.bar}>
-                    <View style={[styles.barFill, { width: `${(share(m) / scale) * 100}%` }, (me || share(m) >= fairPct) && { backgroundColor: colors.text }]} />
+                    <View style={[styles.barFill, { width: `${(share(m) / scale) * 100}%` }, share(m) >= fairPct && { backgroundColor: colors.text }, me && { backgroundColor: colors.you }]} />
                   </View>
                   <View style={[styles.fairMark, { left: `${(fairPct / scale) * 100}%` }]} />
                 </View>
@@ -91,14 +90,14 @@ export default function Leaderboard() {
                   {nextUp?.uid === m.uid ? ' · next up for chores' : ''}
                 </Text>
               </View>
-              <Text style={[styles.scoreText, styles.score]}>{houseTotal ? `${Math.round(share(m))}%` : '–'}</Text>
+              <Text style={[styles.scoreText, styles.score, me && { color: colors.you }]}>{houseTotal ? `${Math.round(share(m))}%` : '–'}</Text>
             </View>
           );
         })}
       </View>
 
       <Text style={type.small}>
-        The purple line on each bar is a fair share ({Math.round(fairPct)}% each). Bigger jobs are worth more points, and
+        You&apos;re in purple. The white line on each bar is a fair share ({Math.round(fairPct)}% each). Bigger jobs are worth more points, and
         whoever is furthest below their fair share gets the next &quot;needs doing&quot; request. Sent-back chores don&apos;t
         count until they&apos;re redone.
       </Text>
@@ -118,12 +117,11 @@ const styles = StyleSheet.create({
   headText: { fontSize: 10, fontFamily: fonts.mono, color: colors.muted, textTransform: 'uppercase', letterSpacing: 1.2 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   meRow: { backgroundColor: colors.cardRaised },
-  youDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.you },
   pos: { width: 24 },
   posText: { fontSize: 13, fontFamily: fonts.mono, color: colors.muted },
   name: { fontSize: 16, fontWeight: '600', color: colors.text },
   bar: { height: 5, borderRadius: 3, backgroundColor: colors.line, overflow: 'hidden' },
-  fairMark: { position: 'absolute', width: 2, height: 12, marginLeft: -1, backgroundColor: colors.you, borderRadius: 1 },
+  fairMark: { position: 'absolute', width: 2, height: 12, marginLeft: -1, backgroundColor: colors.text, borderRadius: 1 },
   barFill: { height: '100%', backgroundColor: colors.muted },
   next: { fontSize: 12, color: colors.muted },
   score: { width: 72, textAlign: 'right' },

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '../context/AppContext';
 import { colors, darkHeader } from '../components/theme';
+import { CelebrationHost } from '../components/Celebration';
 
 export default function RootLayout() {
   // Fonts load in a moment; until then the system font is used.
@@ -24,6 +25,7 @@ export default function RootLayout() {
           <Stack.Screen name="terms" options={{ presentation: 'modal', headerShown: true, title: 'TERMS' }} />
           <Stack.Screen name="sign-in" options={{ presentation: 'modal', headerShown: true, title: 'SIGN IN' }} />
         </Stack>
+        <CelebrationHost />
       </AppProvider>
     </SafeAreaProvider>
   );

@@ -1,7 +1,8 @@
 /**
  * Rotawise look ("Graphite"): black background, soft grey cards and
- * tiles, white text and icons. Purple is only in the logo (and a tiny dot
- * marking "you"). Small labels use a mono font; numbers are big and bold.
+ * tiles, white text and icons. Purple means "you": your bar, your name,
+ * your celebrations. Everyone else is white. Small labels use a mono font;
+ * numbers are big and bold.
  */
 export const colors = {
   bg: '#000000',
@@ -20,7 +21,7 @@ export const colors = {
   primaryBright: '#F2F2F2',
   outline: '#2A2A2A',
   primaryText: '#000000',
-  /** The only purple outside the logo: marks "you". */
+  /** Purple = "you" (your bar, your name, your confetti). */
   you: '#9381F2',
   success: '#4ADE80',
   danger: '#FF4D4D',
