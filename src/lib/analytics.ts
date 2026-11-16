@@ -26,6 +26,8 @@ export const EVENTS = {
   offer_accept: 'Offer accepted',
   offer_paid: 'Offer paid',
   avatar_set: 'Profile picture set',
+  away_set: 'Set themselves as away',
+  bathroom_added: 'Bathroom added',
   feedback_sent: 'Feedback sent',
   tab_home: 'Home tab',
   tab_checks: 'Checks tab',

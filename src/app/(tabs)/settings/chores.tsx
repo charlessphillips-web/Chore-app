@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
 import { updateHouse } from '../../../lib/db';
 import { addChore, choreSize, DEFAULT_CHORES, SIZE_NAMES, type ChoreSize, type HouseChore } from '../../../lib/chores';
@@ -9,6 +10,7 @@ import { colors, space, type } from '../../../components/theme';
 /** Admin: switch chores on/off and add new ones. */
 export default function ChoresSettings() {
   const { house, isAdmin } = useApp();
+  const list = house?.chores.filter((c) => !c.group) ?? [];
   const [name, setName] = useState('');
   const [needs, setNeeds] = useState('');
   const [size, setSize] = useState<ChoreSize>(2);
@@ -53,8 +55,8 @@ export default function ChoresSettings() {
         Changes count from now on.
       </Subtitle>
       <Card style={{ paddingVertical: space.xs }}>
-        {house.chores.map((c, i) => (
-          <View key={c.key} style={[styles.row, i < house.chores.length - 1 && styles.divider]}>
+        {list.map((c, i) => (
+          <View key={c.key} style={[styles.row, i < list.length - 1 && styles.divider]}>
             <View style={{ flex: 1 }}>
               <Text style={[type.body, !c.active && { color: colors.muted }]}>{c.name}</Text>
               <Text style={type.small}>&quot;{c.needs}&quot; · {SIZE_NAMES[choreSize(c)]} ({choreSize(c)} pt{choreSize(c) > 1 ? 's' : ''})</Text>
@@ -82,6 +84,7 @@ export default function ChoresSettings() {
           </View>
         ))}
       </Card>
+      <Button title="Bathrooms (per floor, who uses which)" icon="water-outline" variant="secondary" onPress={() => router.push('/settings/bathrooms')} />
 
       <Label>Add a new chore</Label>
       <Input value={name} onChangeText={setName} placeholder="Chore, e.g. Recycling" maxLength={40} />

@@ -12,6 +12,7 @@ import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, choreSize, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
+import type { Away } from './away';
 import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
@@ -243,6 +244,9 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     pushToken: d.pushToken ?? null,
     avatar: toAvatar(d.avatar),
     notifPrefs: d.notifPrefs && typeof d.notifPrefs === 'object' ? (d.notifPrefs as NotifyPrefs) : {},
+    aways: Array.isArray(d.aways)
+      ? (d.aways as unknown[]).filter((a): a is Away => !!a && typeof (a as Away).from === 'number' && typeof (a as Away).until === 'number')
+      : [],
   };
 };
 
@@ -336,6 +340,12 @@ export async function setNotifPrefs(houseId: string, uid: string, prefs: NotifyP
 }
 
 /** Your profile picture (only you can change yours). null = back to your initial. */
+/** Save your trips away (see lib/away). */
+export async function setAways(houseId: string, uid: string, aways: Away[]) {
+  await updateDoc(memberRef(houseId, uid), { aways: aways.map((a) => ({ from: a.from, until: a.until })) });
+  track('away_set');
+}
+
 export async function setAvatar(houseId: string, uid: string, avatar: Avatar | null) {
   await updateDoc(memberRef(houseId, uid), { avatar });
   if (avatar) track('avatar_set');
@@ -604,8 +614,12 @@ export async function requestChore(opts: {
   chore: HouseChore;
 }): Promise<{ assignee: Member; notified: boolean }> {
   const { house, chore } = opts;
-  const assignee = pickAssignee(opts.members, opts.requester.uid, 'overall', chore.key) as Member | null;
-  if (!assignee) throw new Error("You're the only one in the house so far — share your house code first!");
+  const assignee = pickAssignee(opts.members, opts.requester.uid, 'overall', chore.key, chore.users) as Member | null;
+  if (!assignee) {
+    throw new Error(opts.members.length > 1
+      ? 'Nobody else can be asked right now: everyone else is away or doesn’t use this one.'
+      : "You're the only one in the house so far — share your house code first!");
+  }
 
   await setDoc(doc(collection(db, 'houses', house.id, 'requests')), {
     choreKey: chore.key,

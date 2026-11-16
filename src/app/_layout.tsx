@@ -16,6 +16,7 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, ...darkHeader }}>
           <Stack.Screen name="chore/[key]" options={{ presentation: 'modal', headerShown: true, title: '' }} />
+          <Stack.Screen name="area/[group]" options={{ presentation: 'modal', headerShown: true, title: '' }} />
           <Stack.Screen name="how-it-works" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="photo/[logId]" options={{ presentation: 'modal', headerShown: true, title: 'PHOTO' }} />
           <Stack.Screen name="offer/[id]" options={{ presentation: 'modal', headerShown: true, title: 'CHORE OFFER' }} />

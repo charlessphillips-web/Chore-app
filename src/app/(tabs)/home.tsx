@@ -12,6 +12,7 @@ import { periodLabel, periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
 import { needsStakeVote } from '../../components/StakesCard';
 import { standing } from '../../lib/standing';
+import { awayLabel, currentOrNextAway } from '../../lib/away';
 import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
@@ -26,8 +27,21 @@ export default function Home() {
   const mine = openRequests.filter((r) => r.assignedTo === user.uid);
   const others = openRequests.filter((r) => r.assignedTo !== user.uid);
   const chores = house.chores.filter((c) => c.active);
+  // Bathrooms show as one tile each (tap to pick toilet / shower / sink / whole).
+  const tiles: { key: string; name: string; group?: string; sub?: string }[] = [];
+  for (const c of chores) {
+    if (!c.group) tiles.push({ key: c.key, name: c.name });
+    else if (!tiles.some((t) => t.group === c.group)) {
+      const users = c.users ?? [];
+      tiles.push({
+        key: `group:${c.group}`, name: c.group, group: c.group,
+        sub: users.length === 0 ? 'Everyone' : users.includes(user.uid) ? 'Yours' : 'Not one you use',
+      });
+    }
+  }
   const me = members.find((m) => m.uid === user.uid);
   const s = standing(members, user.uid);
+  const myTrip = currentOrNextAway(me?.aways, new Date().getTime());
   const needsVote = needsStakeVote(user.uid, house, stakes);
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
@@ -77,6 +91,15 @@ export default function Home() {
       )}
       {needsVote && (
         <RowButton icon="trophy-outline" highlight title="Vote on this period's stakes" subtitle="Pick the prize for the top and the forfeit for the bottom" onPress={() => router.push('/stakes')} />
+      )}
+      {myTrip && (
+        <RowButton
+          icon="airplane-outline"
+          highlight={myTrip.from <= new Date().getTime()}
+          title={myTrip.from <= new Date().getTime() ? `You're away till ${awayLabel(myTrip)}` : `Going away ${awayLabel({ from: myTrip.from, until: myTrip.from + 1 })}`}
+          subtitle={myTrip.from <= new Date().getTime() ? 'You won’t be asked to do chores. Back early? Tap here' : `Back after ${awayLabel(myTrip)} · you won’t be asked while you’re gone`}
+          onPress={() => router.push('/settings/away')}
+        />
       )}
       <VerifyEmailBanner />
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
@@ -135,28 +158,33 @@ export default function Home() {
 
       <Label>Chores</Label>
       <Tip id="home">Tap a chore to log it with a photo, or to say it needs doing. Whoever is furthest below their fair share gets asked.</Tip>
-      {chores.length > 0 || isAdmin ? (
+      {tiles.length > 0 || isAdmin ? (
         <View style={styles.grid}>
-          {chores.map((c) => {
-            const waiting = others.find((r) => r.choreKey === c.key);
+          {tiles.map((t) => {
+            const waiting = t.group
+              ? others.find((r) => chores.some((c) => c.group === t.group && c.key === r.choreKey))
+              : others.find((r) => r.choreKey === t.key);
             return (
               <Pressable
-                key={c.key}
+                key={t.key}
                 accessibilityRole="button"
-                accessibilityLabel={c.name}
+                accessibilityLabel={t.name}
                 onPress={() => {
                   haptics.tap();
-                  openChore(c.key);
+                  if (t.group) router.push({ pathname: '/area/[group]', params: { group: t.group } });
+                  else openChore(t.key);
                 }}
                 style={({ pressed }) => [styles.tile, pressed && { backgroundColor: colors.cardRaised, transform: [{ scale: 0.98 }] }]}
               >
-                <Icon name={choreIcon(c.key) as IconName} size={22} color={colors.text} />
+                <Icon name={(t.group ? 'water-outline' : choreIcon(t.key)) as IconName} size={22} color={colors.text} />
                 <View>
-                  <Text style={styles.tileText} numberOfLines={2}>{c.name}</Text>
-                  {waiting && (
+                  <Text style={styles.tileText} numberOfLines={2}>{t.name}</Text>
+                  {waiting ? (
                     <Text style={styles.tileSub} numberOfLines={1}>
                       {waiting.kind === 'redo' ? 'Being redone by' : 'Waiting on'} {waiting.assignedToName}
                     </Text>
+                  ) : t.group && (
+                    <Text style={styles.tileSub} numberOfLines={1}>{t.sub}</Text>
                   )}
                 </View>
               </Pressable>

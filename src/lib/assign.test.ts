@@ -72,3 +72,14 @@ test('weighted points beat raw counts: whoever has fewest points is asked', () =
   const r2 = pickAssignee([m('me'), m('b', { totalCompleted: 5, points: 5 }), m('c', { totalCompleted: 2, points: 6 })], 'me', 'overall', 'bins');
   assert.equal(r2?.uid, 'b');
 });
+
+test('away people are skipped; `only` limits who can be asked; weight scales points', () => {
+  const m = (uid: string, points: number, extra: object = {}) =>
+    ({ uid, username: uid, totalCompleted: points, points, choreCounts: {}, lastCompletedAt: null, joinedAt: 0, ...extra });
+  const ms = [m('a', 0, { away: true }), m('b', 4), m('c', 6)];
+  assert.equal(pickAssignee(ms, 'x', 'overall', 'k')?.uid, 'b');
+  assert.equal(pickAssignee(ms, 'x', 'overall', 'k', ['c'])?.uid, 'c');
+  assert.equal(pickAssignee(ms, 'x', 'overall', 'k', ['a']), null);
+  // b was around half the period: 4 points ÷ 0.5 = 8 > c's 6, so c is further below.
+  assert.equal(pickAssignee([m('b', 4, { weight: 0.5 }), m('c', 6)], 'x', 'overall', 'k')?.uid, 'c');
+});

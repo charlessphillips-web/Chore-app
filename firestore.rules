@@ -296,7 +296,8 @@ service cloud.firestore {
         // Your own doc: name, push token, profile picture, and your score up by at most 1.
         allow update: if signedIn() && me() == uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt', 'notifPrefs'])
+               .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt', 'notifPrefs', 'aways'])
+          && (!('aways' in request.resource.data) || (request.resource.data.aways is list && request.resource.data.aways.size() <= 20))
           && (!('notifPrefs' in request.resource.data) || (request.resource.data.notifPrefs is map
               && request.resource.data.notifPrefs.keys().hasOnly(['turn', 'nudge', 'check', 'redo', 'offers', 'payments', 'bins', 'reset', 'weekly'])))
           && (!('lastSeenAt' in request.resource.data) || request.resource.data.lastSeenAt == request.time

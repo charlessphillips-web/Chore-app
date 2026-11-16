@@ -19,6 +19,10 @@ export interface MemberStats {
   lastCompletedAt: number | null;
   /** Millis since epoch they joined the house. */
   joinedAt: number;
+  /** Share of the period they're around (1 = all of it; lower if they've been away). */
+  weight?: number;
+  /** Away right now: never asked to do chores. */
+  away?: boolean;
 }
 
 /**
@@ -27,7 +31,10 @@ export interface MemberStats {
  *
  * Rules:
  *  - The person reporting the chore is never chosen (they've passed on it).
- *  - mode 'overall': fewest points (chores weighted by size), i.e. furthest below their fair share.
+ *  - Nobody who is away is chosen; if `only` is given (e.g. the people who
+ *    use a bathroom), only they can be chosen.
+ *  - mode 'overall': furthest below their fair share: fewest points for the
+ *    time they've been around (points ÷ weight).
  *  - mode 'chore':   fewest completions of this specific chore, then fewest overall.
  *  - Ties: whoever has gone longest without doing a chore (never counts as
  *    longest), then whoever has been in the house longest (more chances to
@@ -38,8 +45,11 @@ export function pickAssignee(
   requesterUid: string,
   mode: AssignMode,
   choreKey: string,
+  only?: string[] | null,
 ): MemberStats | null {
-  const candidates = members.filter((m) => m.uid !== requesterUid);
+  const candidates = members.filter(
+    (m) => m.uid !== requesterUid && !m.away && (!only || only.length === 0 || only.includes(m.uid)),
+  );
   if (candidates.length === 0) return null;
 
   const choreCount = (m: MemberStats) => m.choreCounts[choreKey] ?? 0;
@@ -51,7 +61,7 @@ export function pickAssignee(
       const diff = choreCount(a) - choreCount(b);
       if (diff !== 0) return diff;
     }
-    const total = (a.points ?? a.totalCompleted) - (b.points ?? b.totalCompleted);
+    const total = (a.points ?? a.totalCompleted) / (a.weight ?? 1) - (b.points ?? b.totalCompleted) / (b.weight ?? 1);
     if (total !== 0) return total;
     const idle = last(a) - last(b);
     if (idle !== 0) return idle;

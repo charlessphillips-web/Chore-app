@@ -32,11 +32,12 @@ const LINES: Record<string, string[]> = {
   'cleaning oven': ['Oven reborn.', 'That was a big one. Respect.', 'Grease: defeated.'],
   'cleaning stove': ['Hob gleaming.', 'Stove sorted.', 'Ready for the next fry-up.'],
 };
+const BATHROOM = ['Bathroom sparkling.', 'Five-star facilities.', 'Fresh as a daisy.', 'Your housemates salute you.'];
 const GENERIC = ['Nice one.', 'Job done.', 'House points secured.', 'Clean sheet.', 'Back of the net.'];
 
 /** Pick a line. `seed` keeps it deterministic in tests (defaults to random). */
 export function celebrationLine(choreKey: string, seed = Math.random()): string {
-  const list = LINES[choreKey] ?? GENERIC;
+  const list = LINES[choreKey] ?? (/\b(bath\w*|toilet|shower|en-?suite|loo)\b/.test(choreKey) ? BATHROOM : GENERIC);
   return list[Math.min(list.length - 1, Math.floor(seed * list.length))];
 }
 
@@ -44,15 +45,15 @@ export function celebrationLine(choreKey: string, seed = Math.random()): string 
  * `mine`/`total` are points BEFORE this chore; `people` is house size.
  */
 export function celebration(
-  opts: { mine: number; total: number; people: number; points: number; choreKey: string },
+  opts: { mine: number; total: number; people: number; points: number; choreKey: string; fair?: number },
   seed?: number,
 ): Celebration {
   const { mine, total, people, points, choreKey } = opts;
   const pct = (m: number, t: number) => (t > 0 ? Math.round((m / t) * 100) : 0);
-  const fairPct = people > 0 ? Math.round(100 / people) : 100;
+  const fair = opts.fair ?? 1 / Math.max(1, people);
+  const fairPct = Math.round(fair * 100);
   const beforePct = pct(mine, total);
   const afterPct = pct(mine + points, total + points);
-  const fair = 1 / Math.max(1, people);
   const wasBelow = total === 0 || mine / total < fair;
   const nowAt = (mine + points) / (total + points) >= fair;
   const tier: CelebrationTier = people > 1 && wasBelow && nowAt ? 'fair' : points >= 2 ? 'popup' : 'toast';

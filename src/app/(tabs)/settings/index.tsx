@@ -9,6 +9,8 @@ import { resetTips, Tip } from '../../../components/Tip';
 import { Avatar } from '../../../components/Avatar';
 import { haptics } from '../../../lib/haptics';
 import { celebrations } from '../../../components/Celebration';
+import { awayLabel, currentOrNextAway } from '../../../lib/away';
+import { bathroomGroups } from '../../../lib/chores';
 import { colors, fonts, space, type } from '../../../components/theme';
 
 export default function SettingsIndex() {
@@ -85,6 +87,7 @@ export default function SettingsIndex() {
   }
 
   const myAvatar = members.find((m) => m.uid === user.uid)?.avatar ?? null;
+  const myTrip = currentOrNextAway(members.find((m) => m.uid === user.uid)?.aways, new Date().getTime());
 
   return (
     <Screen>
@@ -127,6 +130,12 @@ export default function SettingsIndex() {
           subtitle={user.isAnonymous ? 'Not saved: add an email so you can sign in on another phone' : user.email ?? 'Saved'}
           right={user.isAnonymous ? <View style={styles.dot} /> : undefined}
           onPress={() => router.push('/settings/account')}
+        />
+        <ListRow
+          icon="airplane-outline"
+          title="I'm away"
+          subtitle={myTrip ? `${myTrip.from <= new Date().getTime() ? 'Away' : 'Going away'} till ${awayLabel(myTrip)}` : 'Going home or visiting friends? Pause your chores'}
+          onPress={() => router.push('/settings/away')}
         />
         <ListRow icon="notifications-outline" title="Notifications" subtitle="Choose what you're told about" onPress={() => router.push('/settings/notifications')} />
         <ListRow
@@ -174,6 +183,7 @@ export default function SettingsIndex() {
           <Label>House admin</Label>
           <ListGroup>
             <ListRow icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
+            <ListRow icon="water-outline" title="Bathrooms" subtitle={bathroomGroups(house.chores).length ? `${bathroomGroups(house.chores).length} set up · who uses which` : 'Per floor: only the people who use it get asked'} onPress={() => router.push('/settings/bathrooms')} />
             <ListRow icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
             <ListRow icon="trash-outline" title="Bin days" subtitle={house.bins.length ? `${house.bins.length} bin${house.bins.length > 1 ? 's' : ''} set · reminders the night before` : 'Set them up for night-before reminders'} onPress={() => router.push('/settings/bins')} />
             <ListRow icon="options-outline" title="House details" subtitle="Name, leaderboard reset, wallpaper" onPress={() => router.push('/settings/house-details')} />

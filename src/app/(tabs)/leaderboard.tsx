@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
+import { awayLabel, currentOrNextAway, fairShareOf } from '../../lib/away';
 import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
 import { StakesCard } from '../../components/StakesCard';
 import { BigNumber, Loading, Screen, Title } from '../../components/ui';
@@ -27,10 +28,12 @@ export default function Leaderboard() {
   const pts = (m: (typeof members)[number]) => m.points ?? m.totalCompleted;
   const ranked = [...members].sort((a, b) => pts(b) - pts(a) || a.username.localeCompare(b.username));
   const houseTotal = ranked.reduce((n, m) => n + pts(m), 0);
+  // Fair share per person: equal, except it shrinks for days someone was away.
+  const fairOf = (m: (typeof members)[number]) => fairShareOf(m.uid, members) * 100;
   const fairPct = members.length ? 100 / members.length : 100;
   const share = (m: (typeof members)[number]) => (houseTotal ? (pts(m) / houseTotal) * 100 : 0);
   // Bars are scaled so a fair share sits in the middle-ish and nobody's bar is tiny.
-  const scale = Math.min(100, Math.max(fairPct * 2, ...ranked.map(share)));
+  const scale = Math.min(100, Math.max(fairPct * 2, ...ranked.map(share), ...ranked.map(fairOf)));
   // Who'd get the next "needs doing" (if someone other than them reported it).
   const nextUp = members.length > 1 ? pickAssignee(members, '', 'overall', '') : null;
   // Same score = same position.
@@ -81,13 +84,14 @@ export default function Leaderboard() {
                 </View>
                 <View style={{ justifyContent: 'center' }}>
                   <View style={styles.bar}>
-                    <View style={[styles.barFill, { width: `${(share(m) / scale) * 100}%` }, share(m) >= fairPct && { backgroundColor: colors.text }, me && { backgroundColor: colors.you }]} />
+                    <View style={[styles.barFill, { width: `${(share(m) / scale) * 100}%` }, share(m) >= fairOf(m) && { backgroundColor: colors.text }, me && { backgroundColor: colors.you }]} />
                   </View>
-                  <View style={[styles.fairMark, { left: `${(fairPct / scale) * 100}%` }]} />
+                  <View style={[styles.fairMark, { left: `${(fairOf(m) / scale) * 100}%` }]} />
                 </View>
                 <Text style={styles.next}>
                   {pts(m)} point{pts(m) === 1 ? '' : 's'} · {m.totalCompleted} chore{m.totalCompleted === 1 ? '' : 's'}
                   {nextUp?.uid === m.uid ? ' · next up for chores' : ''}
+                  {m.away ? ` · ✈️ away till ${awayLabel(currentOrNextAway(m.aways, new Date().getTime())!)}` : ''}
                 </Text>
               </View>
               <Text style={[styles.scoreText, styles.score, me && { color: colors.you }]}>{houseTotal ? `${Math.round(share(m))}%` : '–'}</Text>
@@ -97,7 +101,7 @@ export default function Leaderboard() {
       </View>
 
       <Text style={type.small}>
-        You&apos;re in purple. The white line on each bar is a fair share ({Math.round(fairPct)}% each). Bigger jobs are worth more points, and
+        You&apos;re in purple. The white line on each bar is their fair share ({Math.round(fairPct)}% each, a bit less for anyone who&apos;s been away). Bigger jobs are worth more points, and
         whoever is furthest below their fair share gets the next &quot;needs doing&quot; request. Sent-back chores don&apos;t
         count until they&apos;re redone.
       </Text>

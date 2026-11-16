@@ -11,9 +11,9 @@ test('ordinals', () => {
 
 test('points needed to reach a fair share', () => {
   // 4 people, house has 20 points, I have 2 → need x: (2+x)/(20+x) >= 0.25 → x >= 4 (6 of 24 = 25%)
-  assert.equal(pointsToFairShare(2, 20, 4), 4);
-  assert.equal(pointsToFairShare(5, 20, 4), 0);
-  assert.equal(pointsToFairShare(0, 0, 3), 1);
+  assert.equal(pointsToFairShare(2, 20, 1 / 4), 4);
+  assert.equal(pointsToFairShare(5, 20, 1 / 4), 0);
+  assert.equal(pointsToFairShare(0, 0, 1 / 3), 1);
   assert.equal(pointsToFairShare(3, 3, 1), 0);
 });
 
@@ -27,4 +27,14 @@ test('alone, nobody started, behind, and ahead', () => {
   const ahead = standing([m('me', 9), m('sam', 2), m('jo', 5), m('al', 4)], 'me');
   assert.equal(ahead.hint, 'You’re doing more than your fair share 👏');
   assert.equal(standing([m('me', 4), m('sam', 4)], 'me').place, 'joint 1st');
+});
+
+test('away housemate: smaller fair share for them, bigger for others', () => {
+  const ms = [
+    { uid: 'a', username: 'A', totalCompleted: 5, points: 5, weight: 1 },
+    { uid: 'b', username: 'B', totalCompleted: 5, points: 5, weight: 1 },
+    { uid: 'c', username: 'C', totalCompleted: 0, points: 0, weight: 0.5 },
+  ];
+  assert.equal(standing(ms, 'c').fairPct, 20);
+  assert.equal(standing(ms, 'a').fairPct, 40);
 });

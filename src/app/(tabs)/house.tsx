@@ -1,6 +1,7 @@
 import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
+import { awayLabel, currentOrNextAway } from '../../lib/away';
 import { WEB_URL } from '../../lib/legal';
 import { nextCollections, scheduleLabel } from '../../lib/bins';
 import { jpegUri } from '../../lib/photos';
@@ -62,9 +63,10 @@ export default function HouseTab() {
         {sorted.map((m, i) => (
           <View key={m.uid} style={[styles.row, i < sorted.length - 1 && styles.divider]}>
             <Avatar avatar={m.avatar} name={m.username} size={34} />
-            <Text style={[type.body, { flex: 1 }]}>
-              {m.username}{m.uid === user.uid ? ' (you)' : ''}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={type.body}>{m.username}{m.uid === user.uid ? ' (you)' : ''}</Text>
+              {m.away && <Text style={type.small}>✈️ Away till {awayLabel(currentOrNextAway(m.aways, new Date().getTime())!)}</Text>}
+            </View>
             {m.uid === house.adminUid && <Text style={styles.admin}>ADMIN</Text>}
             <Icon
               name={m.pushToken ? 'notifications' : 'notifications-off-outline'}

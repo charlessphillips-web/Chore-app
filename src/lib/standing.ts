@@ -23,6 +23,8 @@ interface Scored {
   username: string;
   totalCompleted: number;
   points?: number;
+  /** Share of the period they're around (away days lower it). */
+  weight?: number;
 }
 
 export function ordinal(n: number): string {
@@ -33,10 +35,9 @@ export function ordinal(n: number): string {
 
 const pts = (m: Scored) => m.points ?? m.totalCompleted;
 
-/** Points you'd need to do (alone) to reach an equal share. */
-export function pointsToFairShare(mine: number, total: number, people: number): number {
-  if (people <= 1) return 0;
-  const fair = 1 / people;
+/** Points you'd need to do (alone) to reach your fair share (`fair` 0–1). */
+export function pointsToFairShare(mine: number, total: number, fair: number): number {
+  if (fair >= 1) return 0;
   if (total > 0 && mine / total >= fair) return 0;
   return Math.max(1, Math.ceil((fair * total - mine) / (1 - fair)));
 }
@@ -46,7 +47,9 @@ export function standing(members: Scored[], uid: string): Standing {
   const me = members.find((m) => m.uid === uid);
   const mine = me ? pts(me) : 0;
   const total = members.reduce((n, m) => n + pts(m), 0);
-  const fairPct = people > 0 ? Math.round(100 / people) : 100;
+  const weights = members.reduce((n, m) => n + (m.weight ?? 1), 0);
+  const fair = people > 0 && weights > 0 ? (me?.weight ?? 1) / weights : 1;
+  const fairPct = Math.round(fair * 100);
 
   if (people <= 1) {
     return {
@@ -63,7 +66,7 @@ export function standing(members: Scored[], uid: string): Standing {
     };
   }
   const sharePct = Math.round((mine / total) * 100);
-  const need = pointsToFairShare(mine, total, people);
+  const need = pointsToFairShare(mine, total, fair);
   const rank = members.filter((m) => pts(m) > mine).length + 1;
   const tied = members.filter((m) => m.uid !== uid && pts(m) === mine).length > 0;
   return {

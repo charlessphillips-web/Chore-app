@@ -7,7 +7,8 @@ import {
   CHECK_REMINDER_MS, clearFullPhoto, clearRemovedHouse, sendCheckReminder, setPushToken, toMember, touchLastSeen, watchHouse, watchMembers, watchOpenRequests, watchProfile,
   watchOffers, watchRecentLogs, watchWallpaper, type MemberDoc, watchStakes,
 } from '../lib/db';
-import { periodEnd, periodKey, previousPeriodKey } from '../lib/period';
+import { periodEnd, periodKey, periodStart, previousPeriodKey } from '../lib/period';
+import { isAway, presentWeight } from '../lib/away';
 import type { Stake } from '../lib/stakes';
 import { scheduleReminders } from '../lib/reminders';
 import { track } from '../lib/analytics';
@@ -236,7 +237,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [reminderKey]);
   // Scores for the current period, using the house's reset setting.
   const period = periodKey(new Date(), house?.reset);
-  const members: Member[] = (current?.members ?? []).map((m) => toMember(m.id, m.data, period));
+  // Away days shrink your fair share for this period; away now = not asked to do chores.
+  const nowMs = new Date().getTime();
+  const pStart = periodStart(new Date(nowMs), house?.reset).getTime();
+  const pEnd = periodEnd(new Date(nowMs), house?.reset).getTime();
+  const members: Member[] = (current?.members ?? []).map((m) => {
+    const x = toMember(m.id, m.data, period);
+    return { ...x, weight: presentWeight(x.aways, pStart, pEnd), away: isAway(x.aways, nowMs) };
+  });
   const value: AppState = {
     ready: profileReady,
     error,

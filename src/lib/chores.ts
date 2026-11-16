@@ -9,6 +9,10 @@ export interface HouseChore {
   active: boolean;
   /** How big a job it is: 1 Quick, 2 Medium, 3 Big. Worth that many points. */
   size?: ChoreSize;
+  /** Bathroom (or other area) it belongs to, e.g. "Top floor bathroom". Shown as one tile on Home. */
+  group?: string;
+  /** Only these people get asked to do it (e.g. who uses that bathroom). Empty/missing = everyone. */
+  users?: string[];
 }
 
 export type ChoreSize = 1 | 2 | 3;
@@ -93,5 +97,64 @@ const ICONS: Record<string, string> = {
 };
 
 export function choreIcon(key: string): string {
-  return ICONS[key] ?? 'checkmark-circle-outline';
+  if (ICONS[key]) return ICONS[key];
+  const task = BATHROOM_TASKS.find((t) => key.endsWith(` ${t.key}`));
+  return task?.icon ?? 'checkmark-circle-outline';
+}
+
+// ---------- Bathrooms ----------
+// Each bathroom is a group of small chores. Only the people who use it get
+// asked. "Whole bathroom" is worth the same as doing all three bits.
+
+export const BATHROOM_TASKS: { key: string; name: string; needs: string; size: ChoreSize; icon: string }[] = [
+  { key: 'toilet', name: 'Toilet', needs: 'toilet needs cleaning', size: 1, icon: 'water-outline' },
+  { key: 'shower', name: 'Shower / bath', needs: 'shower needs cleaning', size: 1, icon: 'rainy-outline' },
+  { key: 'sink', name: 'Sink & mirror', needs: 'sink needs cleaning', size: 1, icon: 'sparkles-outline' },
+  { key: 'whole', name: 'Whole bathroom', needs: 'needs a full clean', size: 3, icon: 'home-outline' },
+];
+
+/** "Top floor" → "Top floor bathroom" (left alone if it already says bathroom, en-suite, loo...). */
+export function bathroomName(input: string): string {
+  const clean = cleanChoreName(input);
+  if (!clean) return '';
+  return /\b(bath\w*|en-?suite|loo|toilet|shower|wc)\b/i.test(clean) ? clean : `${clean} bathroom`;
+}
+
+/** The chores for one bathroom. */
+export function makeBathroom(name: string, users: string[]): HouseChore[] {
+  const group = bathroomName(name);
+  return BATHROOM_TASKS.map((t) => ({
+    ...makeChore(`${group} ${t.key}`, `${group}: ${t.needs}`, t.size),
+    name: `${group}: ${t.name}`,
+    group,
+    users,
+  }));
+}
+
+/** Adds a bathroom unless the name is taken. Returns an error or the new list. */
+export function addBathroom(list: HouseChore[], name: string, users: string[]): HouseChore[] | string {
+  const group = bathroomName(name);
+  if (choreKey(group).length < 2) return 'Give the bathroom a name, e.g. "Top floor".';
+  if (bathroomGroups(list).some((g) => choreKey(g) === choreKey(group))) return 'There’s already a bathroom with that name.';
+  const extra = makeBathroom(group, users);
+  if (extra.some((c) => list.some((x) => x.key === c.key))) return 'There’s already a chore with that name.';
+  return [...list, ...extra];
+}
+
+/** Bathroom names, in the order they were added. */
+export function bathroomGroups(list: HouseChore[]): string[] {
+  return [...new Set(list.filter((c) => c.group).map((c) => c.group!))];
+}
+
+export function setBathroomUsers(list: HouseChore[], group: string, users: string[]): HouseChore[] {
+  return list.map((c) => (c.group === group ? { ...c, users } : c));
+}
+
+export function removeBathroom(list: HouseChore[], group: string): HouseChore[] {
+  return list.filter((c) => c.group !== group);
+}
+
+/** "Top floor bathroom: Toilet" → "Toilet". */
+export function taskName(c: HouseChore): string {
+  return c.group && c.name.startsWith(`${c.group}: `) ? c.name.slice(c.group.length + 2) : c.name;
 }

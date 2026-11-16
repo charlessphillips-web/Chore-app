@@ -1,3 +1,4 @@
+import type { Away } from './away';
 import type { MemberStats } from './assign';
 import type { HouseChore } from './chores';
 import type { ReviewStatus } from './review';
@@ -57,6 +58,8 @@ export interface Member extends MemberStats {
   avatar: Avatar | null;
   /** Notification types they've switched off (missing = on). */
   notifPrefs: NotifyPrefs;
+  /** Trips away (newest first). See lib/away. */
+  aways: Away[];
 }
 
 /** houses/{houseId}/logs/{id} — a completed chore. */

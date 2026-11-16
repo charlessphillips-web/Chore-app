@@ -16,6 +16,8 @@ export default function SettingsLayout() {
       <Stack.Screen name="account" options={{ title: 'YOUR LOGIN' }} />
       <Stack.Screen name="notifications" options={{ title: 'NOTIFICATIONS' }} />
       <Stack.Screen name="bins" options={{ title: 'BIN DAYS' }} />
+      <Stack.Screen name="away" options={{ title: "I'M AWAY" }} />
+      <Stack.Screen name="bathrooms" options={{ title: 'BATHROOMS' }} />
     </Stack>
   );
 }

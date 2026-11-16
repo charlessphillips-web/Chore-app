@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { cancelRequest, logChore, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
 import { haptics } from '../../lib/haptics';
 import { celebration } from '../../lib/celebrate';
+import { fairShareOf } from '../../lib/away';
 import { choreSize } from '../../lib/chores';
 import { celebrate, toast } from '../../components/Celebration';
 import { pickAssignee } from '../../lib/assign';
@@ -27,7 +28,7 @@ export default function ChoreScreen() {
 
   const chore = house?.chores.find((c) => c.key === key);
   const assignee = useMemo(
-    () => (user && chore ? pickAssignee(members, user.uid, 'overall', chore.key) : null),
+    () => (user && chore ? pickAssignee(members, user.uid, 'overall', chore.key, chore.users) : null),
     [members, user, chore],
   );
 
@@ -79,6 +80,7 @@ export default function ChoreScreen() {
           mine: me ? pts(me) : 0,
           total: members.reduce((n, m) => n + pts(m), 0),
           people: members.length,
+          fair: fairShareOf(user!.uid, members),
           points: choreSize(chore!),
           choreKey: chore!.key,
         }));
@@ -130,7 +132,7 @@ export default function ChoreScreen() {
                 ? `Already flagged — waiting on ${request.assignedToName}`
                 : assignee
                   ? `We'll ask ${assignee.username} (furthest below their fair share)`
-                  : 'Nobody else in the house yet'
+                  : members.length > 1 ? 'Nobody else can be asked right now (away, or don’t use it)' : 'Nobody else in the house yet'
             }
             onPress={() => setStep('needs')}
           />
