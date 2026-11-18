@@ -1,18 +1,17 @@
-import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
+import { Feed } from '../../components/Feed';
 import { awayLabel, currentOrNextAway } from '../../lib/away';
 import { WEB_URL } from '../../lib/legal';
 import { nextCollections, scheduleLabel } from '../../lib/bins';
-import { jpegUri } from '../../lib/photos';
-import { Button, Card, Empty, HouseName, Icon, Label, Loading, Screen, timeAgo } from '../../components/ui';
+import { Button, Card, HouseName, Icon, Label, Loading, Screen } from '../../components/ui';
 import { Tip } from '../../components/Tip';
-import { StatusBadge } from '../../components/StatusBadge';
 import { Avatar } from '../../components/Avatar';
 import { colors, fonts, space, type } from '../../components/theme';
 
 export default function HouseTab() {
-  const { user, house, members, logs, isAdmin } = useApp();
+  const { user, house, members, isAdmin } = useApp();
   if (!user || !house) return <Loading />;
 
   const share = () =>
@@ -77,33 +76,8 @@ export default function HouseTab() {
         ))}
       </Card>
 
-      <Label>Recent activity</Label>
-      <Card style={{ paddingVertical: space.sm }}>
-        {logs.length === 0 ? (
-          <Empty icon="time-outline">No chores logged yet.</Empty>
-        ) : (
-          logs.slice(0, 20).map((l, i) => (
-            <Pressable
-              key={l.id}
-              onPress={() => router.push({ pathname: '/photo/[logId]', params: { logId: l.id } })}
-              style={[styles.row, i < Math.min(logs.length, 20) - 1 && styles.divider]}
-            >
-              {l.photoThumb ? (
-                <Image source={{ uri: jpegUri(l.photoThumb) }} style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, { backgroundColor: colors.cardRaised }]} />
-              )}
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.body}>
-                  <Text style={{ fontWeight: '700' }}>{l.userId === user.uid ? 'You' : l.username}</Text> · {l.choreName}{l.creditToName ? ` for ${l.creditTo === user.uid ? 'you' : l.creditToName}` : ''}
-                </Text>
-                <Text style={type.small}>{timeAgo(l.at)}</Text>
-                <StatusBadge log={l} />
-              </View>
-            </Pressable>
-          ))
-        )}
-      </Card>
+      <Label>House feed</Label>
+      <Feed />
     </Screen>
   );
 }

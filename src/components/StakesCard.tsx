@@ -16,7 +16,7 @@ export function StakesCard() {
     return (
       <View style={styles.card}>
         <View style={styles.head}>
-          <Icon name="trophy" size={22} color={colors.you} />
+          <Icon name="trophy" size={22} color={colors.brand} />
           <Text style={styles.title}>Play for stakes?</Text>
         </View>
         <Text style={styles.body}>
@@ -36,7 +36,7 @@ export function StakesCard() {
   return (
     <View style={styles.card}>
       <View style={styles.head}>
-        <Icon name="trophy" size={22} color={colors.you} />
+        <Icon name="trophy" size={22} color={colors.brand} />
         <Text style={styles.title}>House stakes</Text>
       </View>
       <View style={styles.line}>
@@ -61,11 +61,11 @@ export function needsStakeVote(uid: string, house: House, stakes: Stake[]): bool
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.you, padding: 16, gap: 12 },
+  card: { borderRadius: radius, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.brand, padding: 16, gap: 12 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
   body: { fontSize: 15, color: colors.muted, lineHeight: 21 },
   line: { gap: 2 },
-  tag: { fontSize: 10, letterSpacing: 1.2, color: colors.you, fontWeight: '700' },
+  tag: { fontSize: 10, letterSpacing: 1.2, color: colors.brand, fontWeight: '700' },
   stake: { fontSize: 17, fontWeight: '600', color: colors.text },
 });

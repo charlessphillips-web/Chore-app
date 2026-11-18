@@ -65,7 +65,7 @@ export default function ChoreScreen() {
     setError(null);
     setBusy('save');
     try {
-      await logChore({
+      const result = await logChore({
         house: house!, members, uid: user!.uid, username: profile!.username,
         chore: chore!, photo, requestId: request?.id ?? null, offer: doingForSomeone,
       });
@@ -81,6 +81,7 @@ export default function ChoreScreen() {
           total: members.reduce((n, m) => n + pts(m), 0),
           people: members.length,
           fair: fairShareOf(user!.uid, members),
+          streak: { weeks: result.streak.weeks, grew: (me?.streak?.weeks ?? 0) !== result.streak.weeks, milestone: result.milestone },
           points: choreSize(chore!),
           choreKey: chore!.key,
         }));

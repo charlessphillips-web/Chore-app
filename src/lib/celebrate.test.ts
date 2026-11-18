@@ -23,6 +23,15 @@ test('first chore in the house counts as hitting fair share; alone does not', ()
   assert.equal(celebration({ mine: 0, total: 0, people: 1, points: 1, choreKey: 'x' }).tier, 'toast');
 });
 
+test('streaks: milestone = full confetti; growing streak adds a note', () => {
+  const base = { mine: 10, total: 20, people: 4, points: 1, choreKey: 'bins' };
+  const m = celebration({ ...base, streak: { weeks: 4, grew: true, milestone: 4 } });
+  assert.equal(m.tier, 'fair');
+  assert.equal(m.line, '4-week streak!');
+  assert.equal(celebration({ ...base, streak: { weeks: 3, grew: true, milestone: null } }).streakNote, '🔥 3-week streak');
+  assert.equal(celebration({ ...base, streak: { weeks: 3, grew: false, milestone: null } }).streakNote, undefined);
+});
+
 test('lines: chore-specific, generic fallback', () => {
   assert.equal(celebrationLine('bins', 0), 'Bins conquered.');
   assert.ok(celebrationLine('unknown chore', 0.99).length > 0);

@@ -21,12 +21,43 @@ export const colors = {
   primaryBright: '#F2F2F2',
   outline: '#2A2A2A',
   primaryText: '#000000',
-  /** Purple = "you" (your bar, your name, your confetti). */
+  /** "You" (your bar, your name, your confetti). Purple unless you pick another in Settings → Your colour. */
   you: '#9381F2',
+  /** Rotawise purple for house-wide things (stakes card). Never changes. */
+  brand: '#9381F2',
   success: '#4ADE80',
   danger: '#FF4D4D',
   warning: '#F5A524',
 };
+
+/** Colours you can pick for "you" (Settings → Your colour). */
+export const YOU_COLORS = [
+  { name: 'Purple', hex: '#9381F2' },
+  { name: 'Blue', hex: '#5B9BFF' },
+  { name: 'Green', hex: '#3DD6B0' },
+  { name: 'Orange', hex: '#F5A524' },
+  { name: 'Pink', hex: '#FF7AB6' },
+  { name: 'Red', hex: '#FF5C5C' },
+] as const;
+
+/** Set the "you" colour (AppContext calls this, then re-renders everything). */
+export function applyYouColor(hex: string) {
+  if (YOU_COLORS.some((c) => c.hex === hex)) colors.you = hex as typeof colors.you;
+}
+
+/** Mix a colour with white (amount 0–1), e.g. for lighter confetti. */
+export function tint(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * amount).toString(16).padStart(2, '0');
+  return `#${mix((n >> 16) & 255)}${mix((n >> 8) & 255)}${mix(n & 255)}`;
+}
+
+/** Mix a colour with black (amount 0–1), e.g. for a dark selected chip. */
+export function shade(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round(c * (1 - amount)).toString(16).padStart(2, '0');
+  return `#${mix((n >> 16) & 255)}${mix((n >> 8) & 255)}${mix(n & 255)}`;
+}
 
 /** Font names (loaded in app/_layout.tsx). */
 export const fonts = {

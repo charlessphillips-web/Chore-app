@@ -27,6 +27,7 @@ export const EVENTS = {
   offer_paid: 'Offer paid',
   avatar_set: 'Profile picture set',
   away_set: 'Set themselves as away',
+  reaction: 'Reacted to a chore',
   bathroom_added: 'Bathroom added',
   feedback_sent: 'Feedback sent',
   tab_home: 'Home tab',

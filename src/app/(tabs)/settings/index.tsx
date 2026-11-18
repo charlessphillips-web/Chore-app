@@ -132,6 +132,13 @@ export default function SettingsIndex() {
           onPress={() => router.push('/settings/account')}
         />
         <ListRow
+          icon="color-palette-outline"
+          title="Your colour"
+          subtitle="Your bar, name and confetti"
+          right={<View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.you }} />}
+          onPress={() => router.push('/settings/colour')}
+        />
+        <ListRow
           icon="airplane-outline"
           title="I'm away"
           subtitle={myTrip ? `${myTrip.from <= new Date().getTime() ? 'Away' : 'Going away'} till ${awayLabel(myTrip)}` : 'Going home or visiting friends? Pause your chores'}

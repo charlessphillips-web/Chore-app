@@ -1,4 +1,5 @@
 import type { Away } from './away';
+import type { Streak } from './streak';
 import type { MemberStats } from './assign';
 import type { HouseChore } from './chores';
 import type { ReviewStatus } from './review';
@@ -60,6 +61,8 @@ export interface Member extends MemberStats {
   notifPrefs: NotifyPrefs;
   /** Trips away (newest first). See lib/away. */
   aways: Away[];
+  /** Weeks in a row with at least one chore. See lib/streak. */
+  streak: Streak | null;
 }
 
 /** houses/{houseId}/logs/{id} — a completed chore. */
@@ -92,6 +95,10 @@ export interface ChoreLog {
   offerId: string | null;
   creditTo: string | null;
   creditToName: string | null;
+  /** Points it was worth (1–3). */
+  points: number;
+  /** Housemates' reactions: uid → emoji. */
+  reactions: Record<string, string>;
 }
 
 /** houses/{houseId}/requests/{id} — "this needs doing". */

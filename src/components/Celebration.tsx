@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Celebration as C } from '../lib/celebrate';
 import { haptics } from '../lib/haptics';
-import { colors, fonts } from './theme';
+import { colors, fonts, tint } from './theme';
 
 const KEY = 'rotawise.celebrations';
 let enabled = true;
@@ -79,8 +79,8 @@ function Toast({ c, onDone }: { c: Shown; onDone: () => void }) {
           { top: insets.top + 10, opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [-30, 0] }) }] },
         ]}
       >
-        {c.points > 0 && <Text style={styles.toastPts}>+{c.points}</Text>}
-        <Text style={styles.toastText} numberOfLines={1}>{c.line}</Text>
+        {c.points > 0 && <Text style={[styles.toastPts, { color: colors.you }]}>+{c.points}</Text>}
+        <Text style={styles.toastText} numberOfLines={1}>{c.line}{c.streakNote ? `  ${c.streakNote}` : ''}</Text>
       </Animated.View>
     </View>
   );
@@ -139,8 +139,9 @@ function Popup({ c, onDone }: { c: Shown; onDone: () => void }) {
         accessibilityLiveRegion="polite"
       >
         <View style={{ alignItems: 'center', alignSelf: 'stretch' }}>
-          {c.points > 0 && <Text style={styles.pts}>+{c.points}</Text>}
-          <Text style={styles.line}>{c.line}</Text>
+          {c.points > 0 && <Text style={[styles.pts, { color: colors.you }]}>+{c.points}</Text>}
+          <Text style={styles.line}>{c.line.endsWith('streak!') ? `🔥 ${c.line}` : c.line}</Text>
+          {c.streakNote && <Text style={[styles.label, { marginTop: 8 }]}>{c.streakNote}</Text>}
           {c.fairPct > 0 && c.fairPct < 100 && (
             <View style={styles.barBlock}>
               <View style={styles.barTop}>
@@ -149,10 +150,10 @@ function Popup({ c, onDone }: { c: Shown; onDone: () => void }) {
               </View>
               <View style={styles.track}>
                 <Animated.View
-                  style={[styles.fill, { width: bar.interpolate({ inputRange: [0, 1], outputRange: [`${fill(c.beforePct)}%`, `${fill(c.afterPct)}%`] }) }]}
+                  style={[styles.fill, { backgroundColor: colors.you, width: bar.interpolate({ inputRange: [0, 1], outputRange: [`${fill(c.beforePct)}%`, `${fill(c.afterPct)}%`] }) }]}
                 />
               </View>
-              {big && <Text style={[styles.label, { color: colors.you }]}>🎯 Fair share reached</Text>}
+              {big && c.afterPct >= c.fairPct && !c.line.endsWith('streak!') && <Text style={[styles.label, { color: colors.you }]}>🎯 Fair share reached</Text>}
             </View>
           )}
           <Pressable style={styles.btn} onPress={onDone} accessibilityRole="button">
@@ -177,7 +178,7 @@ function Popup({ c, onDone }: { c: Shown; onDone: () => void }) {
 
 /** Purple + white pieces flying out from the middle, then dropping a little. */
 function confetti(n: number, big: boolean) {
-  const shades = [colors.you, colors.text, colors.you, '#BFB4FF'];
+  const shades = [colors.you, colors.text, colors.you, tint(colors.you, 0.45)];
   return Array.from({ length: n }, (_, i) => {
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
     const d = (big ? 160 : 120) + Math.random() * (big ? 220 : 90);
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardRaised, borderColor: colors.line, borderWidth: 1, borderRadius: 999,
     paddingVertical: 10, paddingHorizontal: 16,
   },
-  toastPts: { color: colors.you, fontWeight: '700', fontSize: 15 },
+  toastPts: { fontWeight: '700', fontSize: 15 },
   toastText: { color: colors.text, fontSize: 14, fontWeight: '500', flexShrink: 1 },
   dim: { backgroundColor: 'rgba(0,0,0,0.72)', alignItems: 'center', justifyContent: 'center', padding: 28 },
   piece: { position: 'absolute', borderRadius: 2 },
@@ -207,13 +208,13 @@ const styles = StyleSheet.create({
     width: '100%', maxWidth: 340, backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1,
     borderRadius: 22, paddingTop: 22, paddingBottom: 14, paddingHorizontal: 18,
   },
-  pts: { fontSize: 52, fontWeight: '700', letterSpacing: -2, color: colors.you },
+  pts: { fontSize: 52, fontWeight: '700', letterSpacing: -2 },
   line: { fontSize: 20, fontWeight: '600', color: colors.text, textAlign: 'center', marginTop: 2 },
   barBlock: { alignSelf: 'stretch', gap: 6, marginTop: 18 },
   barTop: { flexDirection: 'row', justifyContent: 'space-between' },
   label: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1, color: colors.muted, textTransform: 'uppercase' },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.line, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 4, backgroundColor: colors.you },
+  fill: { height: '100%', borderRadius: 4 },
   btn: { alignSelf: 'stretch', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 18 },
   btnText: { color: colors.primaryText, fontWeight: '600', fontSize: 15 },
   off: { color: colors.muted, fontSize: 13, marginTop: 12 },

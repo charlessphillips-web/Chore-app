@@ -12,7 +12,8 @@ import { periodLabel, periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
 import { needsStakeVote } from '../../components/StakesCard';
 import { standing } from '../../lib/standing';
-import { awayLabel, currentOrNextAway } from '../../lib/away';
+import { awayDaysBetween, awayLabel, currentOrNextAway } from '../../lib/away';
+import { currentStreak, daysLeftThisWeek, doneThisWeek } from '../../lib/streak';
 import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
@@ -42,6 +43,9 @@ export default function Home() {
   const me = members.find((m) => m.uid === user.uid);
   const s = standing(members, user.uid);
   const myTrip = currentOrNextAway(me?.aways, new Date().getTime());
+  const nowMs = new Date().getTime();
+  const streakWeeks = currentStreak(me?.streak, nowMs, (a, b) => awayDaysBetween(me?.aways, a, b));
+  const streakDone = doneThisWeek(me?.streak, nowMs);
   const needsVote = needsStakeVote(user.uid, house, stakes);
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
@@ -84,6 +88,7 @@ export default function Home() {
           <Text style={styles.scoreText}>{s.headline}</Text>
         )}
         <Text style={type.small}>{s.hint}</Text>
+        {members.length > 1 && <StreakRow weeks={streakWeeks} done={streakDone} />}
       </View>
 
       {stakesNews && (
@@ -212,6 +217,31 @@ export default function Home() {
   );
 }
 
+/** 🔥 N-week streak, with dots for recent weeks (the last one is this week). */
+function StreakRow({ weeks, done }: { weeks: number; done: boolean }) {
+  const left = daysLeftThisWeek(new Date().getTime());
+  const title = weeks > 0 ? `${weeks}-week streak` : 'Start a streak';
+  const sub = done
+    ? 'This week’s done ✓ See you next week'
+    : weeks > 0
+      ? `One chore in the next ${left} day${left === 1 ? '' : 's'} keeps it going`
+      : 'Log a chore every week to build one';
+  const past = Math.min(4, done ? weeks - 1 : weeks);
+  return (
+    <View style={styles.streak} accessibilityLabel={`${title}. ${sub}`}>
+      <Text style={{ fontSize: 22 }}>🔥</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.streakTitle}>{title}</Text>
+        <Text style={styles.streakSub}>{sub}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 4 }}>
+        {Array.from({ length: past }, (_, i) => <View key={i} style={[styles.sDot, { backgroundColor: colors.you }]} />)}
+        <View style={[styles.sDot, { borderWidth: 1.5, borderColor: colors.you }, done && { backgroundColor: colors.you }]} />
+      </View>
+    </View>
+  );
+}
+
 /** Your share, with a tick mark where a fair share is. Scaled so small shares are still visible. */
 function FairBar({ share, fair }: { share: number; fair: number }) {
   const max = Math.min(100, Math.max(fair * 2, share + 10));
@@ -240,6 +270,10 @@ const styles = StyleSheet.create({
   fairWrap: { justifyContent: 'center', marginVertical: 4 },
   fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.text, borderRadius: 1 },
   fairLine: { fontSize: 12, color: colors.muted },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.cardRaised, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
+  streakTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  streakSub: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  sDot: { width: 8, height: 8, borderRadius: 4 },
   barFill: { height: '100%', backgroundColor: colors.text, borderRadius: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
   tile: {

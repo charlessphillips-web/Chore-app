@@ -4,6 +4,7 @@ export const NOTIFY_KINDS = {
   nudge: { title: 'Nudges', desc: 'When a housemate nudges you to do your chore' },
   check: { title: 'Photos to check', desc: 'When a housemate logs a chore' },
   redo: { title: 'Sent back', desc: 'When a chore you did is sent back to redo' },
+  reactions: { title: 'Reactions', desc: 'When a housemate reacts 👏 to a chore you did' },
   offers: { title: 'Chore offers', desc: 'Offers, counter offers and accepted deals' },
   payments: { title: 'Payments', desc: 'When you’re paid, or reminded to pay' },
   bins: { title: 'Bin day', desc: '8pm the night before the bins go out' },

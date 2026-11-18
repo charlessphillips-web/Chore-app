@@ -12,7 +12,8 @@ import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, choreSize, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
-import type { Away } from './away';
+import { awayDaysBetween, type Away } from './away';
+import { afterChore, milestoneHit, type Streak } from './streak';
 import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
@@ -247,6 +248,9 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     aways: Array.isArray(d.aways)
       ? (d.aways as unknown[]).filter((a): a is Away => !!a && typeof (a as Away).from === 'number' && typeof (a as Away).until === 'number')
       : [],
+    streak: d.streak && typeof d.streak.weeks === 'number' && typeof d.streak.lastWeek === 'string'
+      ? { weeks: d.streak.weeks, lastWeek: d.streak.lastWeek }
+      : null,
   };
 };
 
@@ -323,6 +327,8 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             offerId: d.offerId ?? null,
             creditTo: d.creditTo ?? null,
             creditToName: d.creditToName ?? null,
+            points: typeof d.points === 'number' ? d.points : 1,
+            reactions: d.reactions && typeof d.reactions === 'object' ? (d.reactions as Record<string, string>) : {},
           };
         }),
       ),
@@ -340,6 +346,18 @@ export async function setNotifPrefs(houseId: string, uid: string, prefs: NotifyP
 }
 
 /** Your profile picture (only you can change yours). null = back to your initial. */
+/** The emojis you can react with. */
+export const REACTIONS = ['👏', '🔥', '😂', '🫡', '💪'] as const;
+
+/** React to a housemate's chore (tap the same emoji again to take it off). */
+export async function reactToLog(houseId: string, log: ChoreLog, me: { uid: string; username: string }, emoji: string | null, members: Member[]) {
+  await updateDoc(doc(db, 'houses', houseId, 'logs', log.id), { [`reactions.${me.uid}`]: emoji ?? deleteField() });
+  if (emoji) {
+    track('reaction');
+    await ping(members, [log.userId], houseId, `${me.username} reacted ${emoji}`, `to your ${log.choreName}`, 'reactions');
+  }
+}
+
 /** Save your trips away (see lib/away). */
 export async function setAways(houseId: string, uid: string, aways: Away[]) {
   await updateDoc(memberRef(houseId, uid), { aways: aways.map((a) => ({ from: a.from, until: a.until })) });
@@ -368,8 +386,11 @@ export async function logChore(opts: {
   requestId?: string | null;
   /** Doing it for someone who's paying (an agreed offer): they get the point. */
   offer?: ChoreOffer | null;
-}): Promise<void> {
+}): Promise<{ streak: Streak; milestone: number | null }> {
   const { house, uid, username, photo } = opts;
+  const meNow = opts.members.find((m) => m.uid === uid);
+  const streak = afterChore(meNow?.streak, Date.now(), (a, b) => awayDaysBetween(meNow?.aways, a, b));
+  const milestone = milestoneHit(meNow?.streak, streak);
   const offer = opts.offer && opts.offer.doerUid === uid ? opts.offer : null;
   const requestId = opts.requestId ?? null;
   const name = cleanChoreName(opts.chore.name);
@@ -391,6 +412,7 @@ export async function logChore(opts: {
   if (offer) {
     // The payer gets the point when they mark it as paid, not now.
     batch.update(doc(db, 'houses', house.id, 'offers', offer.id), { status: 'done', logId: logRef.id });
+    batch.update(memberRef(house.id, uid), { streak });
   } else {
     // Dot-paths so only this period's / this chore's counters change.
     batch.update(memberRef(house.id, uid), {
@@ -400,6 +422,7 @@ export async function logChore(opts: {
       [`stats.${period}.points`]: (opts.members.find((m) => m.uid === uid)?.points ?? 0) + points,
       [`stats.${period}.chores.${key}`]: increment(1),
       lastCompletedAt: serverTimestamp(),
+      streak,
     });
   }
   if (requestId) {
@@ -419,6 +442,7 @@ export async function logChore(opts: {
       data: { type: 'chore_check', houseId: house.id },
     });
   }
+  return { streak, milestone };
 }
 
 /** Loads the full-size photo for one chore. */

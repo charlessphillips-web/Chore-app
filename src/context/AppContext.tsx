@@ -14,6 +14,8 @@ import { scheduleReminders } from '../lib/reminders';
 import { track } from '../lib/analytics';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { applyYouColor, colors } from '../components/theme';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, UserProfile } from '../lib/types';
 
 interface AppState {
@@ -41,6 +43,9 @@ interface AppState {
   notifStatus: NotificationStatus | null;
   /** Shows the phone's "allow notifications" pop-up and saves the token. */
   enableNotifications: () => Promise<NotificationStatus>;
+  /** Your "you" colour (Settings → Your colour). Saved on this phone. */
+  youColor: string;
+  setYouColor: (hex: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -64,8 +69,22 @@ interface HouseData {
 
 const MAX_RETRIES = 5;
 
+const YOU_KEY = 'rotawise.youColor';
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  // "You" colour: load the saved one, and re-render everything when it changes.
+  const [youColor, setYouState] = useState<string>(colors.you);
+  useEffect(() => {
+    AsyncStorage.getItem(YOU_KEY).then((v) => {
+      if (v) { applyYouColor(v); setYouState(colors.you); }
+    }).catch(() => {});
+  }, []);
+  const setYouColor = (hex: string) => {
+    applyYouColor(hex);
+    setYouState(colors.you);
+    AsyncStorage.setItem(YOU_KEY, colors.you).catch(() => {});
+  };
   // The profile, tagged with whose it is (undefined = not loaded yet).
   const [profileState, setProfileState] = useState<{ uid: string; profile: UserProfile | null }>();
   const [houseData, setHouseData] = useState<HouseData | null>(null);
@@ -263,6 +282,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     membersIn: (p: string) => (current?.members ?? []).map((m) => toMember(m.id, m.data, p)),
     notifStatus,
     enableNotifications,
+    youColor,
+    setYouColor,
   };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

@@ -733,3 +733,32 @@ test('house stakes: admin switches on, members suggest and vote only for themsel
   await assertSucceeds(deleteDoc(doc(db('alice'), 'houses', 'h1', 'stakes', 's1')));
   await assertFails(getDoc(doc(db('stranger'), 'houses', 'h1', 'stakes', 's1')));
 });
+
+test('reactions: one emoji each, only on someone else\'s chore, only your own', async () => {
+  await createHouse('alice');
+  await joinHouse('sam');
+  await joinHouse('toby', 'ABCDEF');
+  const id = await logChore('alice', 'h1', 'bins');
+  const ref = (uid) => doc(db(uid), 'houses', 'h1', 'logs', id);
+  await assertSucceeds(updateDoc(ref('sam'), { 'reactions.sam': '👏' }));
+  await assertSucceeds(updateDoc(ref('sam'), { 'reactions.sam': '🔥' }));
+  await assertSucceeds(updateDoc(ref('toby'), { 'reactions.toby': '😂' }));
+  await assertFails(updateDoc(ref('sam'), { 'reactions.toby': '👏' }));
+  await assertFails(updateDoc(ref('sam'), { 'reactions.sam': '💩' }));
+  await assertFails(updateDoc(ref('alice'), { 'reactions.alice': '👏' }));
+  await assertFails(updateDoc(ref('sam'), { 'reactions.sam': '👏', status: 'verified' }));
+  await assertSucceeds(updateDoc(ref('sam'), { 'reactions.sam': deleteField() }));
+  const r = (await getDoc(ref('alice'))).data().reactions;
+  assert.deepEqual(r, { toby: '😂' });
+});
+
+test('streak: your own, and only up by one at a time', async () => {
+  await createHouse('alice');
+  const ref = doc(db('alice'), 'houses', 'h1', 'members', 'alice');
+  await assertSucceeds(updateDoc(ref, { streak: { weeks: 1, lastWeek: '2026-11-16' } }));
+  await assertSucceeds(updateDoc(ref, { streak: { weeks: 2, lastWeek: '2026-11-23' } }));
+  await assertFails(updateDoc(ref, { streak: { weeks: 50, lastWeek: '2026-11-30' } }));
+  await assertSucceeds(updateDoc(ref, { streak: { weeks: 1, lastWeek: '2026-12-14' } }));
+  await joinHouse('sam');
+  await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1', 'members', 'alice'), { streak: { weeks: 2, lastWeek: '2026-12-21' } }));
+});

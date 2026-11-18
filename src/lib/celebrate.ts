@@ -17,6 +17,8 @@ export interface Celebration {
   afterPct: number;
   /** An equal share, e.g. 25 in a 4-person house. */
   fairPct: number;
+  /** "🔥 4-week streak", when this chore kept or grew your streak this week. */
+  streakNote?: string;
 }
 
 /** Cheeky lines per chore key; anything else uses GENERIC. */
@@ -45,7 +47,11 @@ export function celebrationLine(choreKey: string, seed = Math.random()): string 
  * `mine`/`total` are points BEFORE this chore; `people` is house size.
  */
 export function celebration(
-  opts: { mine: number; total: number; people: number; points: number; choreKey: string; fair?: number },
+  opts: {
+    mine: number; total: number; people: number; points: number; choreKey: string; fair?: number;
+    /** Streak after this chore, whether it went up just now, and a milestone (4, 8…) if hit. */
+    streak?: { weeks: number; grew: boolean; milestone: number | null };
+  },
   seed?: number,
 ): Celebration {
   const { mine, total, people, points, choreKey } = opts;
@@ -56,7 +62,10 @@ export function celebration(
   const afterPct = pct(mine + points, total + points);
   const wasBelow = total === 0 || mine / total < fair;
   const nowAt = (mine + points) / (total + points) >= fair;
-  const tier: CelebrationTier = people > 1 && wasBelow && nowAt ? 'fair' : points >= 2 ? 'popup' : 'toast';
-  const line = tier === 'fair' ? 'You hit your fair share.' : celebrationLine(choreKey, seed);
-  return { tier, points, line, beforePct, afterPct, fairPct };
+  const st = opts.streak;
+  const milestone = st?.milestone ?? null;
+  const tier: CelebrationTier = (people > 1 && wasBelow && nowAt) || milestone ? 'fair' : points >= 2 ? 'popup' : 'toast';
+  const line = milestone ? `${milestone}-week streak!` : tier === 'fair' ? 'You hit your fair share.' : celebrationLine(choreKey, seed);
+  const streakNote = st && st.grew && st.weeks >= 2 && !milestone ? `🔥 ${st.weeks}-week streak` : undefined;
+  return { tier, points, line, beforePct, afterPct, fairPct, streakNote };
 }

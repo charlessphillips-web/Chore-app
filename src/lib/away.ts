@@ -70,6 +70,11 @@ export function presentWeight(aways: Away[] | undefined, start: number, end: num
   return Math.max(0.05, 1 - away / len);
 }
 
+/** Days (can be fractional) of trips that fall between from and to. */
+export function awayDaysBetween(aways: Away[] | undefined, from: number, to: number): number {
+  return (1 - presentWeight(aways, from, to)) * ((to - from) / DAY);
+}
+
 /** Your fair share (0–1) of the house's points, given everyone's weights. */
 export function fairShareOf(uid: string, members: { uid: string; weight?: number }[]): number {
   const total = members.reduce((n, m) => n + (m.weight ?? 1), 0);

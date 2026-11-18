@@ -182,7 +182,7 @@ function ActionCard(p: {
 }) {
   return (
     <Pressable onPress={p.onPress} accessibilityRole="button" accessibilityLabel={`${p.title}. ${p.button}`}
-      style={({ pressed }) => [styles.card, styles.row, p.highlight && styles.highlight, pressed && { opacity: 0.7 }]}>
+      style={({ pressed }) => [styles.card, styles.row, p.highlight && [styles.highlight, { borderColor: colors.you }], pressed && { opacity: 0.7 }]}>
       {p.avatar ? <Avatar avatar={p.avatar.data} name={p.avatar.name} size={32} />
         : p.icon ? <Icon name={p.icon} size={22} color={colors.text} /> : null}
       <View style={{ flex: 1 }}>
@@ -206,7 +206,7 @@ function Btn({ title, onPress, ghost }: { title: string; onPress: () => void; gh
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 18, padding: 16 },
   wallet: { flexDirection: 'row', justifyContent: 'space-between' },
-  highlight: { borderWidth: 1.5, borderColor: colors.you },
+  highlight: { borderWidth: 1.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   label: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.2, color: colors.muted, textTransform: 'uppercase' },
   money: { fontSize: 30, fontWeight: '700', letterSpacing: -1, color: colors.text },

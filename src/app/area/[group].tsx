@@ -44,7 +44,7 @@ export default function AreaScreen() {
                   {waiting ? `Waiting on ${waiting.assignedToName}` : c.key.endsWith(' whole') ? 'Toilet, shower and sink in one go' : `${pts} point${pts > 1 ? 's' : ''}`}
                 </Text>
               </View>
-              <Text style={styles.pts}>+{pts}</Text>
+              <Text style={[styles.pts, { color: colors.you }]}>+{pts}</Text>
               <Icon name="chevron-forward" size={18} color={colors.muted} />
             </Pressable>
           );
@@ -60,5 +60,5 @@ const styles = StyleSheet.create({
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   name: { fontSize: 17, fontWeight: '600', color: colors.text },
   sub: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  pts: { fontSize: 15, fontWeight: '700', color: colors.you },
+  pts: { fontSize: 15, fontWeight: '700' },
 });
