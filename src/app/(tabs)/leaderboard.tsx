@@ -2,9 +2,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
 import { awayLabel, currentOrNextAway, fairShareOf } from '../../lib/away';
-import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, resetLabel } from '../../lib/period';
+import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, previousPeriodKey, resetLabel } from '../../lib/period';
 import { StakesCard } from '../../components/StakesCard';
-import { BigNumber, Loading, Screen, Title } from '../../components/ui';
+import { BigNumber, Loading, RowButton, Screen, Title } from '../../components/ui';
+import { router } from 'expo-router';
+import { track } from '../../lib/analytics';
 import { Tip } from '../../components/Tip';
 import { Avatar } from '../../components/Avatar';
 import { colors, fonts, radius, space, type } from '../../components/theme';
@@ -13,7 +15,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /** A league table: position, name, chores this period. */
 export default function Leaderboard() {
-  const { user, house, members } = useApp();
+  const { user, house, members, membersIn } = useApp();
   if (!user || !house) return <Loading />;
 
   const rule = house.reset;
@@ -24,6 +26,8 @@ export default function Leaderboard() {
   const daysLeft = Math.max(1, Math.ceil((end.getTime() - now.getTime()) / DAY));
   const elapsed = (now.getTime() - start.getTime()) / (end.getTime() - start.getTime());
   const resets = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  const freshPeriod = now.getTime() - start.getTime() < 30 * DAY
+    && membersIn(previousPeriodKey(now, rule)).some((m) => (m.points ?? m.totalCompleted) > 0);
 
   const pts = (m: (typeof members)[number]) => m.points ?? m.totalCompleted;
   const ranked = [...members].sort((a, b) => pts(b) - pts(a) || a.username.localeCompare(b.username));
@@ -43,6 +47,12 @@ export default function Leaderboard() {
     <Screen>
       <Title>Ranks</Title>
       <StakesCard />
+      <RowButton
+        icon="gift-outline"
+        title={freshPeriod ? 'Last period, wrapped 🎁' : 'Your Wrapped so far 🎁'}
+        subtitle={freshPeriod ? `${periodLabel(new Date(start.getTime() - DAY / 2), rule)}: who carried the house` : `Sneak peek. The full one arrives ${resets}`}
+        onPress={() => { track('wrapped_open'); router.push({ pathname: '/wrapped', params: { p: freshPeriod ? 'last' : 'now' } }); }}
+      />
       <Tip id="ranks">Everyone&apos;s fair share is an equal split of the chores. Bigger jobs are worth more points (Quick 1 · Medium 2 · Big 3). Whoever is furthest below their fair share gets the next &quot;needs doing&quot;.</Tip>
 
       <View style={styles.period}>

@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
 import { GettingStarted } from '../../components/GettingStarted';
@@ -17,12 +19,34 @@ import { currentStreak, daysLeftThisWeek, doneThisWeek } from '../../lib/streak'
 import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
+import { track } from '../../lib/analytics';
 import { colors, fonts, type } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
+/** Show last period's Wrapped once, in the first 2 weeks of a new period. */
+function useWrappedOnce(houseId: string | undefined, prevKey: string, show: boolean) {
+  useEffect(() => {
+    if (!houseId || !show) return;
+    const k = `rotawise.wrapped.${houseId}.${prevKey}`;
+    let live = true;
+    AsyncStorage.getItem(k).then((v) => {
+      if (!live || v) return;
+      AsyncStorage.setItem(k, 'seen').catch(() => {});
+      track('wrapped_open');
+      router.push({ pathname: '/wrapped', params: { p: 'last' } });
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [houseId, prevKey, show]);
+}
+
 export default function Home() {
   const { user, profile, house, members, openRequests, offers, wallpaper, isAdmin, stakes, membersIn } = useApp();
+  const today = new Date();
+  const prevKey = house ? previousPeriodKey(today, house.reset) : '';
+  const freshPeriod = !!house && today.getTime() - periodStart(today, house.reset).getTime() < 14 * 24 * 3_600_000;
+  const prevHadChores = freshPeriod && membersIn(prevKey).some((m) => (m.points ?? m.totalCompleted) > 0);
+  useWrappedOnce(house?.id, prevKey, prevHadChores);
   if (!user || !house) return <Loading />;
 
   const mine = openRequests.filter((r) => r.assignedTo === user.uid);
