@@ -34,6 +34,9 @@ export default function CreateAccount() {
       haptics.warning();
       setError(authError(e));
       setBusy(false);
+      if (['auth/email-already-in-use', 'auth/credential-already-in-use'].includes((e as { code?: string }).code ?? '')) {
+        router.push({ pathname: '/sign-in', params: { email: email.trim() } });
+      }
     }
   }
 

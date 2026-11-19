@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
-import { authError, checkLogin, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
+import { authError, checkLogin, resetPassword, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
 import { haptics } from '../../../lib/haptics';
 import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { PasswordInput } from '../../../components/PasswordInput';
@@ -31,8 +31,25 @@ export default function AccountScreen() {
           </Text>
         </Card>
         <Button
-          title="Sign out"
+          title="Switch to a different account"
           variant="secondary"
+          onPress={() => router.push({ pathname: '/sign-in', params: { switch: '1' } })}
+        />
+        <Button
+          title="Forgot this password?"
+          variant="ghost"
+          onPress={async () => {
+            try {
+              await resetPassword(loginEmail);
+              notify('Check your email', `We've sent a link to ${loginEmail} to set a new password. It can land in Junk.`);
+            } catch (e) {
+              notify('Could not send', authError(e));
+            }
+          }}
+        />
+        <Button
+          title="Sign out"
+          variant="ghost"
           onPress={async () => {
             if (await confirm('Sign out?', 'You can sign back in any time with your email and password.', 'Sign out')) {
               await signOutUser();
@@ -58,6 +75,9 @@ export default function AccountScreen() {
     } catch (e) {
       haptics.warning();
       setError(authError(e));
+      if (['auth/email-already-in-use', 'auth/credential-already-in-use'].includes((e as { code?: string }).code ?? '')) {
+        router.push({ pathname: '/sign-in', params: { switch: '1', email: email.trim() } });
+      }
     } finally {
       setBusy(false);
     }
@@ -77,6 +97,7 @@ export default function AccountScreen() {
         textContentType="newPassword" accessibilityLabel="Password" />
       <ErrorText>{error}</ErrorText>
       <Button title="Save my account" onPress={save} loading={busy} disabled={!email.trim() || !password} />
+      <Button title="I already have an account: sign in" variant="ghost" onPress={() => router.push({ pathname: '/sign-in', params: { switch: '1', email: email.trim() } })} />
       <Text style={[type.small, { color: colors.muted }]}>
         Your email is only used to sign in and reset your password. Housemates never see it.
       </Text>
