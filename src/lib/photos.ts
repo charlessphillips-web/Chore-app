@@ -52,6 +52,30 @@ export async function takeChorePhoto(): Promise<ChorePhoto | null> {
 
 export const jpegUri = (base64: string) => `data:image/jpeg;base64,${base64}`;
 
+/** Before photos are kept smaller (they sit on the chore itself). */
+const MAX_BEFORE_BYTES = 120_000;
+
+async function smallJpeg(uri: string): Promise<string> {
+  for (const [w, q] of [[480, 0.5], [360, 0.45], [280, 0.4]] as const) {
+    const data = await toJpegBase64(uri, w, q);
+    if (data.length <= MAX_BEFORE_BYTES) return data;
+  }
+  throw new Error('That photo is too large — try again.');
+}
+
+/** A "before" photo: from the camera now, or (`fromLibrary`) one already taken. Base64 JPEG, or null if cancelled. */
+export async function takeBeforePhoto(fromLibrary = false): Promise<string | null> {
+  if (!fromLibrary && Platform.OS !== 'web') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) throw new Error('Camera access is needed. You can turn it on in Settings.');
+  }
+  const result = fromLibrary
+    ? await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 })
+    : await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+  if (result.canceled || !result.assets?.[0]) return null;
+  return smallJpeg(result.assets[0].uri);
+}
+
 /**
  * Pick a picture from the phone's photos (house wallpaper, bug report
  * screenshot). Returns compressed base64 JPEG, or null if cancelled.

@@ -99,6 +99,10 @@ export interface ChoreLog {
   points: number;
   /** Housemates' reactions: uid → emoji. */
   reactions: Record<string, string>;
+  /** One line from the chore-doer, e.g. "Did the oven door too". */
+  note: string | null;
+  /** Optional "before" photo (small JPEG, base64). */
+  beforePhoto: string | null;
 }
 
 /** houses/{houseId}/requests/{id} — "this needs doing". */

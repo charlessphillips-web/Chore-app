@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { updateHouse } from '../../../lib/db';
-import { addBathroom, BATHROOM_TASKS, bathroomGroups, removeBathroom, setBathroomUsers, type HouseChore } from '../../../lib/chores';
+import { addBathroom, BATHROOM_TASKS, bathroomGroups, bathroomName, QUICK_BATHROOMS, removeBathroom, setBathroomUsers, type HouseChore } from '../../../lib/chores';
 import { track } from '../../../lib/analytics';
 import { haptics } from '../../../lib/haptics';
 import { Button, Card, Chip, ChipRow, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
@@ -84,8 +84,13 @@ export default function BathroomsSettings() {
 
       <Label>Add a bathroom</Label>
       <Card style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {QUICK_BATHROOMS.filter((n) => !groups.includes(bathroomName(n))).map((n) => (
+            <Chip key={n} label={n} selected={name === n} onPress={() => setName(n)} />
+          ))}
+        </View>
         <Input value={name} onChangeText={setName} placeholder='e.g. "Top floor" or "Downstairs loo"' maxLength={30} accessibilityLabel="Bathroom name" />
-        <Text style={type.small}>Who uses it?</Text>
+        <Text style={type.small}>Who uses it? (skip = everyone)</Text>
         <ChipRow>
           {members.map((m) => (
             <Chip key={m.uid} label={m.username} selected={users.includes(m.uid)} onPress={() => setUsers(toggle(users, m.uid))} />

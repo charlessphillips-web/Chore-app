@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
-import { cancelRequest, logChore, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
+import { cancelRequest, logChore, NOTE_MAX, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
 import { haptics } from '../../lib/haptics';
 import { celebration } from '../../lib/celebrate';
 import { fairShareOf } from '../../lib/away';
 import { choreSize } from '../../lib/chores';
 import { celebrate, toast } from '../../components/Celebration';
 import { pickAssignee } from '../../lib/assign';
-import { takeChorePhoto, type ChorePhoto } from '../../lib/photos';
+import { jpegUri, takeBeforePhoto, takeChorePhoto, type ChorePhoto } from '../../lib/photos';
 import { formatPrice } from '../../lib/money';
-import { Button, Card, confirm, ErrorText, Icon, Loading, notify, Screen, timeAgo, Title } from '../../components/ui';
+import { Button, Card, confirm, ErrorText, Icon, Input, Loading, notify, Screen, timeAgo, Title } from '../../components/ui';
 import { colors, radius, space, type } from '../../components/theme';
 
 type Step = 'choose' | 'done' | 'needs';
@@ -25,6 +26,35 @@ export default function ChoreScreen() {
   const [busy, setBusy] = useState<'photo' | 'save' | 'nudge' | null>(null);
   const [now] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState('');
+  // Optional "before" photo, kept on this phone until the chore is logged (max 24h).
+  const [before, setBefore] = useState<{ data: string; at: number } | null>(null);
+  const beforeKey = `rotawise.before.${house?.id ?? ''}.${key}`;
+  useEffect(() => {
+    let live = true;
+    AsyncStorage.getItem(beforeKey).then((v) => {
+      if (!live || !v) return;
+      const b = JSON.parse(v) as { data: string; at: number };
+      if (Date.now() - b.at < 24 * 3_600_000) setBefore(b);
+      else AsyncStorage.removeItem(beforeKey).catch(() => {});
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [beforeKey]);
+  const saveBefore = async (fromLibrary: boolean) => {
+    setError(null);
+    try {
+      const data = await takeBeforePhoto(fromLibrary);
+      if (!data) return;
+      const b = { data, at: Date.now() };
+      setBefore(b);
+      AsyncStorage.setItem(beforeKey, JSON.stringify(b)).catch(() => {});
+      haptics.success();
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const dropBefore = () => { setBefore(null); AsyncStorage.removeItem(beforeKey).catch(() => {}); };
 
   const chore = house?.chores.find((c) => c.key === key);
   const assignee = useMemo(
@@ -68,7 +98,9 @@ export default function ChoreScreen() {
       const result = await logChore({
         house: house!, members, uid: user!.uid, username: profile!.username,
         chore: chore!, photo, requestId: request?.id ?? null, offer: doingForSomeone,
+        note, before: before?.data ?? null,
       });
+      AsyncStorage.removeItem(beforeKey).catch(() => {});
       router.back();
       if (doingForSomeone) {
         haptics.success();
@@ -125,6 +157,22 @@ export default function ChoreScreen() {
             subtitle="Take a photo — a housemate will check it"
             onPress={() => setStep('done')}
           />
+          {before ? (
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Image source={{ uri: jpegUri(before.data) }} style={styles.beforeThumb} />
+              <View style={{ flex: 1 }}>
+                <Text style={type.body}>Before photo saved ✓</Text>
+                <Text style={type.small}>{timeAgo(before.at)}. Come back here when you&apos;re done.</Text>
+              </View>
+            </Card>
+          ) : (
+            <Choice
+              icon="images-outline"
+              title="Starting now?"
+              subtitle="Take a before photo (optional), then log it when you're done"
+              onPress={() => { saveBefore(false).then((ok) => ok && notify('Before photo saved', 'Do the chore, then tap it again and choose "I\'ve done it".')); }}
+            />
+          )}
           <Choice
             icon="notifications-outline"
             title={chore.needs}
@@ -228,6 +276,28 @@ export default function ChoreScreen() {
             loading={busy === 'photo'}
             disabled={busy === 'save'}
           />
+          <View style={styles.beforeRow}>
+            {before ? (
+              <>
+                <Image source={{ uri: jpegUri(before.data) }} style={styles.beforeThumb} />
+                <Text style={[type.small, { flex: 1 }]}>Before photo added. Checkers see before and after.</Text>
+                <Button title="Remove" variant="ghost" style={{ paddingVertical: 8, paddingHorizontal: 12 }} onPress={dropBefore} />
+              </>
+            ) : (
+              <>
+                <Icon name="images-outline" size={20} color={colors.muted} />
+                <Text style={[type.small, { flex: 1 }]}>Got a before photo? Add it from your photos (optional).</Text>
+                <Button title="Add" variant="ghost" style={{ paddingVertical: 8, paddingHorizontal: 12 }} onPress={() => saveBefore(true)} />
+              </>
+            )}
+          </View>
+          <Input
+            value={note}
+            onChangeText={setNote}
+            placeholder="What did you do? (optional) e.g. did the oven door too"
+            maxLength={NOTE_MAX}
+            accessibilityLabel="Note"
+          />
           <ErrorText>{error}</ErrorText>
           <Button title="Log chore" onPress={saveDone} loading={busy === 'save'} disabled={!photo || busy === 'photo'} />
           {canOffer && (
@@ -302,6 +372,8 @@ function Choice(p: { icon: React.ComponentProps<typeof Icon>['name']; title: str
 }
 
 const styles = StyleSheet.create({
+  beforeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  beforeThumb: { width: 52, height: 52, borderRadius: 8 },
   choice: {
     flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg,
     borderWidth: 1, borderColor: colors.outline, borderRadius: radius, backgroundColor: colors.card,

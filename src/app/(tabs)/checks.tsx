@@ -133,12 +133,26 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
         accessibilityRole="imagebutton"
         accessibilityLabel={`Photo of ${log.choreName}`}
       >
-        {log.photoThumb ? (
-          <Image source={{ uri: jpegUri(log.photoThumb) }} style={styles.photo} resizeMode="cover" />
+        {log.beforePhoto ? (
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {[['Before', log.beforePhoto], ['After', log.photoThumb]].map(([label, data]) => (
+              <View key={label} style={{ flex: 1 }}>
+                {data ? <Image source={{ uri: jpegUri(data) }} style={[styles.photo, { aspectRatio: 3 / 4 }]} resizeMode="cover" />
+                  : <View style={[styles.photo, { aspectRatio: 3 / 4, backgroundColor: colors.cardRaised }]} />}
+                <Text style={styles.enlarge}>{label}</Text>
+              </View>
+            ))}
+          </View>
         ) : (
-          <View style={[styles.photo, { backgroundColor: colors.cardRaised }]} />
+          <>
+            {log.photoThumb ? (
+              <Image source={{ uri: jpegUri(log.photoThumb) }} style={styles.photo} resizeMode="cover" />
+            ) : (
+              <View style={[styles.photo, { backgroundColor: colors.cardRaised }]} />
+            )}
+            <Text style={styles.enlarge}>tap to enlarge</Text>
+          </>
         )}
-        <Text style={styles.enlarge}>tap to enlarge</Text>
       </Pressable>
       <View style={{ padding: 6, paddingTop: 12, gap: space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -150,6 +164,7 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
             </Text>
           </View>
         </View>
+        {log.note && <Text style={[type.body, { fontStyle: 'italic' }]}>&ldquo;{log.note}&rdquo;</Text>}
         {prog.needed > 1 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Dots done={prog.done} needed={prog.needed} />

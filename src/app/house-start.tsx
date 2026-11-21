@@ -3,7 +3,7 @@ import { StyleSheet, Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { updateHouse } from '../lib/db';
-import { choreSize, SIZE_NAMES, type ChoreSize, type HouseChore } from '../lib/chores';
+import { addBathroom, bathroomGroups, bathroomName, choreSize, QUICK_BATHROOMS, removeBathroom, SIZE_NAMES, type ChoreSize, type HouseChore } from '../lib/chores';
 import { haptics } from '../lib/haptics';
 import { Button, Card, Chip, ErrorText, Label, Loading, Screen, Subtitle, Title } from '../components/ui';
 import { colors, type } from '../components/theme';
@@ -46,7 +46,7 @@ export default function HouseStart() {
         {isAdmin ? ' Switch off any your house doesn’t need, and change sizes if they look wrong.' : ' The house admin sets these.'}
       </Subtitle>
       <View style={styles.list}>
-        {house.chores.filter((c) => isAdmin || c.active).map((c, i) => (
+        {house.chores.filter((c) => !c.group && (isAdmin || c.active)).map((c, i) => (
           <View key={c.key} style={[styles.row, i > 0 && styles.divider]}>
             <View style={{ flex: 1, gap: 6 }}>
               <Text style={[styles.name, !c.active && { color: colors.muted }]}>{c.name}</Text>
@@ -67,7 +67,31 @@ export default function HouseStart() {
         ))}
       </View>
 
-      <Label>3 · House stakes (optional)</Label>
+      <Label>3 · Bathrooms</Label>
+      <Card style={{ gap: 10 }}>
+        <Text style={type.small}>
+          Tap each shared bathroom you have. Each gets Toilet, Shower and Sink (1 point each) or Whole bathroom (3).
+          {isAdmin ? ' Once people join, pick who uses which in Settings → Bathrooms.' : ''}
+        </Text>
+        {isAdmin ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {QUICK_BATHROOMS.map((n) => {
+              const on = bathroomGroups(house.chores).includes(bathroomName(n));
+              return (
+                <Chip key={n} label={on ? `✓ ${n}` : n} selected={on}
+                  onPress={() => {
+                    const next = on ? removeBathroom(house.chores, bathroomName(n)) : addBathroom(house.chores, n, []);
+                    if (typeof next !== 'string') save({ chores: next });
+                  }} />
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={type.small}>{bathroomGroups(house.chores).length ? `Set up: ${bathroomGroups(house.chores).join(', ')}` : 'None set up yet.'}</Text>
+        )}
+      </Card>
+
+      <Label>4 · House stakes (optional)</Label>
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Text style={[type.small, { flex: 1 }]}>

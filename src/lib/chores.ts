@@ -113,6 +113,9 @@ export const BATHROOM_TASKS: { key: string; name: string; needs: string; size: C
   { key: 'whole', name: 'Whole bathroom', needs: 'needs a full clean', size: 3, icon: 'home-outline' },
 ];
 
+/** One-tap names for setting up bathrooms. */
+export const QUICK_BATHROOMS = ['Top floor', 'First floor', 'Ground floor', 'Downstairs loo', 'Shared bathroom'];
+
 /** "Top floor" → "Top floor bathroom" (left alone if it already says bathroom, en-suite, loo...). */
 export function bathroomName(input: string): string {
   const clean = cleanChoreName(input);

@@ -38,6 +38,8 @@ export default function AddChore() {
     <Screen edges={['left', 'right']}>
       <Title>Add a chore</Title>
       <Subtitle>It appears as a tile on everyone&apos;s Home screen.</Subtitle>
+      <Button title="Adding a bathroom? Set them up per floor" icon="water-outline" variant="secondary"
+        onPress={() => router.replace('/settings/bathrooms')} />
       <Label>Chore</Label>
       <Input value={name} onChangeText={setName} placeholder="e.g. Recycling" maxLength={40} autoFocus accessibilityLabel="Chore name" />
       <Label>When it needs doing (optional)</Label>

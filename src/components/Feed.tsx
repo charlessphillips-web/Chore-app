@@ -89,7 +89,8 @@ function FeedItem({ log, me }: { log: ChoreLog; me: { uid: string; username: str
             <Text style={[styles.name, mine && { color: colors.you }]}>{mine ? 'You' : log.username}</Text>
             {' · '}{log.choreName}{log.creditToName ? ` for ${log.creditTo === me.uid ? 'you' : log.creditToName}` : ''}
           </Text>
-          <Text style={styles.sub}>{timeAgo(log.at)} · +{log.points} pt{log.points === 1 ? '' : 's'}</Text>
+          {log.note && <Text style={[styles.text, { fontSize: 14, fontStyle: 'italic' }]} numberOfLines={2}>&ldquo;{log.note}&rdquo;</Text>}
+          <Text style={styles.sub}>{timeAgo(log.at)} · +{log.points} pt{log.points === 1 ? '' : 's'}{log.beforePhoto ? ' · before & after' : ''}</Text>
           <StatusBadge log={log} />
         </View>
         {log.photoThumb ? (

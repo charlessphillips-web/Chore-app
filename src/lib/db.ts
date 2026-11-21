@@ -329,6 +329,8 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
             creditToName: d.creditToName ?? null,
             points: typeof d.points === 'number' ? d.points : 1,
             reactions: d.reactions && typeof d.reactions === 'object' ? (d.reactions as Record<string, string>) : {},
+            note: typeof d.note === 'string' && d.note.trim() ? d.note : null,
+            beforePhoto: typeof d.beforePhoto === 'string' ? d.beforePhoto : null,
           };
         }),
       ),
@@ -346,6 +348,9 @@ export async function setNotifPrefs(houseId: string, uid: string, prefs: NotifyP
 }
 
 /** Your profile picture (only you can change yours). null = back to your initial. */
+/** Longest one-line note on a logged chore. */
+export const NOTE_MAX = 80;
+
 /** The emojis you can react with. */
 export const REACTIONS = ['👏', '🔥', '😂', '🫡', '💪'] as const;
 
@@ -386,6 +391,10 @@ export async function logChore(opts: {
   requestId?: string | null;
   /** Doing it for someone who's paying (an agreed offer): they get the point. */
   offer?: ChoreOffer | null;
+  /** Optional one line about what was done. */
+  note?: string | null;
+  /** Optional "before" photo (small base64 JPEG). */
+  before?: string | null;
 }): Promise<{ streak: Streak; milestone: number | null }> {
   const { house, uid, username, photo } = opts;
   const meNow = opts.members.find((m) => m.uid === uid);
@@ -407,6 +416,8 @@ export async function logChore(opts: {
     photoThumb: photo.thumb, status: 'pending', reviewedBy: null, reviewedByName: null,
     checks: [], checkNames: [], checksNeeded: checksNeededFor(opts.members.length), points,
     offerId: offer?.id ?? null, creditTo: offer?.fromUid ?? null, creditToName: offer?.fromName ?? null,
+    note: opts.note?.trim().slice(0, NOTE_MAX) || null,
+    beforePhoto: opts.before ?? null,
   });
   batch.set(doc(db, 'houses', house.id, 'photos', logRef.id), { userId: uid, data: photo.full });
   if (offer) {

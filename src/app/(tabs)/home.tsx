@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,13 +10,14 @@ import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
 import { choreIcon } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
-import { periodLabel, periodStart, previousPeriodKey } from '../../lib/period';
+import { periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
 import { needsStakeVote } from '../../components/StakesCard';
 import { standing } from '../../lib/standing';
-import { awayDaysBetween, awayLabel, currentOrNextAway } from '../../lib/away';
+import { awayDaysBetween, awayLabel, currentOrNextAway, endAway } from '../../lib/away';
+import { setAways } from '../../lib/db';
 import { currentStreak, daysLeftThisWeek, doneThisWeek } from '../../lib/streak';
-import { Icon, Label, Loading, Logo, RowButton, Screen, timeAgo } from '../../components/ui';
+import { Button, confirm, Icon, Label, Loading, Logo, notify, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
 import { track } from '../../lib/analytics';
@@ -42,6 +43,7 @@ function useWrappedOnce(houseId: string | undefined, prevKey: string, show: bool
 
 export default function Home() {
   const { user, profile, house, members, openRequests, offers, wallpaper, isAdmin, stakes, membersIn } = useApp();
+  const [peek, setPeek] = useState(false);
   const today = new Date();
   const prevKey = house ? previousPeriodKey(today, house.reset) : '';
   const freshPeriod = !!house && today.getTime() - periodStart(today, house.reset).getTime() < 14 * 24 * 3_600_000;
@@ -67,6 +69,19 @@ export default function Home() {
   const me = members.find((m) => m.uid === user.uid);
   const s = standing(members, user.uid);
   const myTrip = currentOrNextAway(me?.aways, new Date().getTime());
+  const awayNow = !!me?.away;
+  async function toggleAway() {
+    haptics.tap();
+    if (!awayNow) return router.push('/away-quick');
+    if (!myTrip || !(await confirm('Back already?', 'You’ll be in the rota again straight away.', 'I’m back'))) return;
+    try {
+      await setAways(house!.id, user!.uid, endAway(me?.aways, myTrip, new Date().getTime()));
+      haptics.success();
+      setPeek(false);
+    } catch (e) {
+      notify('Could not save', (e as Error).message);
+    }
+  }
   const nowMs = new Date().getTime();
   const streakWeeks = currentStreak(me?.streak, nowMs, (a, b) => awayDaysBetween(me?.aways, a, b));
   const streakDone = doneThisWeek(me?.streak, nowMs);
@@ -89,8 +104,34 @@ export default function Home() {
       <View style={styles.top}>
         <Logo size={26} />
         <Text style={styles.house} numberOfLines={1}>{house.name}</Text>
-        <Text style={styles.period}>{periodLabel(new Date(), house.reset)}</Text>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityLabel="Away"
+          accessibilityState={{ checked: awayNow }}
+          onPress={toggleAway}
+          style={[styles.awayPill, awayNow && { backgroundColor: colors.you, borderColor: colors.you }]}
+        >
+          <Icon name="airplane" size={13} color={awayNow ? colors.inverse : colors.text} />
+          <Text style={[styles.awayText, awayNow && { color: colors.inverse }]}>{awayNow ? 'Away' : 'Away?'}</Text>
+        </Pressable>
       </View>
+
+      {awayNow && myTrip && !peek ? (
+        <View style={styles.awayCard}>
+          <Text style={{ fontSize: 56 }}>✈️</Text>
+          <Text style={styles.awayTitle}>You&apos;re away</Text>
+          <Text style={styles.awayBack}>Back {awayLabel(myTrip)}</Text>
+          <Text style={[type.small, { textAlign: 'center' }]}>
+            Enjoy it. You won&apos;t be asked to do any chores, and your fair share is paused while you&apos;re gone.
+          </Text>
+          <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 8 }}>
+            <Button title="I'm back" onPress={toggleAway} />
+            <Button title="Change dates" variant="secondary" onPress={() => router.push('/settings/away')} />
+            <Button title="Look at the house anyway" variant="ghost" onPress={() => setPeek(true)} />
+          </View>
+        </View>
+      ) : (
+      <>
 
       <View style={styles.hero}>
         <View style={styles.helloRow}>
@@ -219,6 +260,17 @@ export default function Home() {
               </Pressable>
             );
           })}
+          {isAdmin && !tiles.some((t) => t.group) && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add a bathroom"
+              onPress={() => { haptics.tap(); router.push('/settings/bathrooms'); }}
+              style={({ pressed }) => [styles.tile, styles.addTile, pressed && { backgroundColor: colors.card }]}
+            >
+              <Icon name="water-outline" size={24} color={colors.muted} />
+              <Text style={[styles.tileText, { color: colors.muted }]}>Add bathrooms</Text>
+            </Pressable>
+          )}
           {isAdmin && (
             <Pressable
               accessibilityRole="button"
@@ -236,6 +288,8 @@ export default function Home() {
         </View>
       ) : (
         <Text style={type.small}>No chores switched on. The house admin can add some in Settings.</Text>
+      )}
+      </>
       )}
     </Screen>
   );
@@ -294,6 +348,11 @@ const styles = StyleSheet.create({
   fairWrap: { justifyContent: 'center', marginVertical: 4 },
   fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.text, borderRadius: 1 },
   fairLine: { fontSize: 12, color: colors.muted },
+  awayPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 },
+  awayText: { fontSize: 12, fontWeight: '600', color: colors.text },
+  awayCard: { backgroundColor: colors.card, borderRadius: 22, padding: 24, alignItems: 'center', gap: 6, marginTop: 8 },
+  awayTitle: { fontSize: 30, fontWeight: '700', letterSpacing: -1, color: colors.text },
+  awayBack: { fontSize: 17, color: colors.you, fontWeight: '600', marginBottom: 4 },
   streak: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.cardRaised, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
   streakTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
   streakSub: { fontSize: 12, color: colors.muted, marginTop: 1 },

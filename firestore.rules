@@ -328,7 +328,11 @@ service cloud.firestore {
           && creditOk(houseId, logId, request.resource.data)
           && request.resource.data.get('checksNeeded', 1) in [1, 2]
           && request.resource.data.get('points', 1) in [1, 2, 3]
-          && request.resource.data.get('checks', []) == [];
+          && request.resource.data.get('checks', []) == []
+          && (request.resource.data.get('note', null) == null
+              || (request.resource.data.note is string && request.resource.data.note.size() <= 100))
+          && (request.resource.data.get('beforePhoto', null) == null
+              || (request.resource.data.beforePhoto is string && request.resource.data.beforePhoto.size() < 150000));
         // Housemates (not the chore-doer) check it within 24 hours: it needs
         // checksNeeded verifications (2, or 1 in a 2-person house), each person
         // once. Any one checker can send it back, which must take it off the
