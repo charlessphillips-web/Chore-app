@@ -9,6 +9,7 @@ import {
 } from '../lib/db';
 import { periodEnd, periodKey, periodStart, previousPeriodKey } from '../lib/period';
 import { isAway, presentWeight } from '../lib/away';
+import { AWAY_UNTIL_KEY } from '../lib/homeAway';
 import type { Stake } from '../lib/stakes';
 import { scheduleReminders } from '../lib/reminders';
 import { track } from '../lib/analytics';
@@ -261,6 +262,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const nowMs = new Date().getTime();
   const pStart = periodStart(new Date(nowMs), house?.reset).getTime();
   const pEnd = periodEnd(new Date(nowMs), house?.reset).getTime();
+  const myAways = (current?.members ?? []).find((m) => m.id === uid)?.data.aways;
+  const awayUntilNote = JSON.stringify(myAways ?? []);
+  useEffect(() => {
+    const trips = JSON.parse(awayUntilNote) as { from: number; until: number }[];
+    const t = Date.now();
+    const on = trips.find((a) => a.from <= t && t < a.until);
+    AsyncStorage.setItem(AWAY_UNTIL_KEY, String(on?.until ?? 0)).catch(() => {});
+  }, [awayUntilNote]);
   const members: Member[] = (current?.members ?? []).map((m) => {
     const x = toMember(m.id, m.data, period);
     return { ...x, weight: presentWeight(x.aways, pStart, pEnd), away: isAway(x.aways, nowMs) };

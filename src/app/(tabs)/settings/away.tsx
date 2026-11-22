@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { setAways } from '../../../lib/db';
 import { addAway, awayLabel, currentOrNextAway, endAway, makeAway, type Away } from '../../../lib/away';
 import { toDobString } from '../../../lib/dob';
 import { haptics } from '../../../lib/haptics';
-import { Button, Card, ErrorText, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
+import { Button, Card, ErrorText, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../../components/ui';
+import { homeAwaySupported, isHomeAwayOn, turnOffHomeAway, turnOnHomeAway } from '../../../lib/homeAway';
 import { DateField } from '../../../components/DobPicker';
 import { colors, type } from '../../../components/theme';
 
@@ -22,7 +23,23 @@ export default function AwayScreen() {
   const [until, setUntil] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoOn, setAutoOn] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
+  useEffect(() => { isHomeAwayOn().then(setAutoOn).catch(() => {}); }, []);
   if (!user || !house) return <Loading />;
+
+  async function toggleAuto(on: boolean) {
+    setAutoBusy(true);
+    if (on) {
+      const err = await turnOnHomeAway().catch((e) => (e as Error).message);
+      if (err) notify('Couldn’t switch it on', err);
+      else { setAutoOn(true); notify('Switched on', 'This spot is now home. We’ll ask if your phone isn’t here at night.'); }
+    } else {
+      await turnOffHomeAway();
+      setAutoOn(false);
+    }
+    setAutoBusy(false);
+  }
 
   const me = members.find((m) => m.uid === user.uid);
   const aways = me?.aways ?? [];
@@ -63,6 +80,19 @@ export default function AwayScreen() {
           <Button title="I'm back" onPress={() => save(endAway(aways, current, new Date().getTime()), 'Welcome back! You’re in the rota again.')} loading={busy} />
         </Card>
       )}
+
+      <Label>Notice when I&apos;m away</Label>
+      <Card style={{ gap: 10 }}>
+        <View style={styles.row}>
+          <Text style={[type.body, { flex: 1 }]}>Ask me if I&apos;m away</Text>
+          <Toggle value={autoOn} disabled={!homeAwaySupported || autoBusy} onValueChange={toggleAuto} accessibilityLabel="Ask me if I'm away" />
+        </View>
+        <Text style={type.small}>
+          {homeAwaySupported
+            ? 'Switch this on while you’re at home. If your phone isn’t home by 9:30pm, you’ll get a quick “Not home tonight?” to pause your chores. It never marks you away by itself, and your location never leaves your phone.'
+            : 'Only in the iPhone and Android app, not the website.'}
+        </Text>
+      </Card>
 
       <Label>Add a trip</Label>
       <Card style={{ gap: 12 }}>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addAway, endAway, currentOrNextAway, fairShareOf, isAway, makeAway, presentWeight } from './away.ts';
+import { addAway, awayAskTime, endAway, currentOrNextAway, fairShareOf, isAway, makeAway, presentWeight } from './away.ts';
 
 const DAY = 86_400_000;
 const now = new Date(2026, 10, 16, 12).getTime();
@@ -51,4 +51,11 @@ test('endAway: back early, or cancel a future trip', () => {
   const later = { from: now + DAY, until: now + 2 * DAY };
   assert.deepEqual(endAway([on, later], on, now), [{ from: now - DAY, until: now }, later]);
   assert.deepEqual(endAway([on, later], later, now), [on]);
+});
+
+test('awayAskTime: 9:30pm, or 30 minutes later if it is already evening', () => {
+  const noon = new Date(2026, 10, 16, 12).getTime();
+  assert.equal(new Date(awayAskTime(noon)).getHours(), 21);
+  const late = new Date(2026, 10, 16, 22, 10).getTime();
+  assert.equal(awayAskTime(late), late + 30 * 60_000);
 });

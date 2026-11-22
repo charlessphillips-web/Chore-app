@@ -43,7 +43,16 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Rotawise can notice when your phone is away from home overnight and ask if you want to pause your chores. Your location stays on your phone and is never shared.",
+          "locationWhenInUsePermission": "Rotawise uses your location once, while you are at home, to remember where home is. It stays on your phone.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
     ],
     "scheme": "choreboard",
     "backgroundColor": "#000000",

@@ -100,3 +100,10 @@ export function awayLabel(a: Away): string {
   const last = new Date(a.until - 1);
   return last.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
+
+/** When to ask "Not home tonight?": 9:30pm today, or in 30 minutes if it's already later than 9pm. */
+export function awayAskTime(now: number): number {
+  const d = new Date(now);
+  d.setHours(21, 30, 0, 0);
+  return now < d.getTime() - 30 * 60_000 ? d.getTime() : now + 30 * 60_000;
+}
