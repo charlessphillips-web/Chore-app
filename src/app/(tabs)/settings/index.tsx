@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
 import { deleteAccount, isAppOwner, leaveHouse } from '../../../lib/db';
 import { signOutUser } from '../../../lib/account';
-import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Screen, Title } from '../../../components/ui';
+import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Screen, Title, Toggle } from '../../../components/ui';
 import { resetTips, Tip } from '../../../components/Tip';
 import { Avatar } from '../../../components/Avatar';
 import { haptics } from '../../../lib/haptics';
@@ -156,18 +156,11 @@ export default function SettingsIndex() {
           title="Haptics"
           subtitle="Gentle vibration when you tap (app only)"
           right={
-            <Switch
-              value={hapticsOn}
-              onValueChange={(v) => {
+            <Toggle value={hapticsOn} onValueChange={(v) => {
                 haptics.setEnabled(v);
                 setHapticsOn(v);
                 haptics.select();
-              }}
-              trackColor={{ true: colors.text, false: colors.line }}
-              thumbColor={hapticsOn ? colors.inverse : colors.muted}
-              {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
-              accessibilityLabel="Haptics"
-            />
+              }} accessibilityLabel="Haptics" />
           }
         />
         <ListRow
@@ -175,18 +168,11 @@ export default function SettingsIndex() {
           title="Celebrations"
           subtitle="Pop-up and confetti when you log a chore"
           right={
-            <Switch
-              value={partyOn}
-              onValueChange={(v) => {
+            <Toggle value={partyOn} onValueChange={(v) => {
                 celebrations.setEnabled(v);
                 setPartyOn(v);
                 haptics.select();
-              }}
-              trackColor={{ true: colors.text, false: colors.line }}
-              thumbColor={partyOn ? colors.inverse : colors.muted}
-              {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
-              accessibilityLabel="Celebrations"
-            />
+              }} accessibilityLabel="Celebrations" />
           }
         />
       </ListGroup>

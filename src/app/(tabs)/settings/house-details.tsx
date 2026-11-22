@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { setResetRule, setWallpaper, updateHouse } from '../../../lib/db';
 import { pickFromLibrary } from '../../../lib/photos';
@@ -8,7 +8,7 @@ import { toDobString } from '../../../lib/dob';
 import { DateField } from '../../../components/DobPicker';
 import { PostcodeField } from '../../../components/PostcodeField';
 import type { HouseArea } from '../../../lib/postcode';
-import { Button, Card, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
+import { Button, Card, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../../components/ui';
 import { colors, radius, type } from '../../../components/theme';
 
 /** Admin: house name, leaderboard reset and wallpaper. */
@@ -142,11 +142,7 @@ export default function HouseDetails() {
             Optional: a prize for whoever does the most this period and a forfeit for whoever does the least. Everyone
             suggests and votes on Ranks.
           </Text>
-          <Switch
-            accessibilityLabel="House stakes"
-            value={house.stakes}
-            onValueChange={(on) => updateHouse(house.id, { stakes: on }).catch((e) => setError((e as Error).message))}
-          />
+          <Toggle value={house.stakes} onValueChange={(on) => updateHouse(house.id, { stakes: on }).catch((e) => setError((e as Error).message))} accessibilityLabel="House stakes" />
         </View>
       </Card>
 

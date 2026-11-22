@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Image, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, Animated, Easing, Image, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   type TextInputProps, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -334,4 +334,38 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 14, color: colors.text, fontWeight: '500' },
   error: { color: colors.danger, fontSize: 14 },
   empty: { alignItems: 'center', gap: space.sm, paddingVertical: space.lg },
+});
+
+/**
+ * On/off toggle: grey with the dot on the left when off, your colour with
+ * the dot on the right when on. A short, plain slide (no bounce).
+ */
+export function Toggle({ value, onValueChange, accessibilityLabel, disabled }: {
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  accessibilityLabel?: string;
+  disabled?: boolean;
+}) {
+  const [x] = useState(() => new Animated.Value(value ? 1 : 0));
+  useEffect(() => {
+    Animated.timing(x, { toValue: value ? 1 : 0, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  }, [value, x]);
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
+      hitSlop={8}
+      onPress={() => { haptics.select(); onValueChange(!value); }}
+      style={[toggleStyles.track, { backgroundColor: value ? colors.you : colors.line }, disabled && { opacity: 0.4 }]}
+    >
+      <Animated.View style={[toggleStyles.thumb, { transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) }] }]} />
+    </Pressable>
+  );
+}
+
+const toggleStyles = StyleSheet.create({
+  track: { width: 48, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },
+  thumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF' },
 });

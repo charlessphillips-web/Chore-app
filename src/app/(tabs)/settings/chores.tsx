@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
 import { updateHouse } from '../../../lib/db';
 import { addChore, choreSize, DEFAULT_CHORES, SIZE_NAMES, type ChoreSize, type HouseChore } from '../../../lib/chores';
-import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
+import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../../components/ui';
 import { colors, space, type } from '../../../components/theme';
 
 /** Admin: switch chores on/off and add new ones. */
@@ -73,14 +73,7 @@ export default function ChoresSettings() {
                 <Icon name="trash-outline" size={18} color={colors.muted} />
               </Text>
             )}
-            <Switch
-              accessibilityLabel={`${c.name} on or off`}
-              value={c.active}
-              onValueChange={(v) => toggle(c.key, v)}
-              trackColor={{ true: colors.text, false: colors.line }}
-              thumbColor={c.active ? colors.inverse : colors.muted}
-              {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
-            />
+            <Toggle value={c.active} onValueChange={(v) => toggle(c.key, v)} accessibilityLabel={`${c.name} on or off`} />
           </View>
         ))}
       </Card>

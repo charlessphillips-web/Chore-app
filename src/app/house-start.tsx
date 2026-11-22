@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { updateHouse } from '../lib/db';
 import { addBathroom, bathroomGroups, bathroomName, choreSize, QUICK_BATHROOMS, removeBathroom, SIZE_NAMES, type ChoreSize, type HouseChore } from '../lib/chores';
 import { haptics } from '../lib/haptics';
-import { Button, Card, Chip, ErrorText, Label, Loading, Screen, Subtitle, Title } from '../components/ui';
+import { Button, Card, Chip, ErrorText, Label, Loading, Screen, Subtitle, Title, Toggle } from '../components/ui';
 import { colors, type } from '../components/theme';
 
 /**
@@ -61,7 +61,7 @@ export default function HouseStart() {
               )}
             </View>
             {isAdmin && (
-              <Switch accessibilityLabel={`${c.name} on`} value={c.active} onValueChange={(on) => setChore(c.key, { active: on })} />
+              <Toggle value={c.active} onValueChange={(on) => setChore(c.key, { active: on })} accessibilityLabel={`${c.name} on`} />
             )}
           </View>
         ))}
@@ -98,7 +98,7 @@ export default function HouseStart() {
             A prize for whoever does the most this period and a forfeit for whoever does the least, e.g. &quot;Everyone buys
             them a pint&quot; or &quot;Cooks a roast&quot;. The whole house suggests and votes on Ranks.
           </Text>
-          {isAdmin && <Switch accessibilityLabel="House stakes" value={house.stakes} onValueChange={(on) => save({ stakes: on })} />}
+          {isAdmin && <Toggle value={house.stakes} onValueChange={(on) => save({ stakes: on })} accessibilityLabel="House stakes" />}
         </View>
         {!isAdmin && <Text style={type.small}>{house.stakes ? 'Your house has stakes switched on. Vote on Ranks.' : 'Your admin hasn’t switched these on.'}</Text>}
       </Card>

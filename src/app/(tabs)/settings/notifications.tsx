@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Platform, Switch, Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { useApp } from '../../../context/AppContext';
 import { setNotifPrefs } from '../../../lib/db';
 import { NOTIFY_KINDS, wants, type NotifyKind, type NotifyPrefs } from '../../../lib/notifyPrefs';
 import { haptics } from '../../../lib/haptics';
-import { Card, ErrorText, ListGroup, ListRow, Loading, Screen, Subtitle } from '../../../components/ui';
-import { colors, type } from '../../../components/theme';
+import { Card, ErrorText, ListGroup, ListRow, Loading, Screen, Subtitle, Toggle } from '../../../components/ui';
+import { type } from '../../../components/theme';
 
 /** Choose which notifications you get. */
 export default function NotificationSettings() {
@@ -48,14 +48,7 @@ export default function NotificationSettings() {
             title={NOTIFY_KINDS[k].title}
             subtitle={NOTIFY_KINDS[k].desc}
             right={
-              <Switch
-                value={wants(current, k)}
-                onValueChange={(v) => toggle(k, v)}
-                trackColor={{ true: colors.text, false: colors.line }}
-                thumbColor={wants(current, k) ? colors.inverse : colors.muted}
-                {...({ activeThumbColor: colors.inverse, activeTrackColor: colors.text } as object)}
-                accessibilityLabel={NOTIFY_KINDS[k].title}
-              />
+              <Toggle value={wants(current, k)} onValueChange={(v) => toggle(k, v)} accessibilityLabel={NOTIFY_KINDS[k].title} />
             }
           />
         ))}
