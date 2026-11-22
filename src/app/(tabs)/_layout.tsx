@@ -1,18 +1,17 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Platform, Text } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../context/AppContext';
 import { needsCheckBy } from '../../lib/review';
-import { colors, isLight, shade, tint, type TabName } from '../../components/theme';
+import { colors, isLight, type TabName } from '../../components/theme';
 import { haptics } from '../../lib/haptics';
 import { track, type EventName } from '../../lib/analytics';
 import { PRIVACY_VERSION } from '../../lib/legal';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-/** All-purple tab bar: bright and filled on the tab you're on, softer purple on the rest. */
-const tabTint = (_tab: TabName, focused: boolean) =>
-  focused ? colors.brand : isLight ? tint(colors.brand, 0.45) : shade(colors.brand, 0.35);
+/** Purple on the tab you're on (with a small dot under it), grey on the rest. */
+const tabTint = (_tab: TabName, focused: boolean) => (focused ? colors.brand : colors.muted);
 
 function icon(outline: IconName, filled: IconName, tab: TabName) {
   function TabIcon({ focused }: { focused: boolean }) {
@@ -23,7 +22,12 @@ function icon(outline: IconName, filled: IconName, tab: TabName) {
 
 function label(text: string, tab: TabName) {
   function TabLabel({ focused }: { focused: boolean }) {
-    return <Text style={{ fontSize: 11, lineHeight: 14, fontWeight: focused ? '700' : '500', marginTop: 4, color: tabTint(tab, focused) }}>{text}</Text>;
+    return (
+      <View style={{ alignItems: 'center', marginTop: 4 }}>
+        <Text style={{ fontSize: 11, lineHeight: 14, fontWeight: focused ? '700' : '500', color: tabTint(tab, focused) }}>{text}</Text>
+        <View style={{ width: 5, height: 5, borderRadius: 3, marginTop: 3, backgroundColor: focused ? colors.brand : 'transparent' }} />
+      </View>
+    );
   }
   return TabLabel;
 }
@@ -56,7 +60,7 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
-          height: 70 + bottom,
+          height: 78 + bottom,
           paddingTop: 6,
           paddingBottom: bottom,
         },
