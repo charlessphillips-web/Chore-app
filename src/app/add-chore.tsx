@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
+import { goBackOrHome } from '../lib/nav';
 import { useApp } from '../context/AppContext';
 import { updateHouse } from '../lib/db';
 import { addChore, SIZE_NAMES, type ChoreSize } from '../lib/chores';
@@ -27,7 +28,7 @@ export default function AddChore() {
     try {
       await updateHouse(house!.id, { chores: result });
       haptics.success();
-      router.back();
+      goBackOrHome();
     } catch (e) {
       setError((e as Error).message);
       setSaving(false);

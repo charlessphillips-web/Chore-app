@@ -3,7 +3,7 @@ import { useApp } from '../../../context/AppContext';
 import { haptics } from '../../../lib/haptics';
 import { Avatar } from '../../../components/Avatar';
 import { Label, Loading, Screen, Subtitle } from '../../../components/ui';
-import { colors, YOU_COLORS } from '../../../components/theme';
+import { colors, swatch, YOU_COLORS } from '../../../components/theme';
 
 /** Pick your "you" colour: your bar, name, points and confetti. Only you see it. */
 export default function ColourScreen() {
@@ -14,7 +14,7 @@ export default function ColourScreen() {
 
   return (
     <Screen edges={['left', 'right']}>
-      <Subtitle>Your bar, your name, your points and your confetti. Only you see it: everyone else still sees you in white.</Subtitle>
+      <Subtitle>Your bar, your name, your points and your confetti. Only you see it: to everyone else you look like everyone else.</Subtitle>
       <View style={styles.card}>
         <View style={styles.swatches}>
           {YOU_COLORS.map((c) => {
@@ -28,7 +28,7 @@ export default function ColourScreen() {
                 onPress={() => { haptics.select(); setYouColor(c.hex); }}
                 style={[styles.ring, on && { borderColor: colors.text }]}
               >
-                <View style={[styles.swatch, { backgroundColor: c.hex }]} />
+                <View style={[styles.swatch, { backgroundColor: swatch(c) }]} />
               </Pressable>
             );
           })}
@@ -42,7 +42,7 @@ export default function ColourScreen() {
         <Row avatar={<Avatar avatar={other?.avatar} name={other?.username ?? 'Sam'} size={30} />} name={other?.username ?? 'Sam'} pct={31} />
       </View>
       <View style={[styles.card, { alignItems: 'center' }]}>
-        <Text style={[styles.pts, { color: youColor }]}>+2</Text>
+        <Text style={[styles.pts, { color: colors.you }]}>+2</Text>
         <Text style={styles.line}>Carpet looking crisp.</Text>
       </View>
     </Screen>

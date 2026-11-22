@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { goBackOrHome } from '../../lib/nav';
 import { useApp } from '../../context/AppContext';
 import { cancelRequest, logChore, NOTE_MAX, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
 import { haptics } from '../../lib/haptics';
@@ -101,7 +102,7 @@ export default function ChoreScreen() {
         note, before: before?.data ?? null,
       });
       AsyncStorage.removeItem(beforeKey).catch(() => {});
-      router.back();
+      goBackOrHome();
       if (doingForSomeone) {
         haptics.success();
         toast(`Done for ${doingForSomeone.fromName}. You get paid once it's checked.`);
@@ -137,7 +138,7 @@ export default function ChoreScreen() {
           ? `${who.username} has been notified.`
           : `Added to ${who.username}'s list. They'll see it next time they open the app.`,
       );
-      router.back();
+      goBackOrHome();
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);
@@ -212,7 +213,7 @@ export default function ChoreScreen() {
               variant="ghost"
               onPress={async () => {
                 if (await confirm('Cancel it?', `${request.assignedToName} won't need to do it any more.`, 'Cancel it')) {
-                  await cancelRequest(house.id, request.id, user.uid).then(() => router.back()).catch((e) => setError((e as Error).message));
+                  await cancelRequest(house.id, request.id, user.uid).then(() => goBackOrHome()).catch((e) => setError((e as Error).message));
                 }
               }}
             />
@@ -251,7 +252,7 @@ export default function ChoreScreen() {
                 variant="ghost"
                 onPress={async () => {
                   if (await confirm('Dismiss this redo?', 'Use this if it was a mistake, e.g. the chore was logged twice. The sent-back chore still won’t count.', 'Dismiss')) {
-                    await cancelRequest(house.id, request.id, user.uid).then(() => router.back()).catch((e) => setError((e as Error).message));
+                    await cancelRequest(house.id, request.id, user.uid).then(() => goBackOrHome()).catch((e) => setError((e as Error).message));
                   }
                 }}
               />

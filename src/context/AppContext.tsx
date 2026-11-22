@@ -15,7 +15,7 @@ import { track } from '../lib/analytics';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { applyYouColor, colors } from '../components/theme';
+import { applyYouColor, YOU_COLORS } from '../components/theme';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, UserProfile } from '../lib/types';
 
 interface AppState {
@@ -74,16 +74,17 @@ const YOU_KEY = 'rotawise.youColor';
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   // "You" colour: load the saved one, and re-render everything when it changes.
-  const [youColor, setYouState] = useState<string>(colors.you);
+  // Stored and passed around as the colour's id (its Dark-mode hex); colors.you is the shade in use.
+  const [youColor, setYouState] = useState<string>(YOU_COLORS[0].hex);
   useEffect(() => {
     AsyncStorage.getItem(YOU_KEY).then((v) => {
-      if (v) { applyYouColor(v); setYouState(colors.you); }
+      if (v && YOU_COLORS.some((c) => c.hex === v)) { applyYouColor(v); setYouState(v); }
     }).catch(() => {});
   }, []);
   const setYouColor = (hex: string) => {
     applyYouColor(hex);
-    setYouState(colors.you);
-    AsyncStorage.setItem(YOU_KEY, colors.you).catch(() => {});
+    setYouState(hex);
+    AsyncStorage.setItem(YOU_KEY, hex).catch(() => {});
   };
   // The profile, tagged with whose it is (undefined = not loaded yet).
   const [profileState, setProfileState] = useState<{ uid: string; profile: UserProfile | null }>();

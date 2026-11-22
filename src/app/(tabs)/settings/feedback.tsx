@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, View } from 'react-native';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { goBackOrHome } from '../../../lib/nav';
 import { useApp } from '../../../context/AppContext';
 import { submitFeedback, type FeedbackType } from '../../../lib/db';
 import { jpegUri, pickFromLibrary } from '../../../lib/photos';
@@ -62,7 +63,7 @@ export default function Feedback() {
         screenshot,
       });
       notify('Thanks!', t.thanks);
-      router.back();
+      goBackOrHome();
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);

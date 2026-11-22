@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { goBackOrHome } from '../../../lib/nav';
 import { useApp } from '../../../context/AppContext';
 import { updateProfile } from '../../../lib/db';
 import { ProfileForm } from '../../../components/ProfileForm';
@@ -15,7 +15,7 @@ export default function PersonalDetails() {
         onSubmit={async (p) => {
           await updateProfile(user.uid, p, profile.houseId);
           notify('Saved', 'Your details have been updated.');
-          router.back();
+          goBackOrHome();
         }}
       />
     </Screen>

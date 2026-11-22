@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { goBackOrHome } from '../../../lib/nav';
 import { useApp } from '../../../context/AppContext';
 import { setAvatar } from '../../../lib/db';
 import {
@@ -46,7 +46,7 @@ export default function AvatarScreen() {
       await setAvatar(house!.id, user!.uid, a);
       haptics.success();
       notify('Saved', a ? 'Your housemates will see your new picture.' : 'Picture removed.');
-      router.back();
+      goBackOrHome();
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

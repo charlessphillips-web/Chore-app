@@ -111,7 +111,7 @@ export default function Leaderboard() {
       </View>
 
       <Text style={type.small}>
-        You&apos;re in purple. The white line on each bar is their fair share ({Math.round(fairPct)}% each, a bit less for anyone who&apos;s been away). Bigger jobs are worth more points, and
+        You&apos;re in your colour. The thin line on each bar is their fair share ({Math.round(fairPct)}% each, a bit less for anyone who&apos;s been away). Bigger jobs are worth more points, and
         whoever is furthest below their fair share gets the next &quot;needs doing&quot; request. Sent-back chores don&apos;t
         count until they&apos;re redone.
       </Text>

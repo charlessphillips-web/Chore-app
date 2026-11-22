@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   count: { fontSize: 12, color: colors.text, backgroundColor: colors.cardRaised, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 9, overflow: 'hidden' },
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius - 4 },
   enlarge: {
-    position: 'absolute', left: 10, top: 10, fontSize: 11, color: colors.text, backgroundColor: 'rgba(0,0,0,0.55)',
+    position: 'absolute', left: 10, top: 10, fontSize: 11, color: '#FFFFFF', backgroundColor: 'rgba(0,0,0,0.55)',
     borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, overflow: 'hidden',
   },
   empty: { backgroundColor: colors.card, borderRadius: 20, alignItems: 'center', paddingVertical: 32, paddingHorizontal: 18, gap: 6 },

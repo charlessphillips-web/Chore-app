@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { goBackOrHome } from '../lib/nav';
 import { useApp } from '../context/AppContext';
 import { setAways } from '../lib/db';
 import { addAway, makeAway } from '../lib/away';
@@ -35,7 +36,7 @@ export default function AwayQuick() {
       const me = members.find((m) => m.uid === user!.uid);
       await setAways(house!.id, user!.uid, addAway(me?.aways, a));
       haptics.success();
-      router.back();
+      goBackOrHome();
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

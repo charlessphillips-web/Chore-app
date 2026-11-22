@@ -14,6 +14,7 @@
     <link rel="manifest" href="/manifest.json" />
     <style id="expo-reset">
       html, body { height: 100%; background-color: #000000; }
+      html.light, html.light body { background-color: #F4F2EE; }
       body { overflow: hidden; }
       /* Feel like an app, not a web page: pressing and holding mustn't select
          text or pop up "Copy" (it would cancel "Hold to get started"). Text
@@ -25,6 +26,12 @@
       input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
       #root { display: flex; height: 100%; flex: 1; }
     </style>
+      <script>
+      try {
+        var a = localStorage.getItem('rotawise.appearance');
+        if (a === 'light' || (a === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches)) document.documentElement.classList.add('light');
+      } catch (e) {}
+    </script>
   </head>
   <body oncontextmenu="return false;">
     <noscript>You need to enable JavaScript to run this app.</noscript>

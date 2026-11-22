@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { goBackOrHome } from '../../lib/nav';
 import { useApp } from '../../context/AppContext';
 import {
   acceptCounter, acceptOffer, cancelOffer, counterOffer, createOffer, declineCounter, markOfferPaid, remindPayer,
@@ -64,7 +65,7 @@ export default function OfferScreen() {
       if (err) return setError(err);
       run('send', () => createOffer({ house, members, request, from: me, price: parsePrice(price)! }), () => {
         notify('Offer sent', 'Your housemates can accept it or make you one counter offer each.');
-        router.back();
+        goBackOrHome();
       });
     };
     return (
@@ -137,7 +138,7 @@ export default function OfferScreen() {
           <Button title="Withdraw offer" variant="ghost" disabled={!!busy}
             onPress={async () => {
               if (await confirm('Withdraw offer?', 'The chore goes back to being yours to do.', 'Withdraw')) {
-                run('cancel', () => cancelOffer(house.id, offer), () => router.back());
+                run('cancel', () => cancelOffer(house.id, offer), () => goBackOrHome());
               }
             }} />
         </>
@@ -217,7 +218,7 @@ export default function OfferScreen() {
                   if (await confirm(`Paid ${offer.doerName} ${price$}?`, 'This closes the deal and gives you the point for this chore.', "I've paid")) {
                     run('paid', () => markOfferPaid(house, offer, members), () => {
                       notify('Done', 'Thanks! The chore counts for you now.');
-                      router.back();
+                      goBackOrHome();
                     });
                   }
                 }} />

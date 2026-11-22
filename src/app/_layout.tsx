@@ -4,7 +4,7 @@ import { SpaceMono_400Regular, SpaceMono_700Bold } from '@expo-google-fonts/spac
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '../context/AppContext';
-import { colors, darkHeader } from '../components/theme';
+import { colors, darkHeader, isLight } from '../components/theme';
 import { CelebrationHost } from '../components/Celebration';
 
 export default function RootLayout() {
@@ -13,7 +13,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ backgroundColor: colors.bg }}>
       <AppProvider>
-        <StatusBar style="light" />
+        <StatusBar style={isLight ? 'dark' : 'light'} />
         <Stack screenOptions={{ headerShown: false, ...darkHeader }}>
           <Stack.Screen name="chore/[key]" options={{ presentation: 'modal', headerShown: true, title: '' }} />
           <Stack.Screen name="area/[group]" options={{ presentation: 'modal', headerShown: true, title: '' }} />

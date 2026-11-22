@@ -16,9 +16,9 @@ import type { ChoreLog } from '../lib/types';
 import { Avatar } from './Avatar';
 import { StatusBadge } from './StatusBadge';
 import { Empty, notify, timeAgo } from './ui';
-import { colors, shade } from './theme';
+import { colors, soft } from './theme';
 
-const chipOn = () => ({ borderColor: colors.you, backgroundColor: shade(colors.you, 0.75) });
+const chipOn = () => ({ borderColor: colors.you, backgroundColor: soft(colors.you) });
 
 export function Feed({ limit = 30 }: { limit?: number }) {
   const { user, profile, house, members, logs } = useApp();

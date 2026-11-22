@@ -11,7 +11,7 @@ import { haptics } from '../../../lib/haptics';
 import { celebrations } from '../../../components/Celebration';
 import { awayLabel, currentOrNextAway } from '../../../lib/away';
 import { bathroomGroups } from '../../../lib/chores';
-import { colors, fonts, space, type } from '../../../components/theme';
+import { appearance, colors, fonts, isLight, space, type } from '../../../components/theme';
 
 export default function SettingsIndex() {
   const { user, profile, house, members, isAdmin } = useApp();
@@ -130,6 +130,12 @@ export default function SettingsIndex() {
           subtitle={user.isAnonymous ? 'Not saved: add an email so you can sign in on another phone' : user.email ?? 'Saved'}
           right={user.isAnonymous ? <View style={styles.dot} /> : undefined}
           onPress={() => router.push('/settings/account')}
+        />
+        <ListRow
+          icon={isLight ? 'sunny-outline' : 'moon-outline'}
+          title="Appearance"
+          subtitle={appearance === 'system' ? 'Match my phone' : isLight ? 'Light' : 'Dark'}
+          onPress={() => router.push('/settings/appearance')}
         />
         <ListRow
           icon="color-palette-outline"

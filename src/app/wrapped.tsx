@@ -10,7 +10,7 @@ import { WEB_URL } from '../lib/legal';
 import { haptics } from '../lib/haptics';
 import { track } from '../lib/analytics';
 import { Icon, Loading, notify } from '../components/ui';
-import { colors, fonts, shade } from '../components/theme';
+import { colors, fonts, shade, tint } from '../components/theme';
 
 interface Slide { kicker: string; big?: string; title: string; body?: string; you?: boolean }
 
@@ -19,6 +19,9 @@ interface Slide { kicker: string; big?: string; title: string; body?: string; yo
  * ?p=last → the period that just ended (shown once at the start of a new
  * period); ?p=now → a sneak peek of the current one so far.
  */
+/** Wrapped is always a dark, colourful story (in Light mode too). */
+const W = '#F2F2F2';
+
 export default function WrappedScreen() {
   const { p } = useLocalSearchParams<{ p?: string }>();
   const { user, house, membersIn, stakes } = useApp();
@@ -93,16 +96,16 @@ export default function WrappedScreen() {
   return (
     <View style={[styles.page, { backgroundColor: shade(accent, 0.78), paddingTop: insets.top + 10, paddingBottom: insets.bottom + 16 }]}>
       <View style={styles.bars}>
-        {slides.map((_, n) => <View key={n} style={[styles.bar, { backgroundColor: n <= i ? colors.text : 'rgba(255,255,255,0.25)' }]} />)}
+        {slides.map((_, n) => <View key={n} style={[styles.bar, { backgroundColor: n <= i ? W : 'rgba(255,255,255,0.25)' }]} />)}
       </View>
       <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" hitSlop={12} style={styles.close}>
-        <Icon name="close" size={24} color={colors.text} />
+        <Icon name="close" size={24} color={W} />
       </Pressable>
 
       <View style={styles.body}>
-        <Text style={[styles.kicker, { color: colors.text }]}>{s.kicker}</Text>
+        <Text style={[styles.kicker, { color: W }]}>{s.kicker}</Text>
         <Text style={styles.title}>{s.title}</Text>
-        {s.big && <Text style={[styles.big, { color: s.you ? colors.you : colors.text }]} adjustsFontSizeToFit numberOfLines={1}>{s.big}</Text>}
+        {s.big && <Text style={[styles.big, { color: s.you ? tint(colors.you, 0.25) : W }]} adjustsFontSizeToFit numberOfLines={1}>{s.big}</Text>}
         {s.body && <Text style={styles.text}>{s.body}</Text>}
       </View>
 
@@ -140,15 +143,15 @@ const styles = StyleSheet.create({
   close: { position: 'absolute', right: 18, top: 56, zIndex: 3 },
   body: { flex: 1, justifyContent: 'center', gap: 10 },
   kicker: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.8 },
-  title: { fontSize: 34, fontWeight: '700', letterSpacing: -1, color: colors.text, lineHeight: 38 },
+  title: { fontSize: 34, fontWeight: '700', letterSpacing: -1, color: W, lineHeight: 38 },
   big: { fontSize: 96, fontWeight: '700', letterSpacing: -4, lineHeight: 104 },
-  text: { fontSize: 17, color: colors.text, opacity: 0.85, lineHeight: 24 },
+  text: { fontSize: 17, color: W, opacity: 0.85, lineHeight: 24 },
   taps: { position: 'absolute', left: 0, right: 0, top: 90, bottom: 140, flexDirection: 'row' },
   footer: { gap: 10, alignItems: 'stretch' },
-  btn: { backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  btnText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  btn: { backgroundColor: W, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  btnText: { color: '#000000', fontWeight: '700', fontSize: 16 },
   ghost: { paddingVertical: 10, alignItems: 'center' },
-  ghostText: { color: colors.text, fontSize: 15 },
-  hint: { color: colors.text, opacity: 0.7, textAlign: 'center', fontSize: 14 },
-  site: { color: colors.text, opacity: 0.5, textAlign: 'center', fontSize: 12, fontFamily: fonts.mono },
+  ghostText: { color: W, fontSize: 15 },
+  hint: { color: W, opacity: 0.7, textAlign: 'center', fontSize: 14 },
+  site: { color: W, opacity: 0.5, textAlign: 'center', fontSize: 12, fontFamily: fonts.mono },
 });
