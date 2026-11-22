@@ -48,6 +48,12 @@ function gapExcused(last: number, now: number, awayDays: (from: number, to: numb
   }
 }
 
+/** People who did chores before streaks existed: count their last chore week as week 1. */
+export function seedStreak(s: Streak | null | undefined, lastCompletedAt: number | null | undefined): Streak | null {
+  if (s) return s;
+  return lastCompletedAt ? { weeks: 1, lastWeek: weekKey(lastCompletedAt) } : null;
+}
+
 /** Your streak as it stands now (0 if it's broken). Still alive if you did one last week. */
 export function currentStreak(s: Streak | null | undefined, now: number, awayDays: (from: number, to: number) => number = () => 0): number {
   if (!s || s.weeks <= 0) return 0;

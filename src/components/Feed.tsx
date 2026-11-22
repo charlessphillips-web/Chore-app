@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { reactToLog, REACTIONS } from '../lib/db';
 import { awayDaysBetween, awayLabel, currentOrNextAway } from '../lib/away';
-import { currentStreak } from '../lib/streak';
+import { currentStreak, seedStreak } from '../lib/streak';
 import { jpegUri } from '../lib/photos';
 import { haptics } from '../lib/haptics';
 import type { ChoreLog } from '../lib/types';
@@ -26,7 +26,7 @@ export function Feed({ limit = 30 }: { limit?: number }) {
   if (!user || !house) return null;
   const away = members.filter((m) => m.away);
   const streaky = members
-    .map((m) => ({ m, w: currentStreak(m.streak, now, (a, b) => awayDaysBetween(m.aways, a, b)) }))
+    .map((m) => ({ m, w: currentStreak(seedStreak(m.streak, m.lastCompletedAt), now, (a, b) => awayDaysBetween(m.aways, a, b)) }))
     .filter((x) => x.w >= 4)
     .sort((a, b) => b.w - a.w);
 

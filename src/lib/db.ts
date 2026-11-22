@@ -13,7 +13,7 @@ import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, choreSize, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
 import { pickAssignee } from './assign';
 import { awayDaysBetween, type Away } from './away';
-import { afterChore, milestoneHit, type Streak } from './streak';
+import { afterChore, milestoneHit, seedStreak, type Streak } from './streak';
 import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import { sendPush } from './notifications';
@@ -398,8 +398,9 @@ export async function logChore(opts: {
 }): Promise<{ streak: Streak; milestone: number | null }> {
   const { house, uid, username, photo } = opts;
   const meNow = opts.members.find((m) => m.uid === uid);
-  const streak = afterChore(meNow?.streak, Date.now(), (a, b) => awayDaysBetween(meNow?.aways, a, b));
-  const milestone = milestoneHit(meNow?.streak, streak);
+  const before = seedStreak(meNow?.streak, meNow?.lastCompletedAt);
+  const streak = afterChore(before, Date.now(), (a, b) => awayDaysBetween(meNow?.aways, a, b));
+  const milestone = milestoneHit(before, streak);
   const offer = opts.offer && opts.offer.doerUid === uid ? opts.offer : null;
   const requestId = opts.requestId ?? null;
   const name = cleanChoreName(opts.chore.name);

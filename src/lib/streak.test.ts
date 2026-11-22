@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterChore, currentStreak, doneThisWeek, milestoneHit, weekKey } from './streak.ts';
+import { afterChore, currentStreak, doneThisWeek, milestoneHit, seedStreak, weekKey } from './streak.ts';
 
 const DAY = 86_400_000;
 const wed = new Date(2026, 10, 18, 12).getTime(); // Wed 18 Nov 2026
@@ -40,4 +40,10 @@ test('milestones', () => {
   assert.equal(milestoneHit({ weeks: 3, lastWeek: 'a' }, { weeks: 4, lastWeek: 'b' }), 4);
   assert.equal(milestoneHit({ weeks: 4, lastWeek: 'b' }, { weeks: 4, lastWeek: 'b' }), null);
   assert.equal(milestoneHit(null, { weeks: 1, lastWeek: 'b' }), null);
+});
+
+test('older chores seed a 1-week streak', () => {
+  assert.deepEqual(seedStreak(null, wed), { weeks: 1, lastWeek: '2026-11-16' });
+  assert.equal(seedStreak(null, null), null);
+  assert.equal(afterChore(seedStreak(null, wed - 7 * DAY), wed).weeks, 2);
 });

@@ -4,15 +4,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../context/AppContext';
 import { needsCheckBy } from '../../lib/review';
-import { colors, isLight, shade, tabColors, tint, type TabName } from '../../components/theme';
+import { colors, type TabName } from '../../components/theme';
 import { haptics } from '../../lib/haptics';
 import { track, type EventName } from '../../lib/analytics';
 import { PRIVACY_VERSION } from '../../lib/legal';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
-/** A tab's colour: bright when you're on it, softer when you're not. Each tab keeps its own colour. */
-const tabTint = (tab: TabName, focused: boolean) =>
-  focused ? tabColors[tab] : isLight ? tint(tabColors[tab], 0.35) : shade(tabColors[tab], 0.35);
+/** Plain tab bar: white (black in Light) when you're on it, grey when not. */
+const tabTint = (_tab: TabName, focused: boolean) => (focused ? colors.text : colors.muted);
 
 function icon(outline: IconName, filled: IconName, tab: TabName) {
   function TabIcon({ focused }: { focused: boolean }) {
@@ -46,7 +45,7 @@ export default function TabsLayout() {
     : 0;
   // The iPhone home bar area. Home-screen web apps sometimes report 0, so keep a minimum.
   const bottom = Math.max(insets.bottom, Platform.OS === 'web' ? 14 : 0);
-  const badge = (tab: TabName) => ({ backgroundColor: tabColors[tab], color: isLight ? '#FFFFFF' : '#000000', fontSize: 10, fontWeight: '700' as const });
+  const badge = (_tab: TabName) => ({ backgroundColor: colors.text, color: colors.inverse, fontSize: 10, fontWeight: '700' as const });
 
   return (
     <Tabs

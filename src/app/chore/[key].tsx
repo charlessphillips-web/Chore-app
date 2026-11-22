@@ -8,6 +8,7 @@ import { cancelRequest, logChore, NOTE_MAX, nudgeChore, NUDGE_EVERY_MS, requestC
 import { haptics } from '../../lib/haptics';
 import { celebration } from '../../lib/celebrate';
 import { fairShareOf } from '../../lib/away';
+import { seedStreak } from '../../lib/streak';
 import { choreSize } from '../../lib/chores';
 import { celebrate, toast } from '../../components/Celebration';
 import { pickAssignee } from '../../lib/assign';
@@ -114,7 +115,7 @@ export default function ChoreScreen() {
           total: members.reduce((n, m) => n + pts(m), 0),
           people: members.length,
           fair: fairShareOf(user!.uid, members),
-          streak: { weeks: result.streak.weeks, grew: (me?.streak?.weeks ?? 0) !== result.streak.weeks, milestone: result.milestone },
+          streak: { weeks: result.streak.weeks, grew: (seedStreak(me?.streak, me?.lastCompletedAt)?.weeks ?? 0) !== result.streak.weeks, milestone: result.milestone },
           points: choreSize(chore!),
           choreKey: chore!.key,
         }));

@@ -299,7 +299,7 @@ service cloud.firestore {
                .hasOnly(['username', 'pushToken', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt', 'notifPrefs', 'aways', 'streak'])
           && (!('streak' in request.resource.data) || (request.resource.data.streak.keys().hasOnly(['weeks', 'lastWeek'])
               && request.resource.data.streak.weeks is int && request.resource.data.streak.weeks >= 1
-              && request.resource.data.streak.weeks <= resource.data.get('streak', {}).get('weeks', 0) + 1
+              && request.resource.data.streak.weeks <= resource.data.get('streak', {}).get('weeks', 1) + 1
               && request.resource.data.streak.lastWeek is string && request.resource.data.streak.lastWeek.size() == 10))
           && (!('aways' in request.resource.data) || (request.resource.data.aways is list && request.resource.data.aways.size() <= 20))
           && (!('notifPrefs' in request.resource.data) || (request.resource.data.notifPrefs is map

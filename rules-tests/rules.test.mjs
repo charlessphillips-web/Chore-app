@@ -762,3 +762,10 @@ test('streak: your own, and only up by one at a time', async () => {
   await joinHouse('sam');
   await assertFails(updateDoc(doc(db('sam'), 'houses', 'h1', 'members', 'alice'), { streak: { weeks: 2, lastWeek: '2026-12-21' } }));
 });
+
+test('streak: someone with chores from before streaks can start on week 2, not more', async () => {
+  await createHouse('alice');
+  const ref = doc(db('alice'), 'houses', 'h1', 'members', 'alice');
+  await assertFails(updateDoc(ref, { streak: { weeks: 3, lastWeek: '2026-11-23' } }));
+  await assertSucceeds(updateDoc(ref, { streak: { weeks: 2, lastWeek: '2026-11-23' } }));
+});

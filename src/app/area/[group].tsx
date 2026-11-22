@@ -1,12 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../../context/AppContext';
-import { choreIcon, choreSize, taskName } from '../../lib/chores';
+import { choreEmoji, choreSize, taskName } from '../../lib/chores';
 import { haptics } from '../../lib/haptics';
 import { Icon, Loading, Screen, Subtitle, Title } from '../../components/ui';
 import { colors } from '../../components/theme';
 
-type IconName = React.ComponentProps<typeof Icon>['name'];
 
 /** A bathroom: pick which bit you did (or the whole thing), or say it needs doing. */
 export default function AreaScreen() {
@@ -37,7 +36,7 @@ export default function AreaScreen() {
               onPress={() => { haptics.tap(); router.push({ pathname: '/chore/[key]', params: { key: c.key } }); }}
               style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}
             >
-              <Icon name={choreIcon(c.key) as IconName} size={22} color={colors.text} />
+              <Text style={{ fontSize: 26 }}>{choreEmoji(c.key)}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{taskName(c)}</Text>
                 <Text style={styles.sub}>

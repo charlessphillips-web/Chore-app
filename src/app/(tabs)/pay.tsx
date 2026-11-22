@@ -6,7 +6,7 @@ import { watchPaidOffers } from '../../lib/db';
 import { formatPrice, PAY_LABELS, wallet } from '../../lib/money';
 import { periodStart } from '../../lib/period';
 import { effectiveStatus } from '../../lib/review';
-import { choreIcon } from '../../lib/chores';
+import { choreEmoji, choreIcon } from '../../lib/chores';
 import { haptics } from '../../lib/haptics';
 import type { ChoreOffer } from '../../lib/types';
 import { Avatar } from '../../components/Avatar';
@@ -108,7 +108,7 @@ export default function Pay() {
             return (
               <View key={o.id} style={styles.card}>
                 <View style={styles.row}>
-                  <Icon name={choreIcon(o.choreKey) as IconName} size={22} color={colors.text} />
+                  <Text style={{ fontSize: 24 }}>{choreEmoji(o.choreKey)}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.title} numberOfLines={1}>{o.choreName}</Text>
                     <Text style={styles.sub}>{status ?? `${o.fromName} will pay · ${timeAgo(o.createdAt)}`}</Text>

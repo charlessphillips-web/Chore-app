@@ -9,7 +9,7 @@ import { checkProgress, effectiveStatus, needsCheckBy, needsRedo, redoReason, RE
 import type { ChoreLog } from '../../lib/types';
 import { Button, Card, Chip, ChipRow, Icon, Input, Label, Loading, notify, Screen, Title, timeAgo } from '../../components/ui';
 import { Avatar } from '../../components/Avatar';
-import { choreIcon } from '../../lib/chores';
+import { choreEmoji } from '../../lib/chores';
 import { periodStart } from '../../lib/period';
 import { colors, radius, space, tabColors, type } from '../../components/theme';
 
@@ -62,7 +62,7 @@ export default function Checks() {
           <Card>
             {minePending.map((l, i) => (
               <View key={l.id} style={[styles.mineRow, i > 0 && styles.divider]}>
-                <Icon name={choreIcon(l.choreKey) as IconName} size={18} color={colors.text} />
+                <Text style={{ fontSize: 20 }}>{choreEmoji(l.choreKey)}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={type.body} numberOfLines={1}>{l.choreName}</Text>
                   <Text style={type.small}>{timeLeft(l.at)}</Text>

@@ -9,7 +9,7 @@ import { GettingStarted } from '../../components/GettingStarted';
 import { BinBanner } from '../../components/BinBanner';
 import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
-import { choreIcon } from '../../lib/chores';
+import { choreEmoji } from '../../lib/chores';
 import { formatPrice } from '../../lib/money';
 import { periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
@@ -17,14 +17,13 @@ import { needsStakeVote } from '../../components/StakesCard';
 import { standing } from '../../lib/standing';
 import { awayDaysBetween, awayLabel, currentOrNextAway, endAway } from '../../lib/away';
 import { setAways } from '../../lib/db';
-import { currentStreak, daysLeftThisWeek, doneThisWeek } from '../../lib/streak';
+import { currentStreak, daysLeftThisWeek, doneThisWeek, seedStreak } from '../../lib/streak';
 import { Button, confirm, Icon, Label, Loading, Logo, notify, RowButton, Screen, timeAgo } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
 import { track } from '../../lib/analytics';
 import { colors, fonts, isLight, shade, soft, streakColor, tint, type } from '../../components/theme';
 
-type IconName = React.ComponentProps<typeof Icon>['name'];
 
 /** Show last period's Wrapped once, in the first 2 weeks of a new period. */
 function useWrappedOnce(houseId: string | undefined, prevKey: string, show: boolean) {
@@ -84,8 +83,9 @@ export default function Home() {
     }
   }
   const nowMs = new Date().getTime();
-  const streakWeeks = currentStreak(me?.streak, nowMs, (a, b) => awayDaysBetween(me?.aways, a, b));
-  const streakDone = doneThisWeek(me?.streak, nowMs);
+  const myStreak = seedStreak(me?.streak, me?.lastCompletedAt);
+  const streakWeeks = currentStreak(myStreak, nowMs, (a, b) => awayDaysBetween(me?.aways, a, b));
+  const streakDone = doneThisWeek(myStreak, nowMs);
   const needsVote = needsStakeVote(user.uid, house, stakes);
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
@@ -252,7 +252,7 @@ export default function Home() {
                 }}
                 style={({ pressed }) => [styles.tile, pressed && { backgroundColor: colors.cardRaised, transform: [{ scale: 0.98 }] }]}
               >
-                <Icon name={(t.group ? 'water-outline' : choreIcon(t.key)) as IconName} size={22} color={colors.text} />
+                <Text style={styles.tileEmoji}>{t.group ? '🛁' : choreEmoji(t.key)}</Text>
                 <View>
                   <Text style={styles.tileText} numberOfLines={2}>{t.name}</Text>
                   {waiting ? (
@@ -369,6 +369,7 @@ const styles = StyleSheet.create({
     width: '49%', minHeight: 108, borderRadius: 16, padding: 14, justifyContent: 'space-between',
     backgroundColor: colors.card, gap: 8,
   },
+  tileEmoji: { fontSize: 30, lineHeight: 36 },
   tileText: { fontSize: 15, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
   tileSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
   addTile: { backgroundColor: 'transparent', borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.line },
