@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { ChoreIcon } from '../../components/ChoreIcon';
 import { useApp } from '../../context/AppContext';
 import { haptics } from '../../lib/haptics';
 import { sendBackChore, verifyChore } from '../../lib/db';
@@ -9,7 +10,7 @@ import { checkProgress, effectiveStatus, needsCheckBy, needsRedo, redoReason, RE
 import type { ChoreLog } from '../../lib/types';
 import { Button, Card, Chip, ChipRow, Icon, Input, Label, Loading, notify, Screen, Title, timeAgo } from '../../components/ui';
 import { Avatar } from '../../components/Avatar';
-import { choreEmoji } from '../../lib/chores';
+
 import { periodStart } from '../../lib/period';
 import { colors, radius, space, tabColors, type } from '../../components/theme';
 
@@ -62,7 +63,7 @@ export default function Checks() {
           <Card>
             {minePending.map((l, i) => (
               <View key={l.id} style={[styles.mineRow, i > 0 && styles.divider]}>
-                <Text style={{ fontSize: 20 }}>{choreEmoji(l.choreKey)}</Text>
+                <ChoreIcon choreKey={l.choreKey} size={28} />
                 <View style={{ flex: 1 }}>
                   <Text style={type.body} numberOfLines={1}>{l.choreName}</Text>
                   <Text style={type.small}>{timeLeft(l.at)}</Text>

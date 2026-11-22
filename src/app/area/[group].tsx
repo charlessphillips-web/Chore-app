@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { ChoreIcon } from '../../components/ChoreIcon';
 import { useApp } from '../../context/AppContext';
-import { choreEmoji, choreSize, taskName } from '../../lib/chores';
+import { choreSize, taskName } from '../../lib/chores';
 import { haptics } from '../../lib/haptics';
 import { Icon, Loading, Screen, Subtitle, Title } from '../../components/ui';
 import { colors } from '../../components/theme';
@@ -36,7 +37,7 @@ export default function AreaScreen() {
               onPress={() => { haptics.tap(); router.push({ pathname: '/chore/[key]', params: { key: c.key } }); }}
               style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}
             >
-              <Text style={{ fontSize: 26 }}>{choreEmoji(c.key)}</Text>
+              <ChoreIcon choreKey={c.key} size={34} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{taskName(c)}</Text>
                 <Text style={styles.sub}>

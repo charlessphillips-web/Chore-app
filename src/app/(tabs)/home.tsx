@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { ChoreIcon } from '../../components/ChoreIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../../context/AppContext';
@@ -9,7 +10,7 @@ import { GettingStarted } from '../../components/GettingStarted';
 import { BinBanner } from '../../components/BinBanner';
 import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
-import { choreEmoji } from '../../lib/chores';
+
 import { formatPrice } from '../../lib/money';
 import { periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
@@ -252,7 +253,7 @@ export default function Home() {
                 }}
                 style={({ pressed }) => [styles.tile, pressed && { backgroundColor: colors.cardRaised, transform: [{ scale: 0.98 }] }]}
               >
-                <Text style={styles.tileEmoji}>{t.group ? '🛁' : choreEmoji(t.key)}</Text>
+                <ChoreIcon choreKey={t.group ? 'bathroom' : t.key} />
                 <View>
                   <Text style={styles.tileText} numberOfLines={2}>{t.name}</Text>
                   {waiting ? (
@@ -369,7 +370,6 @@ const styles = StyleSheet.create({
     width: '49%', minHeight: 108, borderRadius: 16, padding: 14, justifyContent: 'space-between',
     backgroundColor: colors.card, gap: 8,
   },
-  tileEmoji: { fontSize: 30, lineHeight: 36 },
   tileText: { fontSize: 15, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
   tileSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
   addTile: { backgroundColor: 'transparent', borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.line },

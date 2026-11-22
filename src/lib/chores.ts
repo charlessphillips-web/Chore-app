@@ -96,34 +96,6 @@ const ICONS: Record<string, string> = {
   'cleaning stove': 'bonfire-outline',
 };
 
-/** A coloured picture (emoji) for each chore; guesses from the name for custom ones. */
-const EMOJI: Record<string, string> = {
-  bins: '🗑️',
-  'taking big bins out on bin days': '🚛',
-  'cleaning kitchen surfaces': '🧽',
-  hoovering: '🧹',
-  'tidying sitting room': '🛋️',
-  'cleaning sink': '🚰',
-  'emptying dishwasher': '🍽️',
-  'cleaning microwave': '♨️',
-  'cleaning oven': '🔥',
-  'cleaning stove': '🍳',
-};
-const BATHROOM_EMOJI: Record<string, string> = { toilet: '🚽', shower: '🚿', sink: '🪥', whole: '🛁' };
-const GUESSES: [RegExp, string][] = [
-  [/toilet|loo\b/, '🚽'], [/shower/, '🚿'], [/bath/, '🛁'], [/laundry|washing machine|clothes/, '🧺'],
-  [/fridge|freezer/, '🧊'], [/window/, '🪟'], [/garden|lawn|grass/, '🌿'], [/plant/, '🪴'], [/recycl/, '♻️'],
-  [/shop|groceries|milk|loo roll/, '🛒'], [/cook|dinner|meal/, '🍳'], [/dust/, '🪶'], [/mop|floor/, '🧽'],
-  [/bin/, '🗑️'], [/dish|plate|wash ?up/, '🍽️'], [/hoover|vacuum/, '🧹'], [/stairs/, '🪜'], [/bed|sheet/, '🛏️'],
-];
-
-export function choreEmoji(key: string): string {
-  if (EMOJI[key]) return EMOJI[key];
-  const task = BATHROOM_TASKS.find((t) => key.endsWith(` ${t.key}`));
-  if (task) return BATHROOM_EMOJI[task.key];
-  return GUESSES.find(([re]) => re.test(key))?.[1] ?? '🧽';
-}
-
 export function choreIcon(key: string): string {
   if (ICONS[key]) return ICONS[key];
   const task = BATHROOM_TASKS.find((t) => key.endsWith(` ${t.key}`));

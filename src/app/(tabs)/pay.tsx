@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { ChoreIcon } from '../../components/ChoreIcon';
 import { useApp } from '../../context/AppContext';
 import { watchPaidOffers } from '../../lib/db';
 import { formatPrice, PAY_LABELS, wallet } from '../../lib/money';
 import { periodStart } from '../../lib/period';
 import { effectiveStatus } from '../../lib/review';
-import { choreEmoji, choreIcon } from '../../lib/chores';
+import { choreIcon } from '../../lib/chores';
 import { haptics } from '../../lib/haptics';
 import type { ChoreOffer } from '../../lib/types';
 import { Avatar } from '../../components/Avatar';
@@ -108,7 +109,7 @@ export default function Pay() {
             return (
               <View key={o.id} style={styles.card}>
                 <View style={styles.row}>
-                  <Text style={{ fontSize: 24 }}>{choreEmoji(o.choreKey)}</Text>
+                  <ChoreIcon choreKey={o.choreKey} size={34} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.title} numberOfLines={1}>{o.choreName}</Text>
                     <Text style={styles.sub}>{status ?? `${o.fromName} will pay · ${timeAgo(o.createdAt)}`}</Text>
