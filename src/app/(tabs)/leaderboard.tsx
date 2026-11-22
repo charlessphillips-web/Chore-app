@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 import { track } from '../../lib/analytics';
 import { Tip } from '../../components/Tip';
 import { Avatar } from '../../components/Avatar';
-import { colors, fonts, radius, space, type } from '../../components/theme';
+import { colors, fonts, radius, space, tabColors, type } from '../../components/theme';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -45,7 +45,7 @@ export default function Leaderboard() {
 
   return (
     <Screen>
-      <Title>Ranks</Title>
+      <Title accent={tabColors.leaderboard}>Ranks</Title>
       <StakesCard />
       <RowButton
         icon="gift-outline"

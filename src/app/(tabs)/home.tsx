@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
@@ -21,7 +22,7 @@ import { Button, confirm, Icon, Label, Loading, Logo, notify, RowButton, Screen,
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
 import { track } from '../../lib/analytics';
-import { colors, fonts, type } from '../../components/theme';
+import { colors, fonts, isLight, shade, soft, streakColor, tint, type } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
@@ -133,7 +134,12 @@ export default function Home() {
       ) : (
       <>
 
-      <View style={styles.hero}>
+      <LinearGradient
+        colors={[isLight ? tint(colors.you, 0.82) : shade(colors.you, 0.6), colors.card]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.55, y: 1 }}
+        style={styles.hero}
+      >
         <View style={styles.helloRow}>
           <Avatar avatar={me?.avatar} name={profile?.username ?? '?'} size={34} />
           <Text style={styles.hello} numberOfLines={1}>Hey {profile?.username ?? ''}</Text>
@@ -154,7 +160,7 @@ export default function Home() {
         )}
         <Text style={type.small}>{s.hint}</Text>
         {members.length > 1 && <StreakRow weeks={streakWeeks} done={streakDone} />}
-      </View>
+      </LinearGradient>
 
       {stakesNews && (
         <RowButton icon="trophy-outline" title="Last period's stakes" subtitle={stakesNews} onPress={() => router.push('/leaderboard')} />
@@ -306,15 +312,15 @@ function StreakRow({ weeks, done }: { weeks: number; done: boolean }) {
       : 'Log a chore every week to build one';
   const past = Math.min(4, done ? weeks - 1 : weeks);
   return (
-    <View style={styles.streak} accessibilityLabel={`${title}. ${sub}`}>
+    <View style={[styles.streak, { backgroundColor: soft(streakColor) }]} accessibilityLabel={`${title}. ${sub}`}>
       <Text style={{ fontSize: 22 }}>🔥</Text>
       <View style={{ flex: 1 }}>
-        <Text style={styles.streakTitle}>{title}</Text>
+        <Text style={[styles.streakTitle, { color: streakColor }]}>{title}</Text>
         <Text style={styles.streakSub}>{sub}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: 4 }}>
-        {Array.from({ length: past }, (_, i) => <View key={i} style={[styles.sDot, { backgroundColor: colors.you }]} />)}
-        <View style={[styles.sDot, { borderWidth: 1.5, borderColor: colors.you }, done && { backgroundColor: colors.you }]} />
+        {Array.from({ length: past }, (_, i) => <View key={i} style={[styles.sDot, { backgroundColor: streakColor }]} />)}
+        <View style={[styles.sDot, { borderWidth: 1.5, borderColor: streakColor }, done && { backgroundColor: streakColor }]} />
       </View>
     </View>
   );
@@ -353,7 +359,7 @@ const styles = StyleSheet.create({
   awayCard: { backgroundColor: colors.card, borderRadius: 22, padding: 24, alignItems: 'center', gap: 6, marginTop: 8 },
   awayTitle: { fontSize: 30, fontWeight: '700', letterSpacing: -1, color: colors.text },
   awayBack: { fontSize: 17, color: colors.you, fontWeight: '600', marginBottom: 4 },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.cardRaised, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
   streakTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
   streakSub: { fontSize: 12, color: colors.muted, marginTop: 1 },
   sDot: { width: 8, height: 8, borderRadius: 4 },

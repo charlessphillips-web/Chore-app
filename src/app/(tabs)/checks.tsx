@@ -11,7 +11,7 @@ import { Button, Card, Chip, ChipRow, Icon, Input, Label, Loading, notify, Scree
 import { Avatar } from '../../components/Avatar';
 import { choreIcon } from '../../lib/chores';
 import { periodStart } from '../../lib/period';
-import { colors, radius, space, type } from '../../components/theme';
+import { colors, radius, space, tabColors, type } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
@@ -29,7 +29,7 @@ export default function Checks() {
   return (
     <Screen>
       <View style={styles.head}>
-        <Title>Checks</Title>
+        <Title accent={tabColors.checks}>Checks</Title>
         {toCheck.length > 0 && <Text style={styles.count}>{toCheck.length} to check</Text>}
       </View>
 

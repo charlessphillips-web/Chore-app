@@ -62,6 +62,15 @@ export const isLight = appearance === 'light' || (appearance === 'system' && App
 
 export const colors = { ...(isLight ? LIGHT : DARK) };
 
+/** Each tab's own colour (tab bar, page title). Deeper shades in Light mode. */
+const TAB_DARK = { home: '#9381F2', checks: '#5B9BFF', leaderboard: '#F5C542', pay: '#3DD6B0', house: '#FF7A59', settings: '#B8B8B8' };
+const TAB_LIGHT: typeof TAB_DARK = { home: '#6E58E6', checks: '#2F6FEB', leaderboard: '#B7860B', pay: '#0E9A76', house: '#E0552F', settings: '#6B675F' };
+export const tabColors = isLight ? TAB_LIGHT : TAB_DARK;
+export type TabName = keyof typeof TAB_DARK;
+
+/** Streak orange. */
+export const streakColor = isLight ? '#C36A00' : '#F5A524';
+
 /** Colours you can pick for "you" (Settings → Your colour). `light` is a deeper shade for Light mode. */
 export const YOU_COLORS = [
   { name: 'Purple', hex: '#9381F2', light: '#6E58E6' },

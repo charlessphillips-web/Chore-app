@@ -11,7 +11,7 @@ import { haptics } from '../../lib/haptics';
 import type { ChoreOffer } from '../../lib/types';
 import { Avatar } from '../../components/Avatar';
 import { Icon, Label, Loading, Screen, timeAgo, Title } from '../../components/ui';
-import { colors, fonts } from '../../components/theme';
+import { colors, fonts, tabColors } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
@@ -55,7 +55,7 @@ export default function Pay() {
 
   return (
     <Screen>
-      <Title>Pay</Title>
+      <Title accent={tabColors.pay}>Pay</Title>
 
       <View style={[styles.card, styles.wallet]} accessibilityLabel={`Earned ${formatPrice(earned)} this period, spent ${formatPrice(spent)}`}>
         <View>

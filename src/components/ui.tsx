@@ -45,8 +45,9 @@ export function Screen({
   );
 }
 
-export function Title({ children }: { children: React.ReactNode }) {
-  return <Text style={type.title}>{children}</Text>;
+/** Big page title. `accent` colours it (tab pages use their tab's colour). */
+export function Title({ children, accent }: { children: React.ReactNode; accent?: string }) {
+  return <Text style={[type.title, accent ? { color: accent } : null]}>{children}</Text>;
 }
 
 /** Text size for a house name: smaller the longer it is, so it always fits. */
@@ -59,10 +60,10 @@ export function houseNameSize(name: string): number {
 }
 
 /** The house name, shrinking to fit (up to 2 lines) so it's never cut off. */
-export function HouseName({ name }: { name: string }) {
+export function HouseName({ name, accent }: { name: string; accent?: string }) {
   return (
     <Text
-      style={[type.title, { fontSize: houseNameSize(name), lineHeight: houseNameSize(name) * 1.2 }]}
+      style={[type.title, { fontSize: houseNameSize(name), lineHeight: houseNameSize(name) * 1.2 }, accent ? { color: accent } : null]}
       numberOfLines={2}
       adjustsFontSizeToFit
       minimumFontScale={0.6}
