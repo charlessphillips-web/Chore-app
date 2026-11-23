@@ -27,6 +27,7 @@ export function Screen({
 }) {
   const content = (
     <SafeAreaView style={styles.screen} edges={edges}>
+      <FadeIn>
       <ScrollView
         contentContainerStyle={styles.screenInner}
         keyboardShouldPersistTaps="handled"
@@ -35,6 +36,7 @@ export function Screen({
       >
         {children}
       </ScrollView>
+      </FadeIn>
     </SafeAreaView>
   );
   if (!background) return <View style={styles.root}>{content}</View>;
@@ -263,10 +265,54 @@ export function Empty({ icon, children }: { icon: IconName; children: React.Reac
   );
 }
 
-export function Loading() {
+/** Fades its contents in when they first appear, so pages arrive smoothly instead of popping in. */
+export function FadeIn({ children, duration = 220 }: { children: React.ReactNode; duration?: number }) {
+  const [a] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(a, { toValue: 1, duration, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  }, [a, duration]);
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-      <ActivityIndicator size="small" color={colors.muted} />
+    <Animated.View style={{ flex: 1, opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }] }}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
+ * While things load: the Rotawise logo gently pulsing with a soft purple
+ * ring, "ROTAWISE" and a short line. Waits a moment before showing, so very
+ * quick loads don't flash it.
+ */
+export function Loading({ message = 'Getting your house…' }: { message?: string }) {
+  const [pulse] = useState(() => new Animated.Value(0));
+  const [show] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    Animated.timing(show, { toValue: 1, duration: 250, delay: 150, useNativeDriver: true }).start();
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse, show]);
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }} accessibilityLabel="Loading">
+      <Animated.View style={{ alignItems: 'center', gap: 16, opacity: show }}>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View
+            style={{
+              position: 'absolute', width: 120, height: 120, borderRadius: 34, backgroundColor: colors.brand,
+              opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.25] }),
+              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] }) }],
+            }}
+          />
+          <Animated.View style={{ transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }] }}>
+            <Logo size={84} />
+          </Animated.View>
+        </View>
+        <Text style={{ fontFamily: type.label.fontFamily, fontSize: 15, letterSpacing: 2.5, color: colors.text, fontWeight: '700' }}>ROTAWISE</Text>
+        <Text style={{ fontSize: 14, color: colors.muted }}>{message}</Text>
+      </Animated.View>
     </View>
   );
 }
