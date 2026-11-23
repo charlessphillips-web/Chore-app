@@ -56,6 +56,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Fade between tabs instead of jumping.
+        animation: 'fade',
         // Taller bar with room for the iPhone home bar, so labels are never cut off.
         tabBarStyle: {
           backgroundColor: colors.bg,

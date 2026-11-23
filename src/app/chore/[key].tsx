@@ -4,7 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { goBackOrHome } from '../../lib/nav';
 import { useApp } from '../../context/AppContext';
-import { cancelRequest, logChore, NOTE_MAX, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
+import { cancelRequest, logChore, NOTE_MAX, streakAfterLog, nudgeChore, NUDGE_EVERY_MS, requestChore } from '../../lib/db';
 import { haptics } from '../../lib/haptics';
 import { celebration } from '../../lib/celebrate';
 import { fairShareOf } from '../../lib/away';
@@ -92,37 +92,34 @@ export default function ChoreScreen() {
     }
   }
 
-  async function saveDone() {
+  /** Celebrate straight away; the photo uploads in the background (you're told if it fails). */
+  function saveDone() {
     if (!photo) return;
     setError(null);
-    setBusy('save');
-    try {
-      const result = await logChore({
-        house: house!, members, uid: user!.uid, username: profile!.username,
-        chore: chore!, photo, requestId: request?.id ?? null, offer: doingForSomeone,
-        note, before: before?.data ?? null,
-      });
-      AsyncStorage.removeItem(beforeKey).catch(() => {});
-      goBackOrHome();
-      if (doingForSomeone) {
-        haptics.success();
-        toast(`Done for ${doingForSomeone.fromName}. You get paid once it's checked.`);
-      } else {
-        const pts = (m: { points?: number; totalCompleted: number }) => m.points ?? m.totalCompleted;
-        const me = members.find((m) => m.uid === user!.uid);
-        celebrate(celebration({
-          mine: me ? pts(me) : 0,
-          total: members.reduce((n, m) => n + pts(m), 0),
-          people: members.length,
-          fair: fairShareOf(user!.uid, members),
-          streak: { weeks: result.streak.weeks, grew: (seedStreak(me?.streak, me?.lastCompletedAt)?.weeks ?? 0) !== result.streak.weeks, milestone: result.milestone },
-          points: choreSize(chore!),
-          choreKey: chore!.key,
-        }));
-      }
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(null);
+    const me = members.find((m) => m.uid === user!.uid);
+    const result = streakAfterLog(me);
+    logChore({
+      house: house!, members, uid: user!.uid, username: profile!.username,
+      chore: chore!, photo, requestId: request?.id ?? null, offer: doingForSomeone,
+      note, before: before?.data ?? null,
+    })
+      .then(() => AsyncStorage.removeItem(beforeKey).catch(() => {}))
+      .catch((e) => notify('That chore didn’t save', `${(e as Error).message} Please log it again.`));
+    goBackOrHome();
+    if (doingForSomeone) {
+      haptics.success();
+      toast(`Done for ${doingForSomeone.fromName}. You get paid once it's checked.`);
+    } else {
+      const pts = (m: { points?: number; totalCompleted: number }) => m.points ?? m.totalCompleted;
+      celebrate(celebration({
+        mine: me ? pts(me) : 0,
+        total: members.reduce((n, m) => n + pts(m), 0),
+        people: members.length,
+        fair: fairShareOf(user!.uid, members),
+        streak: { weeks: result.streak.weeks, grew: (seedStreak(me?.streak, me?.lastCompletedAt)?.weeks ?? 0) !== result.streak.weeks, milestone: result.milestone },
+        points: choreSize(chore!),
+        choreKey: chore!.key,
+      }));
     }
   }
 

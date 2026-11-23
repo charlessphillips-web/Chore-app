@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState as RNAppState } from 'react-native';
 import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import type { FirestoreError } from 'firebase/firestore';
@@ -50,6 +50,8 @@ interface AppState {
 }
 
 const AppContext = createContext<AppState | null>(null);
+/** One shared empty list, so "nothing yet" doesn't count as a change on every render. */
+const EMPTY: never[] = [];
 
 export function useApp(): AppState {
   const ctx = useContext(AppContext);
@@ -82,11 +84,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (v && YOU_COLORS.some((c) => c.hex === v)) { applyYouColor(v); setYouState(v); }
     }).catch(() => {});
   }, []);
-  const setYouColor = (hex: string) => {
+  const setYouColor = useCallback((hex: string) => {
     applyYouColor(hex);
     setYouState(hex);
     AsyncStorage.setItem(YOU_KEY, hex).catch(() => {});
-  };
+  }, []);
   // The profile, tagged with whose it is (undefined = not loaded yet).
   const [profileState, setProfileState] = useState<{ uid: string; profile: UserProfile | null }>();
   const [houseData, setHouseData] = useState<HouseData | null>(null);
@@ -197,13 +199,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [houseId, uid]);
 
-  async function enableNotifications(): Promise<NotificationStatus> {
+  const enableNotifications = useCallback(async (): Promise<NotificationStatus> => {
     const token = await registerForPushNotifications({ ask: true });
     if (token && houseId && uid) await setPushToken(houseId, uid, token).catch(() => {});
     const status = await getNotificationStatus();
     setNotifStatus(status);
     return status;
-  }
+  }, [houseId, uid]);
 
   const current = houseData && houseData.houseId === houseId ? houseData : null;
   const house = current?.house ?? null;
@@ -216,7 +218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const key = `${houseId}|${stakePeriods}`;
     return watchStakes(houseId, stakePeriods.split(','), (stakes) => setStakesData({ key, stakes }), () => {});
   }, [houseId, stakePeriods]);
-  const stakes = stakesData && stakesData.key === `${houseId}|${stakePeriods}` ? stakesData.stakes : [];
+  const stakes = stakesData && stakesData.key === `${houseId}|${stakePeriods}` ? stakesData.stakes : (EMPTY as Stake[]);
 
   // 4b. Chores logged 12+ hours ago that still need checks: remind the people
   // who haven't checked (once per chore, whichever phone gets there first).
@@ -259,9 +261,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Scores for the current period, using the house's reset setting.
   const period = periodKey(new Date(), house?.reset);
   // Away days shrink your fair share for this period; away now = not asked to do chores.
-  const nowMs = new Date().getTime();
-  const pStart = periodStart(new Date(nowMs), house?.reset).getTime();
-  const pEnd = periodEnd(new Date(nowMs), house?.reset).getTime();
+  // Recalculated at most once a minute (and whenever the data changes), so screens don't redraw for nothing.
+  const minute = Math.floor(new Date().getTime() / 60_000);
+  const reset = house?.reset;
+  const resetKey = JSON.stringify(reset ?? null);
   const myAways = (current?.members ?? []).find((m) => m.id === uid)?.data.aways;
   const awayUntilNote = JSON.stringify(myAways ?? []);
   useEffect(() => {
@@ -270,30 +273,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const on = trips.find((a) => a.from <= t && t < a.until);
     AsyncStorage.setItem(AWAY_UNTIL_KEY, String(on?.until ?? 0)).catch(() => {});
   }, [awayUntilNote]);
-  const members: Member[] = (current?.members ?? []).map((m) => {
-    const x = toMember(m.id, m.data, period);
-    return { ...x, weight: presentWeight(x.aways, pStart, pEnd), away: isAway(x.aways, nowMs) };
-  });
-  const value: AppState = {
+  const rawMembers = current?.members;
+  const members: Member[] = useMemo(() => {
+    const nowMs = Math.max(minute * 60_000, new Date().getTime());
+    const r = JSON.parse(resetKey) as typeof reset;
+    const pStart = periodStart(new Date(nowMs), r ?? undefined).getTime();
+    const pEnd = periodEnd(new Date(nowMs), r ?? undefined).getTime();
+    return (rawMembers ?? []).map((m) => {
+      const x = toMember(m.id, m.data, period);
+      return { ...x, weight: presentWeight(x.aways, pStart, pEnd), away: isAway(x.aways, nowMs) };
+    });
+  }, [rawMembers, period, minute, resetKey]);
+  const membersIn = useCallback((p: string) => (rawMembers ?? []).map((m) => toMember(m.id, m.data, p)), [rawMembers]);
+  const clearNotice = useCallback(() => setNotice(null), []);
+  const value: AppState = useMemo(() => ({
     ready: profileReady,
     error,
     notice,
-    clearNotice: () => setNotice(null),
+    clearNotice,
     user,
     profile,
     house,
     isAdmin: !!house && !!uid && house.adminUid === uid,
     members,
-    openRequests: current?.openRequests ?? [],
-    logs: current?.logs ?? [],
-    offers: current?.offers ?? [],
+    openRequests: current?.openRequests ?? EMPTY,
+    logs: current?.logs ?? EMPTY,
+    offers: current?.offers ?? EMPTY,
     wallpaper: current?.wallpaper ?? null,
     stakes,
-    membersIn: (p: string) => (current?.members ?? []).map((m) => toMember(m.id, m.data, p)),
+    membersIn,
     notifStatus,
     enableNotifications,
     youColor,
     setYouColor,
-  };
+  }), [profileReady, error, notice, clearNotice, user, profile, house, uid, members, current, stakes, membersIn, notifStatus, enableNotifications, youColor, setYouColor]);
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

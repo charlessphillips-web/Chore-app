@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { pickAssignee } from '../../lib/assign';
-import { awayLabel, currentOrNextAway, fairShareOf } from '../../lib/away';
+import { fairShareOf, tillLabel } from '../../lib/away';
 import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, previousPeriodKey, resetLabel } from '../../lib/period';
 import { StakesCard } from '../../components/StakesCard';
 import { BigNumber, Loading, RowButton, Screen, Title } from '../../components/ui';
@@ -101,7 +101,7 @@ export default function Leaderboard() {
                 <Text style={styles.next}>
                   {pts(m)} point{pts(m) === 1 ? '' : 's'} · {m.totalCompleted} chore{m.totalCompleted === 1 ? '' : 's'}
                   {nextUp?.uid === m.uid ? ' · next up for chores' : ''}
-                  {m.away ? ` · ✈️ away till ${awayLabel(currentOrNextAway(m.aways, new Date().getTime())!)}` : ''}
+                  {m.away ? ` · ✈️ away till ${tillLabel(m.aways, new Date().getTime())}` : ''}
                 </Text>
               </View>
               <Text style={[styles.scoreText, styles.score, me && { color: colors.you }]}>{houseTotal ? `${Math.round(share(m))}%` : '–'}</Text>

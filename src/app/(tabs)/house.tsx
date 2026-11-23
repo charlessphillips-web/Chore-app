@@ -2,7 +2,7 @@ import { Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { Feed } from '../../components/Feed';
-import { awayLabel, currentOrNextAway } from '../../lib/away';
+import { tillLabel } from '../../lib/away';
 import { WEB_URL } from '../../lib/legal';
 import { nextCollections, scheduleLabel } from '../../lib/bins';
 import { Button, Card, HouseName, Icon, Label, Loading, Screen } from '../../components/ui';
@@ -64,7 +64,7 @@ export default function HouseTab() {
             <Avatar avatar={m.avatar} name={m.username} size={34} />
             <View style={{ flex: 1 }}>
               <Text style={type.body}>{m.username}{m.uid === user.uid ? ' (you)' : ''}</Text>
-              {m.away && <Text style={type.small}>✈️ Away till {awayLabel(currentOrNextAway(m.aways, new Date().getTime())!)}</Text>}
+              {m.away && <Text style={type.small}>✈️ Away till {tillLabel(m.aways, new Date().getTime())}</Text>}
             </View>
             {m.uid === house.adminUid && <Text style={styles.admin}>ADMIN</Text>}
             <Icon

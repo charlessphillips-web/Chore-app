@@ -8,7 +8,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { reactToLog, REACTIONS } from '../lib/db';
-import { awayDaysBetween, awayLabel, currentOrNextAway } from '../lib/away';
+import { awayDaysBetween, tillLabel } from '../lib/away';
 import { currentStreak, seedStreak } from '../lib/streak';
 import { jpegUri } from '../lib/photos';
 import { haptics } from '../lib/haptics';
@@ -20,9 +20,11 @@ import { colors, soft } from './theme';
 
 const chipOn = () => ({ borderColor: colors.you, backgroundColor: soft(colors.you) });
 
-export function Feed({ limit = 30 }: { limit?: number }) {
+export function Feed({ step = 10 }: { step?: number }) {
   const { user, profile, house, members, logs } = useApp();
   const [now] = useState(() => Date.now());
+  // Show 10 at a time so the page stays quick.
+  const [shown, setShown] = useState(step);
   if (!user || !house) return null;
   const away = members.filter((m) => m.away);
   const streaky = members
@@ -37,7 +39,7 @@ export function Feed({ limit = 30 }: { limit?: number }) {
           <Avatar avatar={m.avatar} name={m.username} size={32} />
           <Text style={[styles.text, { flex: 1 }]}>
             <Text style={styles.name}>{m.uid === user.uid ? 'You' : m.username}</Text>
-            {m.uid === user.uid ? ' are' : ' is'} away till {awayLabel(currentOrNextAway(m.aways, now)!)} ✈️
+            {m.uid === user.uid ? ' are' : ' is'} away till {tillLabel(m.aways, now)} ✈️
           </Text>
         </View>
       ))}
@@ -53,9 +55,14 @@ export function Feed({ limit = 30 }: { limit?: number }) {
       {logs.length === 0 ? (
         <View style={styles.card}><Empty icon="time-outline">No chores logged yet. They&apos;ll show up here.</Empty></View>
       ) : (
-        logs.slice(0, limit).map((l) => (
+        logs.slice(0, shown).map((l) => (
           <FeedItem key={l.id} log={l} me={{ uid: user.uid, username: profile?.username ?? '' }} />
         ))
+      )}
+      {logs.length > shown && (
+        <Pressable onPress={() => { haptics.tap(); setShown((n) => n + step); }} accessibilityRole="button" style={styles.more}>
+          <Text style={styles.moreText}>Show more</Text>
+        </Pressable>
       )}
     </View>
   );
@@ -132,6 +139,8 @@ function FeedItem({ log, me }: { log: ChoreLog; me: { uid: string; username: str
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 16, padding: 14 },
+  more: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1, borderColor: colors.line },
+  moreText: { color: colors.text, fontSize: 14, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   text: { fontSize: 15, color: colors.text },
   name: { fontWeight: '700', color: colors.text },

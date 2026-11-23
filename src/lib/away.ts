@@ -107,3 +107,9 @@ export function awayAskTime(now: number): number {
   d.setHours(21, 30, 0, 0);
   return now < d.getTime() - 30 * 60_000 ? d.getTime() : now + 30 * 60_000;
 }
+
+/** "Sun 22 Nov" for whoever's trip is on now, or "soon" if it has just ended (safe to show anywhere). */
+export function tillLabel(aways: Away[] | undefined, now: number): string {
+  const a = currentOrNextAway(aways, now);
+  return a ? awayLabel(a) : 'soon';
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChoreIcon } from '../../components/ChoreIcon';
 import { useApp } from '../../context/AppContext';
@@ -10,6 +10,7 @@ import { checkProgress, effectiveStatus, needsCheckBy, needsRedo, redoReason, RE
 import type { ChoreLog } from '../../lib/types';
 import { Button, Card, Chip, ChipRow, Icon, Input, Label, Loading, notify, Screen, Title, timeAgo } from '../../components/ui';
 import { Avatar } from '../../components/Avatar';
+import { toast } from '../../components/Celebration';
 
 import { periodStart } from '../../lib/period';
 import { colors, radius, space, tabColors, type } from '../../components/theme';
@@ -102,17 +103,22 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
   const [sendingBack, setSendingBack] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  // "Looks good" slides the card away straight away; it comes back if saving fails.
+  const [gone, setGone] = useState(false);
+  const [slide] = useState(() => new Animated.Value(0));
 
-  async function verify() {
+  function verify() {
+    haptics.success();
     setBusy('verify');
-    try {
-      const r = await verifyChore(house!.id, log.id, reviewer);
-      haptics.success();
-      if (r.done < r.needed) notify('Thanks!', `${r.needed - r.done} more housemate needs to check it before it's verified.`);
-    } catch (e) {
-      notify('Could not save', (e as Error).message);
-      setBusy(null);
-    }
+    Animated.timing(slide, { toValue: 1, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => setGone(true));
+    verifyChore(house!.id, log.id, reviewer)
+      .then((r) => toast(r.done < r.needed ? `Checked ✓  ${r.needed - r.done} more housemate to go` : `Checked ✓  ${log.username}'s ${log.choreName.toLowerCase()} counts`))
+      .catch((e) => {
+        slide.setValue(0);
+        setGone(false);
+        setBusy(null);
+        notify('Could not save', (e as Error).message);
+      });
   }
   async function sendBack() {
     if (!reason) return;
@@ -127,7 +133,9 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
 
   const who = members.find((m) => m.uid === log.userId);
   const prog = checkProgress(log);
+  if (gone) return null;
   return (
+    <Animated.View style={{ opacity: slide.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }), transform: [{ translateX: slide.interpolate({ inputRange: [0, 1], outputRange: [0, 80] }) }] }}>
     <Card style={{ padding: 10 }}>
       <Pressable
         onPress={() => router.push({ pathname: '/photo/[logId]', params: { logId: log.id } })}
@@ -200,6 +208,7 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
         )}
       </View>
     </Card>
+    </Animated.View>
   );
 }
 

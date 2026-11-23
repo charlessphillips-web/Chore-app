@@ -53,10 +53,10 @@ export async function takeChorePhoto(): Promise<ChorePhoto | null> {
 export const jpegUri = (base64: string) => `data:image/jpeg;base64,${base64}`;
 
 /** Before photos are kept smaller (they sit on the chore itself). */
-const MAX_BEFORE_BYTES = 120_000;
+const MAX_BEFORE_BYTES = 45_000;
 
 async function smallJpeg(uri: string): Promise<string> {
-  for (const [w, q] of [[480, 0.5], [360, 0.45], [280, 0.4]] as const) {
+  for (const [w, q] of [[320, 0.5], [260, 0.45], [200, 0.4]] as const) {
     const data = await toJpegBase64(uri, w, q);
     if (data.length <= MAX_BEFORE_BYTES) return data;
   }

@@ -381,6 +381,13 @@ export async function setAvatar(houseId: string, uid: string, avatar: Avatar | n
  * score for this 2-month period. Closes the request if it was one, and lets
  * everyone else know there's a photo to check.
  */
+/** Your streak once this chore is logged (and a milestone like 4 if you just hit one). */
+export function streakAfterLog(me: Member | undefined): { streak: Streak; milestone: number | null } {
+  const before = seedStreak(me?.streak, me?.lastCompletedAt);
+  const streak = afterChore(before, Date.now(), (a, b) => awayDaysBetween(me?.aways, a, b));
+  return { streak, milestone: milestoneHit(before, streak) };
+}
+
 export async function logChore(opts: {
   house: House;
   members: Member[];
@@ -397,10 +404,7 @@ export async function logChore(opts: {
   before?: string | null;
 }): Promise<{ streak: Streak; milestone: number | null }> {
   const { house, uid, username, photo } = opts;
-  const meNow = opts.members.find((m) => m.uid === uid);
-  const before = seedStreak(meNow?.streak, meNow?.lastCompletedAt);
-  const streak = afterChore(before, Date.now(), (a, b) => awayDaysBetween(meNow?.aways, a, b));
-  const milestone = milestoneHit(before, streak);
+  const { streak, milestone } = streakAfterLog(opts.members.find((m) => m.uid === uid));
   const offer = opts.offer && opts.offer.doerUid === uid ? opts.offer : null;
   const requestId = opts.requestId ?? null;
   const name = cleanChoreName(opts.chore.name);
