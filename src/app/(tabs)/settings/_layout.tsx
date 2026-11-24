@@ -19,6 +19,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="away" options={{ title: "I'M AWAY" }} />
       <Stack.Screen name="colour" options={{ title: 'YOUR COLOUR' }} />
       <Stack.Screen name="appearance" options={{ title: 'APPEARANCE' }} />
+      <Stack.Screen name="app-icon" options={{ title: 'APP ICON' }} />
       <Stack.Screen name="bathrooms" options={{ title: 'BATHROOMS' }} />
     </Stack>
   );

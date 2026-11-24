@@ -138,6 +138,12 @@ export default function SettingsIndex() {
           onPress={() => router.push('/settings/appearance')}
         />
         <ListRow
+          icon="apps-outline"
+          title="App icon"
+          subtitle="Pick the icon on your home screen"
+          onPress={() => router.push('/settings/app-icon')}
+        />
+        <ListRow
           icon="color-palette-outline"
           title="Your colour"
           subtitle="Your bar, name and confetti"

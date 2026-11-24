@@ -63,7 +63,52 @@
           "backgroundColor": "#000000"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Black",
+            "ios": "./assets/app-icons/black.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/android/black-foreground.png",
+              "backgroundColor": "#0E0E0E"
+            }
+          },
+          {
+            "name": "White",
+            "ios": "./assets/app-icons/white.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/android/white-foreground.png",
+              "backgroundColor": "#F4F4F2"
+            }
+          },
+          {
+            "name": "Navy",
+            "ios": "./assets/app-icons/navy.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/android/navy-foreground.png",
+              "backgroundColor": "#1C2F6B"
+            }
+          },
+          {
+            "name": "Green",
+            "ios": "./assets/app-icons/green.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/android/green-foreground.png",
+              "backgroundColor": "#1F5C46"
+            }
+          },
+          {
+            "name": "Coral",
+            "ios": "./assets/app-icons/coral.png",
+            "android": {
+              "foregroundImage": "./assets/app-icons/android/coral-foreground.png",
+              "backgroundColor": "#F05D4E"
+            }
+          }
+        ]
+      ]
     ],
     "scheme": "choreboard",
     "backgroundColor": "#000000",
