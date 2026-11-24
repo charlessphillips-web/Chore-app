@@ -16,7 +16,7 @@ const ROWS: [string, string, string][] = [
   ['Away dates (e.g. "away 12–19 Dec")', 'So you aren\'t given chores while you\'re away and scores stay fair. Only the dates, never where you went', 'Your housemates'],
   ['Chores you flag, checks and send-backs', 'To ask the right housemate and keep scores fair', 'Your housemates'],
   ['Chore offers, prices and how you asked to be paid (a Monzo/PayPal link, or cash)', 'So housemates can pay each other. The app never handles money', 'The housemates in that deal'],
-  ['Push notification token', 'To send you notifications', 'Nobody'],
+  ['Push notification token (a code that lets notifications reach your phone)', 'To send you notifications. Your housemates\' apps use it to notify you, but it\'s never shown to anyone', 'Not shown to anyone'],
   ['Bug reports and suggestions (with any screenshot), phone model, app version', 'To fix problems and improve the app', 'Only the app owner'],
   ['When you last opened the app', 'Statistics on how many people use the app', 'Only the app owner'],
   ['Anonymous usage counts (e.g. "12 chores logged today")', 'To see which features are used and improve the app. Not linked to you', 'Only the app owner'],
