@@ -1,6 +1,6 @@
 /**
  * A chore's picture: a clear icon of the actual thing (hoover, tap, oven…),
- * in the plain text colour. Custom chores get a guess from their name.
+ * in Rotawise purple. Custom chores get a guess from their name.
  */
 import { View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -51,10 +51,10 @@ export function choreLook(key: string): { icon: MdiName; hue: Hue } {
 
 export function ChoreIcon({ choreKey, size = 38 }: { choreKey: string; size?: number }) {
   const { icon } = choreLook(choreKey);
-  // One plain colour for every chore (the right object, no rainbow).
+  // Every chore in Rotawise purple (the right object, no rainbow).
   return (
     <View style={{ width: size, height: size, alignItems: 'flex-start', justifyContent: 'center' }}>
-      <MaterialCommunityIcons name={icon} size={Math.round(size * 0.68)} color={colors.text} />
+      <MaterialCommunityIcons name={icon} size={Math.round(size * 0.68)} color={colors.brand} />
     </View>
   );
 }
