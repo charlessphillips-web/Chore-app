@@ -12,4 +12,4 @@ export const OWNER_NAME = 'Charles Phillips';
 export const CONTACT_EMAIL = 'rotawise@icloud.com';
 
 /** Bump this when the policy changes: everyone is asked to agree again. */
-export const PRIVACY_VERSION = '2026-11-10';
+export const PRIVACY_VERSION = '2026-11-24';

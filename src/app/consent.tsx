@@ -21,10 +21,12 @@ export default function Consent() {
     <Screen>
       <View style={{ alignItems: 'center', gap: space.md, marginTop: space.lg }}>
         <Logo size={64} />
-        <Title>Our terms and privacy policy</Title>
+        <Title>{profile?.privacyVersion ? 'We\'ve updated our privacy policy' : 'Our terms and privacy policy'}</Title>
       </View>
       <Subtitle>
-        Before you carry on, please read our terms and how {APP_NAME} uses your information, and agree to them. It only takes a minute.
+        {profile?.privacyVersion
+          ? 'It now covers Apple/Google sign-in, notes, before photos, reactions, streaks, away dates and backups. Nothing you already shared has changed. Have a quick read and agree to carry on.'
+          : `Before you carry on, please read our terms and how ${APP_NAME} uses your information, and agree to them. It only takes a minute.`}
       </Subtitle>
       <AgreeBox value={agreed} onChange={setAgreed} />
       <ErrorText>{error}</ErrorText>
