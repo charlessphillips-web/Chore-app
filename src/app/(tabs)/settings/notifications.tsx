@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Platform, Text } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { useApp } from '../../../context/AppContext';
+import { runNotificationTest, type TestStep } from '../../../lib/notifyTest';
 import { setNotifPrefs } from '../../../lib/db';
 import { NOTIFY_KINDS, wants, type NotifyKind, type NotifyPrefs } from '../../../lib/notifyPrefs';
 import { haptics } from '../../../lib/haptics';
-import { Card, ErrorText, ListGroup, ListRow, Loading, Screen, Subtitle, Toggle } from '../../../components/ui';
-import { type } from '../../../components/theme';
+import { Button, Card, ErrorText, ListGroup, ListRow, Loading, Screen, Subtitle, Toggle } from '../../../components/ui';
+import { colors, type } from '../../../components/theme';
 
 /** Choose which notifications you get. */
 export default function NotificationSettings() {
   const { user, house, members, notifStatus } = useApp();
   const saved = members.find((m) => m.uid === user?.uid)?.notifPrefs ?? {};
   const [prefs, setPrefs] = useState<NotifyPrefs | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [steps, setSteps] = useState<TestStep[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!user || !house) return <Loading />;
   const current = prefs ?? saved;
@@ -30,6 +33,26 @@ export default function NotificationSettings() {
   return (
     <Screen edges={['left', 'right']}>
       <Subtitle>Choose what Rotawise tells you about.</Subtitle>
+      <Card style={{ gap: 10 }}>
+        <Text style={type.body}>Not getting notifications?</Text>
+        <Text style={type.small}>Send yourself two test ones. If something&apos;s wrong, this says exactly what.</Text>
+        <Button title={testing ? 'Testing… (about 10 seconds)' : 'Send me a test notification'} variant="secondary" loading={testing}
+          onPress={async () => {
+            if (!user || !house) return;
+            setTesting(true);
+            setSteps(null);
+            const me = members.find((m) => m.uid === user.uid);
+            const result = await runNotificationTest({ houseId: house.id, uid: user.uid, savedToken: me?.pushToken ?? null }).catch((e) => [{ label: 'Test failed', ok: false, detail: (e as Error).message }]);
+            setSteps(result);
+            setTesting(false);
+          }} />
+        {steps?.map((st) => (
+          <View key={st.label} style={{ gap: 2 }}>
+            <Text style={[type.body, { color: st.ok ? colors.success : colors.danger, fontSize: 15 }]}>{st.ok ? '✓' : '✗'} {st.label}</Text>
+            {st.detail && <Text style={type.small}>{st.detail}</Text>}
+          </View>
+        ))}
+      </Card>
       {(Platform.OS === 'web' || notifStatus === 'unavailable') && (
         <Card>
           <Text style={type.small}>
