@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Redirect } from 'expo-router';
+import { UseDifferentAccount } from '../components/SignupExits';
 import { View } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { createProfile, updateProfile } from '../lib/db';
@@ -40,6 +41,7 @@ export default function Onboarding() {
           // The Redirect above fires when the profile updates.
         }}
       />
+      <UseDifferentAccount />
     </Screen>
   );
 }

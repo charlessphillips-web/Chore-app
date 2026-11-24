@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../../context/AppContext';
-import { authError, checkLogin, resetPassword, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
+import { authError, changePassword, checkLogin, resetPassword, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
+import { suggestEmail } from '../../../lib/emailCheck';
+import { EmailHint } from '../../../components/EmailHint';
 import { haptics } from '../../../lib/haptics';
 import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { PasswordInput } from '../../../components/PasswordInput';
@@ -16,6 +18,11 @@ export default function AccountScreen() {
   const [savedAs, setSavedAs] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [typoAsked, setTypoAsked] = useState(false);
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
   if (!user) return <Loading />;
   const loginEmail = savedAs ?? (user.isAnonymous ? null : user.email);
 
@@ -29,6 +36,30 @@ export default function AccountScreen() {
           <Text style={[type.small, { color: user.emailVerified ? colors.success : colors.warning }]}>
             {user.emailVerified ? '✓ Email confirmed' : 'Email not confirmed yet: check your inbox (see Home).'}
           </Text>
+        </Card>
+        <Label>Change password</Label>
+        <Card style={{ gap: 10 }}>
+          <Text style={type.small}>Passwords are stored scrambled, so nobody (not even Rotawise) can see yours. You can set a new one here. Tap the eye to see what you type.</Text>
+          <PasswordInput value={curPw} onChangeText={(t) => { setCurPw(t); setPwMsg(null); }} placeholder="Current password" autoComplete="current-password"
+            textContentType="password" accessibilityLabel="Current password" />
+          <PasswordInput value={newPw} onChangeText={(t) => { setNewPw(t); setPwMsg(null); }} placeholder="New password (8+ characters)" autoComplete="new-password"
+            textContentType="newPassword" accessibilityLabel="New password" />
+          {pwMsg && <Text style={[type.small, { color: pwMsg.ok ? colors.success : colors.danger }]}>{pwMsg.text}</Text>}
+          <Button title="Save new password" variant="secondary" loading={pwBusy} disabled={!curPw || !newPw}
+            onPress={async () => {
+              setPwBusy(true);
+              try {
+                await changePassword(curPw, newPw);
+                haptics.success();
+                setCurPw(''); setNewPw('');
+                setPwMsg({ ok: true, text: 'Password changed ✓ Use the new one next time you sign in.' });
+              } catch (e) {
+                const code = (e as { code?: string }).code ?? '';
+                setPwMsg({ ok: false, text: ['auth/invalid-credential', 'auth/wrong-password'].includes(code) ? 'That current password isn’t right. Forgot it? Use the reset link below.' : authError(e) });
+              } finally {
+                setPwBusy(false);
+              }
+            }} />
         </Card>
         <Button
           title="Switch to a different account"
@@ -64,6 +95,10 @@ export default function AccountScreen() {
   async function save() {
     const err = checkLogin(email, password);
     if (err) return setError(err);
+    if (suggestEmail(email) && !typoAsked) {
+      setTypoAsked(true);
+      return setError('Check your email: it looks like it might have a typo (see above). Tap Save again if it’s right.');
+    }
     setError(null);
     setBusy(true);
     try {
@@ -92,6 +127,7 @@ export default function AccountScreen() {
       <Label>Email</Label>
       <Input value={email} onChangeText={setEmail} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false}
         keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />
+      <EmailHint email={email} onUse={(e) => { setEmail(e); setError(null); }} />
       <Label>Password (8+ characters)</Label>
       <PasswordInput value={password} onChangeText={setPassword} placeholder="Choose a password" autoComplete="new-password"
         textContentType="newPassword" accessibilityLabel="Password" />

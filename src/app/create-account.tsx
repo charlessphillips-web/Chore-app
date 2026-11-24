@@ -3,6 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { authError, checkLogin, saveAccount, sendVerification } from '../lib/account';
+import { suggestEmail } from '../lib/emailCheck';
+import { EmailHint } from '../components/EmailHint';
 import { haptics } from '../lib/haptics';
 import { track } from '../lib/analytics';
 import { PasswordInput } from '../components/PasswordInput';
@@ -16,12 +18,18 @@ export default function CreateAccount() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [typoAsked, setTypoAsked] = useState(false);
   if (profile) return <Redirect href="/" />;
   if (user && !user.isAnonymous) return <Redirect href="/onboarding" />;
 
   async function go() {
     const err = checkLogin(email, password);
     if (err) return setError(err);
+    // Looks like a typo? Ask once before carrying on.
+    if (suggestEmail(email) && !typoAsked) {
+      setTypoAsked(true);
+      return setError('Check your email: it looks like it might have a typo (see above). Tap Continue again if it’s right.');
+    }
     setError(null);
     setBusy(true);
     try {
@@ -50,6 +58,7 @@ export default function CreateAccount() {
       <Label>Email</Label>
       <Input value={email} onChangeText={(t) => { setEmail(t); setError(null); }} placeholder="you@example.com" autoCapitalize="none"
         autoCorrect={false} keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />
+      <EmailHint email={email} onUse={(e) => { setEmail(e); setError(null); }} />
       <Label>Password (8+ characters)</Label>
       <PasswordInput value={password} onChangeText={(t) => { setPassword(t); setError(null); }} placeholder="Choose a password"
         autoComplete="new-password" textContentType="newPassword" accessibilityLabel="Password" onSubmitEditing={go} />

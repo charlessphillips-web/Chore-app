@@ -5,6 +5,7 @@ import { createHouse, joinHouse } from '../lib/db';
 import type { HouseArea } from '../lib/postcode';
 import { PRIVACY_VERSION } from '../lib/legal';
 import { PostcodeField } from '../components/PostcodeField';
+import { ConfirmEmailGate, UseDifferentAccount } from '../components/SignupExits';
 import { Button, Card, Chip, ChipRow, ErrorText, Input, Label, Screen, Subtitle, Title } from '../components/ui';
 import { colors } from '../components/theme';
 import { Text } from 'react-native';
@@ -20,6 +21,8 @@ export default function HouseSetup() {
   const [busy, setBusy] = useState(false);
   // Set once this screen creates/joins a house, so we go on to the set-up step.
   const [joined, setJoined] = useState(false);
+  // Real emails only: confirm it before joining or making a house.
+  const [verified, setVerified] = useState(() => !user || user.isAnonymous || user.emailVerified);
 
   // Move on as soon as the profile update arrives (avoids racing the database).
   if (profile?.houseId) return <Redirect href={joined ? '/house-start' : '/'} />;
@@ -45,6 +48,15 @@ export default function HouseSetup() {
       setBusy(false);
       setJoined(false);
     }
+  }
+
+  if (!verified) {
+    return (
+      <Screen>
+        <ConfirmEmailGate onVerified={() => setVerified(true)} />
+        <UseDifferentAccount />
+      </Screen>
+    );
   }
 
   return (
@@ -89,6 +101,7 @@ export default function HouseSetup() {
 
       <ErrorText>{error}</ErrorText>
       <Button title={mode === 'join' ? 'Join house' : 'Create house'} onPress={go} loading={busy} />
+      <UseDifferentAccount />
     </Screen>
   );
 }

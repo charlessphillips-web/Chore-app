@@ -745,6 +745,8 @@ test('reactions: one emoji each, only on someone else\'s chore, only your own', 
   await assertSucceeds(updateDoc(ref('toby'), { 'reactions.toby': '😂' }));
   await assertFails(updateDoc(ref('sam'), { 'reactions.toby': '👏' }));
   await assertFails(updateDoc(ref('sam'), { 'reactions.sam': '💩' }));
+  await assertSucceeds(updateDoc(ref('toby'), { 'reactions.toby': '👎' }));
+  await assertSucceeds(updateDoc(ref('toby'), { 'reactions.toby': '😂' }));
   await assertFails(updateDoc(ref('alice'), { 'reactions.alice': '👏' }));
   await assertFails(updateDoc(ref('sam'), { 'reactions.sam': '👏', status: 'verified' }));
   await assertSucceeds(updateDoc(ref('sam'), { 'reactions.sam': deleteField() }));

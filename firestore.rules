@@ -355,14 +355,14 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkReminderSent'])
           && request.resource.data.checkReminderSent == true
           && request.time > resource.data.at + duration.value(12, 'h');
-        // Reactions (👏 🔥 😂 🫡 💪): one per housemate, on someone else's chore.
+        // Reactions (👏 🔥 💪 ❤️ 😂 🫡 👀 😬 👎): one per housemate, on someone else's chore.
         allow update: if isMember(houseId)
           && resource.data.userId != me()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
           && request.resource.data.reactions is map
           && request.resource.data.reactions.diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([me()])
           && (!(me() in request.resource.data.reactions)
-              || request.resource.data.reactions[me()] in ['👏', '🔥', '😂', '🫡', '💪']);
+              || request.resource.data.reactions[me()] in ['👏', '🔥', '💪', '❤️', '😂', '🫡', '👀', '😬', '👎']);
         allow delete: if false;
       }
 

@@ -5,9 +5,10 @@
  * phone or browser later.
  */
 import {
-  EmailAuthProvider, linkWithCredential, reload, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, type User,
+  EmailAuthProvider, linkWithCredential, reauthenticateWithCredential, updatePassword, reload, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, type User,
 } from 'firebase/auth';
 import { auth } from './firebase';
+import { cleanEmail, emailProblem } from './emailCheck';
 
 export const MIN_PASSWORD = 8;
 
@@ -31,7 +32,8 @@ export function authError(e: unknown): string {
 }
 
 export function checkLogin(email: string, password: string): string | null {
-  if (!/^\S+@\S+\.\S+$/.test(email.trim())) return 'Enter your email address.';
+  const bad = emailProblem(email);
+  if (bad) return bad;
   if (password.length < MIN_PASSWORD) return `Use a password of at least ${MIN_PASSWORD} characters.`;
   return null;
 }
@@ -40,13 +42,13 @@ export function checkLogin(email: string, password: string): string | null {
 export async function saveAccount(email: string, password: string): Promise<User> {
   const u = auth.currentUser;
   if (!u) throw new Error('Still connecting — try again in a second.');
-  const res = await linkWithCredential(u, EmailAuthProvider.credential(email.trim(), password));
+  const res = await linkWithCredential(u, EmailAuthProvider.credential(cleanEmail(email), password));
   return res.user;
 }
 
 /** Signs in to an existing saved account (replaces the anonymous one on this phone). */
 export async function signIn(email: string, password: string): Promise<void> {
-  await signInWithEmailAndPassword(auth, email.trim(), password);
+  await signInWithEmailAndPassword(auth, cleanEmail(email), password);
 }
 
 /** Emails a "confirm it's you" link. */
@@ -62,10 +64,19 @@ export async function isEmailVerified(): Promise<boolean> {
 }
 
 export async function resetPassword(email: string): Promise<void> {
-  await sendPasswordResetEmail(auth, email.trim());
+  await sendPasswordResetEmail(auth, cleanEmail(email));
 }
 
 /** Only for saved accounts: afterwards a fresh anonymous account starts. */
 export async function signOutUser(): Promise<void> {
   await signOut(auth);
+}
+
+/** Change your password while signed in (asks for the current one first, as Firebase requires). */
+export async function changePassword(current: string, next: string): Promise<void> {
+  const u = auth.currentUser;
+  if (!u || !u.email) throw new Error('Sign in first.');
+  if (next.length < MIN_PASSWORD) throw new Error(`Use a password of at least ${MIN_PASSWORD} characters.`);
+  await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, current));
+  await updatePassword(u, next);
 }

@@ -6,6 +6,7 @@ import { authError, resetPassword, signIn } from '../lib/account';
 import { haptics } from '../lib/haptics';
 import { Button, Card, ErrorText, Input, Label, notify, Screen, Subtitle, Title } from '../components/ui';
 import { PasswordInput } from '../components/PasswordInput';
+import { EmailHint } from '../components/EmailHint';
 import { colors, type } from '../components/theme';
 
 /**
@@ -87,6 +88,7 @@ export default function SignIn() {
       <Label>Email</Label>
       <Input value={email} onChangeText={(t) => { setEmail(t); setError(null); setWrong(false); }} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false}
         keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />
+      <EmailHint email={email} onUse={(e) => { setEmail(e); setError(null); setWrong(false); }} />
       <Label>Password</Label>
       <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" autoComplete="current-password"
         textContentType="password" accessibilityLabel="Password" onSubmitEditing={go} />

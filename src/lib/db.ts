@@ -352,7 +352,7 @@ export async function setNotifPrefs(houseId: string, uid: string, prefs: NotifyP
 export const NOTE_MAX = 80;
 
 /** The emojis you can react with. */
-export const REACTIONS = ['👏', '🔥', '😂', '🫡', '💪'] as const;
+export const REACTIONS = ['👏', '🔥', '💪', '❤️', '😂', '🫡', '👀', '😬', '👎'] as const;
 
 /** React to a housemate's chore (tap the same emoji again to take it off). */
 export async function reactToLog(houseId: string, log: ChoreLog, me: { uid: string; username: string }, emoji: string | null, members: Member[]) {
