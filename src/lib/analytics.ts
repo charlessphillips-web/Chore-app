@@ -28,6 +28,8 @@ export const EVENTS = {
   avatar_set: 'Profile picture set',
   away_set: 'Set themselves as away',
   reaction: 'Reacted to a chore',
+  signin_apple: 'Used Sign in with Apple',
+  signin_google: 'Used Sign in with Google',
   wrapped_open: 'Opened Wrapped',
   wrapped_share: 'Shared Wrapped',
   bathroom_added: 'Bathroom added',

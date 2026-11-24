@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.rotawise.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -61,7 +62,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "scheme": "choreboard",
     "backgroundColor": "#000000",

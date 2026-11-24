@@ -13,7 +13,7 @@ import { Avatar } from '../../components/Avatar';
 import { toast } from '../../components/Celebration';
 
 import { periodStart } from '../../lib/period';
-import { colors, radius, space, tabColors, type } from '../../components/theme';
+import { colors, radius, space, type } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
@@ -31,7 +31,7 @@ export default function Checks() {
   return (
     <Screen>
       <View style={styles.head}>
-        <Title accent={tabColors.checks}>Checks</Title>
+        <Title>Checks</Title>
         {toCheck.length > 0 && <Text style={styles.count}>{toCheck.length} to check</Text>}
       </View>
 

@@ -1,28 +1,15 @@
 /**
- * A chore's picture: a clear icon of the actual thing (hoover, tap, oven…)
- * in its own colour on a soft square. Custom chores get a guess from their
- * name and a colour of their own.
+ * A chore's picture: a clear icon of the actual thing (hoover, tap, oven…),
+ * in the plain text colour. Custom chores get a guess from their name.
  */
 import { View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BATHROOM_TASKS } from '../lib/chores';
-import { isLight } from './theme';
+import { colors } from './theme';
 
 type MdiName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 type Hue = 'orange' | 'teal' | 'blue' | 'pink' | 'sky' | 'purple' | 'coral' | 'gold' | 'red' | 'green';
 
-const HUES: Record<Hue, { dark: string; light: string }> = {
-  orange: { dark: '#F5A524', light: '#C36A00' },
-  teal: { dark: '#3DD6B0', light: '#0E9A76' },
-  blue: { dark: '#5B9BFF', light: '#2F6FEB' },
-  pink: { dark: '#FF7AB6', light: '#D63F80' },
-  sky: { dark: '#4FC3F7', light: '#0B84C6' },
-  purple: { dark: '#9381F2', light: '#6E58E6' },
-  coral: { dark: '#FF7A59', light: '#E0552F' },
-  gold: { dark: '#F5C542', light: '#B7860B' },
-  red: { dark: '#FF5C5C', light: '#D63434' },
-  green: { dark: '#7BD84F', light: '#3E8E1A' },
-};
 
 const KNOWN: Record<string, [MdiName, Hue]> = {
   bins: ['trash-can-outline', 'orange'],
@@ -63,11 +50,11 @@ export function choreLook(key: string): { icon: MdiName; hue: Hue } {
 }
 
 export function ChoreIcon({ choreKey, size = 38 }: { choreKey: string; size?: number }) {
-  const { icon, hue } = choreLook(choreKey);
-  const c = isLight ? HUES[hue].light : HUES[hue].dark;
+  const { icon } = choreLook(choreKey);
+  // One plain colour for every chore (the right object, no rainbow).
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.29, alignItems: 'center', justifyContent: 'center', backgroundColor: `${c}2E` }}>
-      <MaterialCommunityIcons name={icon} size={Math.round(size * 0.58)} color={c} />
+    <View style={{ width: size, height: size, alignItems: 'flex-start', justifyContent: 'center' }}>
+      <MaterialCommunityIcons name={icon} size={Math.round(size * 0.68)} color={colors.text} />
     </View>
   );
 }

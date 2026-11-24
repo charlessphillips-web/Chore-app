@@ -7,6 +7,7 @@ import { haptics } from '../lib/haptics';
 import { Button, Card, ErrorText, Input, Label, notify, Screen, Subtitle, Title } from '../components/ui';
 import { PasswordInput } from '../components/PasswordInput';
 import { EmailHint } from '../components/EmailHint';
+import { SocialButtons } from '../components/SocialButtons';
 import { colors, type } from '../components/theme';
 
 /**
@@ -85,6 +86,7 @@ export default function SignIn() {
           <Text style={type.small}>Signing in below switches to the other account. Nothing gets deleted.</Text>
         </Card>
       )}
+      <SocialButtons />
       <Label>Email</Label>
       <Input value={email} onChangeText={(t) => { setEmail(t); setError(null); setWrong(false); }} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false}
         keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />

@@ -5,6 +5,7 @@ import { useApp } from '../../../context/AppContext';
 import { authError, changePassword, checkLogin, resetPassword, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
 import { suggestEmail } from '../../../lib/emailCheck';
 import { EmailHint } from '../../../components/EmailHint';
+import { SocialButtons } from '../../../components/SocialButtons';
 import { haptics } from '../../../lib/haptics';
 import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
 import { PasswordInput } from '../../../components/PasswordInput';
@@ -25,6 +26,8 @@ export default function AccountScreen() {
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
   if (!user) return <Loading />;
   const loginEmail = savedAs ?? (user.isAnonymous ? null : user.email);
+  // Signed up with Apple/Google only? Then there's no password to change or reset.
+  const hasPassword = !!savedAs || user.providerData.some((p) => p.providerId === 'password');
 
   if (loginEmail) {
     return (
@@ -37,6 +40,10 @@ export default function AccountScreen() {
             {user.emailVerified ? '✓ Email confirmed' : 'Email not confirmed yet: check your inbox (see Home).'}
           </Text>
         </Card>
+        <Label>Sign in faster</Label>
+        <SocialButtons mode="connect" />
+        {hasPassword && (
+          <>
         <Label>Change password</Label>
         <Card style={{ gap: 10 }}>
           <Text style={type.small}>Passwords are stored scrambled, so nobody (not even Rotawise) can see yours. You can set a new one here. Tap the eye to see what you type.</Text>
@@ -61,12 +68,15 @@ export default function AccountScreen() {
               }
             }} />
         </Card>
+          </>
+        )}
         <Button
           title="Switch to a different account"
           variant="secondary"
           onPress={() => router.push({ pathname: '/sign-in', params: { switch: '1' } })}
         />
-        <Button
+        {hasPassword && (
+          <Button
           title="Forgot this password?"
           variant="ghost"
           onPress={async () => {
@@ -78,6 +88,7 @@ export default function AccountScreen() {
             }
           }}
         />
+        )}
         <Button
           title="Sign out"
           variant="ghost"
@@ -124,6 +135,7 @@ export default function AccountScreen() {
         Right now your account only lives on this phone (or browser). Add an email and password so you can sign in
         somewhere else — a new phone, or the website — and keep your house, scores and picture.
       </Subtitle>
+      <SocialButtons />
       <Label>Email</Label>
       <Input value={email} onChangeText={setEmail} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false}
         keyboardType="email-address" autoComplete="email" textContentType="emailAddress" accessibilityLabel="Email" />
