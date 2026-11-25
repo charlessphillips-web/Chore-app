@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Platform, Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { runNotificationTest, type TestStep } from '../../../lib/notifyTest';
-import { setNotifPrefs } from '../../../lib/db';
-import { NOTIFY_KINDS, wants, type NotifyKind, type NotifyPrefs } from '../../../lib/notifyPrefs';
-import { haptics } from '../../../lib/haptics';
-import { Button, Card, ErrorText, ListGroup, ListRow, Loading, Screen, Subtitle, Toggle } from '../../../components/ui';
-import { colors, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { runNotificationTest, type TestStep } from '../../lib/notifyTest';
+import { setNotifPrefs } from '../../lib/db';
+import { NOTIFY_KINDS, wants, type NotifyKind, type NotifyPrefs } from '../../lib/notifyPrefs';
+import { haptics } from '../../lib/haptics';
+import { Button, Card, ErrorText, ListGroup, ListRow, Loading, Screen, Subtitle, Toggle } from '../../components/ui';
+import { colors, type } from '../../components/theme';
 
 /** Choose which notifications you get. */
 export default function NotificationSettings() {

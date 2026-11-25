@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { setFeedbackDone, watchFeedback, type FeedbackItem } from '../../../lib/db';
-import { jpegUri } from '../../../lib/photos';
-import { Button, Card, Chip, ChipRow, Empty, ErrorText, Icon, Loading, notify, Screen, timeAgo } from '../../../components/ui';
-import { colors, radius, type } from '../../../components/theme';
+import { setFeedbackDone, watchFeedback, type FeedbackItem } from '../../lib/db';
+import { jpegUri } from '../../lib/photos';
+import { Button, Card, Chip, ChipRow, Empty, ErrorText, Icon, Loading, notify, Screen, timeAgo } from '../../components/ui';
+import { colors, radius, type } from '../../components/theme';
 
 type Filter = 'new' | 'done' | 'all';
 

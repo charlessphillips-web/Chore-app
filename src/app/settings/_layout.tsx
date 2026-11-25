@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { darkHeader } from '../../../components/theme';
+import { darkHeader } from '../../components/theme';
 
 export default function SettingsLayout() {
   return (

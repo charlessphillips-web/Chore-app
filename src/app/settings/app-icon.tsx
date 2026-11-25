@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getAppIconName, setAlternateAppIcon, supportsAlternateIcons } from 'expo-alternate-app-icons';
-import { haptics } from '../../../lib/haptics';
-import { notify, Screen, Subtitle } from '../../../components/ui';
-import { colors } from '../../../components/theme';
+import { haptics } from '../../lib/haptics';
+import { notify, Screen, Subtitle } from '../../components/ui';
+import { colors } from '../../components/theme';
 
 /** Purple is the default; the others are alternate icons set up in app.json. */
 const ICONS = [
-  { id: null, label: 'Purple', src: require('../../../../assets/icon.png') },
-  { id: 'Black', label: 'Black', src: require('../../../../assets/app-icons/black.png') },
-  { id: 'White', label: 'White', src: require('../../../../assets/app-icons/white.png') },
-  { id: 'Navy', label: 'Navy', src: require('../../../../assets/app-icons/navy.png') },
-  { id: 'Green', label: 'Green', src: require('../../../../assets/app-icons/green.png') },
-  { id: 'Coral', label: 'Coral', src: require('../../../../assets/app-icons/coral.png') },
+  { id: null, label: 'Purple', src: require('../../../assets/icon.png') },
+  { id: 'Black', label: 'Black', src: require('../../../assets/app-icons/black.png') },
+  { id: 'White', label: 'White', src: require('../../../assets/app-icons/white.png') },
+  { id: 'Navy', label: 'Navy', src: require('../../../assets/app-icons/navy.png') },
+  { id: 'Green', label: 'Green', src: require('../../../assets/app-icons/green.png') },
+  { id: 'Coral', label: 'Coral', src: require('../../../assets/app-icons/coral.png') },
 ] as const;
 
 /** Settings → App icon: pick the Rotawise icon on your home screen (iPhone/Android app). */

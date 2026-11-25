@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { saveAppearanceAndReload, type AppearancePref } from '../../../lib/appearance';
-import { haptics } from '../../../lib/haptics';
-import { Icon, Screen, Subtitle } from '../../../components/ui';
-import { appearance, colors } from '../../../components/theme';
+import { saveAppearanceAndReload, type AppearancePref } from '../../lib/appearance';
+import { haptics } from '../../lib/haptics';
+import { Icon, Screen, Subtitle } from '../../components/ui';
+import { appearance, colors } from '../../components/theme';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 

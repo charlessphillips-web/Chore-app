@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { setAways } from '../../../lib/db';
-import { addAway, awayLabel, currentOrNextAway, endAway, makeAway, type Away } from '../../../lib/away';
-import { toDobString } from '../../../lib/dob';
-import { haptics } from '../../../lib/haptics';
-import { Button, Card, ErrorText, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../../components/ui';
-import { homeAwaySupported, isHomeAwayOn, turnOffHomeAway, turnOnHomeAway } from '../../../lib/homeAway';
-import { DateField } from '../../../components/DobPicker';
-import { colors, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { setAways } from '../../lib/db';
+import { addAway, awayLabel, currentOrNextAway, endAway, makeAway, type Away } from '../../lib/away';
+import { toDobString } from '../../lib/dob';
+import { haptics } from '../../lib/haptics';
+import { Button, Card, ErrorText, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../components/ui';
+import { homeAwaySupported, isHomeAwayOn, turnOffHomeAway, turnOnHomeAway } from '../../lib/homeAway';
+import { DateField } from '../../components/DobPicker';
+import { colors, type } from '../../components/theme';
 
 const fmt = (ms: number) => new Date(ms).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 

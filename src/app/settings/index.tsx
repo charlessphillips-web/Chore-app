@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { useApp } from '../../../context/AppContext';
-import { deleteAccount, isAppOwner, leaveHouse } from '../../../lib/db';
-import { signOutUser } from '../../../lib/account';
-import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Screen, Title, Toggle } from '../../../components/ui';
-import { resetTips, Tip } from '../../../components/Tip';
-import { Avatar } from '../../../components/Avatar';
-import { haptics } from '../../../lib/haptics';
-import { celebrations } from '../../../components/Celebration';
-import { awayLabel, currentOrNextAway } from '../../../lib/away';
-import { bathroomGroups } from '../../../lib/chores';
-import { appearance, colors, fonts, isLight, space, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { deleteAccount, isAppOwner, leaveHouse } from '../../lib/db';
+import { signOutUser } from '../../lib/account';
+import { Button, confirm, Icon, Label, ListGroup, ListRow, Loading, notify, Screen, Title, Toggle } from '../../components/ui';
+import { resetTips, Tip } from '../../components/Tip';
+import { Avatar } from '../../components/Avatar';
+import { haptics } from '../../lib/haptics';
+import { celebrations } from '../../components/Celebration';
+import { awayLabel, currentOrNextAway } from '../../lib/away';
+import { bathroomGroups } from '../../lib/chores';
+import { appearance, colors, fonts, isLight, space, type } from '../../components/theme';
 
 export default function SettingsIndex() {
   const { user, profile, house, members, isAdmin } = useApp();

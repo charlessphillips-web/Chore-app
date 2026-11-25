@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { goBackOrHome } from '../../../lib/nav';
-import { useApp } from '../../../context/AppContext';
-import { submitFeedback, type FeedbackType } from '../../../lib/db';
-import { jpegUri, pickFromLibrary } from '../../../lib/photos';
-import { Button, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
-import { colors, radius } from '../../../components/theme';
+import { goBackOrHome } from '../../lib/nav';
+import { useApp } from '../../context/AppContext';
+import { submitFeedback, type FeedbackType } from '../../lib/db';
+import { jpegUri, pickFromLibrary } from '../../lib/photos';
+import { Button, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../components/ui';
+import { colors, radius } from '../../components/theme';
 
 const TEXT: Record<FeedbackType, { title: string; intro: string; label: string; placeholder: string; thanks: string }> = {
   bug: {

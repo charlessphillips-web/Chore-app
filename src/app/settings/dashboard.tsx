@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { loadDashboard, type DashboardData } from '../../../lib/db';
-import { ageBars, countSince, daily, eventTotals, funnel, signupsByWeek, tally, usersCsv, type Bar } from '../../../lib/stats';
-import { EVENTS } from '../../../lib/analytics';
-import { formatPrice } from '../../../lib/money';
-import { Button, ErrorText, Label, Loading, Screen, Subtitle } from '../../../components/ui';
-import { colors, fonts, type } from '../../../components/theme';
+import { loadDashboard, type DashboardData } from '../../lib/db';
+import { ageBars, countSince, daily, eventTotals, funnel, signupsByWeek, tally, usersCsv, type Bar } from '../../lib/stats';
+import { EVENTS } from '../../lib/analytics';
+import { formatPrice } from '../../lib/money';
+import { Button, ErrorText, Label, Loading, Screen, Subtitle } from '../../components/ui';
+import { colors, fonts, type } from '../../components/theme';
 
 const DAY = 86_400_000;
 

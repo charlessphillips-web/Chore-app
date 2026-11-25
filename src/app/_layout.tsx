@@ -46,6 +46,8 @@ export default function RootLayout() {
           <Stack.Screen name="privacy" options={{ ...modal, title: 'PRIVACY' }} />
           <Stack.Screen name="terms" options={{ ...modal, title: 'TERMS' }} />
           <Stack.Screen name="sign-in" options={{ ...modal, title: 'SIGN IN' }} />
+          {/* Settings slides in from the right (swipe back to Home). */}
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
         </Stack>
         <CelebrationHost />
         <NotificationCentre />

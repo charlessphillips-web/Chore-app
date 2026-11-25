@@ -2,14 +2,16 @@ import { Redirect, Tabs } from 'expo-router';
 import { Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../../context/AppContext';
-import { needsCheckBy } from '../../lib/review';
+import { useTabsState } from '../../components/tabBadges';
 import { colors, isLight, type TabName } from '../../components/theme';
 import { haptics } from '../../lib/haptics';
 import { track, type EventName } from '../../lib/analytics';
-import { PRIVACY_VERSION } from '../../lib/legal';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
+/**
+ * Tab bar for the WEBSITE. Phones use Apple's/Android's own tab bar instead
+ * (_layout.native.tsx).
+ */
 /** Purple on the tab you're on (with a small dot under it), grey on the rest. */
 const tabTint = (_tab: TabName, focused: boolean) => (focused ? colors.brand : colors.muted);
 
@@ -33,28 +35,15 @@ function label(text: string, tab: TabName) {
 }
 
 export default function TabsLayout() {
-  const { ready, profile, logs, user, offers } = useApp();
+  const { redirect, toCheck, payToDo } = useTabsState();
   const insets = useSafeAreaInsets();
-  if (ready && !profile?.houseId) return <Redirect href="/" />;
-  // Must have agreed to the current privacy policy.
-  if (profile && profile.privacyVersion !== PRIVACY_VERSION) return <Redirect href="/consent" />;
-  const toCheck = user ? logs.filter((l) => needsCheckBy(l, user.uid)).length : 0;
-  // Pay things waiting on you: counter offers to answer, someone to pay.
-  const payToDo = user
-    ? offers.filter(
-        (o) =>
-          (o.fromUid === user.uid && o.status === 'open' && Object.keys(o.counters).some((u) => !o.declined.includes(u))) ||
-          (o.fromUid === user.uid && o.status === 'done') ||
-          (o.doerUid === user.uid && o.status === 'agreed'),
-      ).length
-    : 0;
+  if (redirect) return <Redirect href={redirect} />;
   // The iPhone home bar area. Home-screen web apps sometimes report 0, so keep a minimum.
   const bottom = Math.max(insets.bottom, Platform.OS === 'web' ? 14 : 0);
   const badge = (_tab: TabName) => ({ backgroundColor: colors.brand, color: isLight ? '#FFFFFF' : '#000000', fontSize: 10, fontWeight: '700' as const });
 
   return (
     <Tabs
-      backBehavior="history"
       screenOptions={{
         headerShown: false,
         // Fade between tabs instead of jumping.
@@ -99,8 +88,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="house" options={{ title: 'House', tabBarIcon: icon('people-outline', 'people', 'house'), tabBarLabel: label('House', 'house') }} />
-      {/* Settings: opened from the cog on Home, not the tab bar. */}
-      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarButton: () => null, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
 }

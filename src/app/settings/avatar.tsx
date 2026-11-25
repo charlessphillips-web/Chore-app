@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { goBackOrHome } from '../../../lib/nav';
-import { useApp } from '../../../context/AppContext';
-import { setAvatar } from '../../../lib/db';
+import { goBackOrHome } from '../../lib/nav';
+import { useApp } from '../../context/AppContext';
+import { setAvatar } from '../../lib/db';
 import {
   BGS, EXTRAS, EYES, HAIR_COLORS, HAIRS, MOUTHS, randomCharacter, SKINS, type Avatar as AvatarData, type CharacterAvatar,
-} from '../../../lib/avatar';
-import { pickProfileImage, type PickedImage } from '../../../lib/photos';
-import { haptics } from '../../../lib/haptics';
-import { Avatar } from '../../../components/Avatar';
-import { PhotoCropper } from '../../../components/PhotoCropper';
-import { Button, Chip, ChipRow, ErrorText, Label, Loading, notify, Screen } from '../../../components/ui';
-import { colors, fonts, space } from '../../../components/theme';
+} from '../../lib/avatar';
+import { pickProfileImage, type PickedImage } from '../../lib/photos';
+import { haptics } from '../../lib/haptics';
+import { Avatar } from '../../components/Avatar';
+import { PhotoCropper } from '../../components/PhotoCropper';
+import { Button, Chip, ChipRow, ErrorText, Label, Loading, notify, Screen } from '../../components/ui';
+import { colors, fonts, space } from '../../components/theme';
 
 type Mode = 'photo' | 'character';
 

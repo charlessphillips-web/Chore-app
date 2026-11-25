@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { setResetRule, setWallpaper, updateHouse } from '../../../lib/db';
-import { pickFromLibrary } from '../../../lib/photos';
-import { customError, DEFAULT_RESET_MONTHS, periodEnd, RESET_OPTIONS, resetLabel, type ResetRule } from '../../../lib/period';
-import { toDobString } from '../../../lib/dob';
-import { DateField } from '../../../components/DobPicker';
-import { PostcodeField } from '../../../components/PostcodeField';
-import type { HouseArea } from '../../../lib/postcode';
-import { Button, Card, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../../components/ui';
-import { colors, radius, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { setResetRule, setWallpaper, updateHouse } from '../../lib/db';
+import { pickFromLibrary } from '../../lib/photos';
+import { customError, DEFAULT_RESET_MONTHS, periodEnd, RESET_OPTIONS, resetLabel, type ResetRule } from '../../lib/period';
+import { toDobString } from '../../lib/dob';
+import { DateField } from '../../components/DobPicker';
+import { PostcodeField } from '../../components/PostcodeField';
+import type { HouseArea } from '../../lib/postcode';
+import { Button, Card, Chip, ChipRow, confirm, Empty, ErrorText, Input, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../components/ui';
+import { colors, radius, type } from '../../components/theme';
 
 /** Admin: house name, leaderboard reset and wallpaper. */
 export default function HouseDetails() {

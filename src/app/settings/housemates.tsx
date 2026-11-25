@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { makeAdmin, removeMember } from '../../../lib/db';
-import { Button, Card, confirm, Loading, notify, Screen, Subtitle } from '../../../components/ui';
-import { colors, space, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { makeAdmin, removeMember } from '../../lib/db';
+import { Button, Card, confirm, Loading, notify, Screen, Subtitle } from '../../components/ui';
+import { colors, space, type } from '../../components/theme';
 
 /** Admin: remove housemates or hand over the admin role. */
 export default function Housemates() {

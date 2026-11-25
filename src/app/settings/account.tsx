@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { router } from 'expo-router';
-import { useApp } from '../../../context/AppContext';
-import { authError, changePassword, checkLogin, resetPassword, saveAccount, sendVerification, signOutUser } from '../../../lib/account';
-import { suggestEmail } from '../../../lib/emailCheck';
-import { EmailHint } from '../../../components/EmailHint';
-import { SocialButtons } from '../../../components/SocialButtons';
-import { haptics } from '../../../lib/haptics';
-import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
-import { PasswordInput } from '../../../components/PasswordInput';
-import { colors, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { authError, changePassword, checkLogin, resetPassword, saveAccount, sendVerification, signOutUser } from '../../lib/account';
+import { suggestEmail } from '../../lib/emailCheck';
+import { EmailHint } from '../../components/EmailHint';
+import { SocialButtons } from '../../components/SocialButtons';
+import { haptics } from '../../lib/haptics';
+import { Button, Card, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../components/ui';
+import { PasswordInput } from '../../components/PasswordInput';
+import { colors, type } from '../../components/theme';
 
 /** Your login: save an email + password so you can sign in on another phone. */
 export default function AccountScreen() {

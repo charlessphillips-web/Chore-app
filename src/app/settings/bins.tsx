@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { updateHouse } from '../../../lib/db';
-import { BIN_NAMES, MAX_BINS, nextCollections, scheduleLabel, type BinSchedule } from '../../../lib/bins';
-import { toDobString } from '../../../lib/dob';
-import { withBigBins } from '../../../lib/chores';
-import { haptics } from '../../../lib/haptics';
-import { DateField } from '../../../components/DobPicker';
-import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, ListGroup, ListRow, Loading, Screen, Subtitle } from '../../../components/ui';
-import { colors, space, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { updateHouse } from '../../lib/db';
+import { BIN_NAMES, MAX_BINS, nextCollections, scheduleLabel, type BinSchedule } from '../../lib/bins';
+import { toDobString } from '../../lib/dob';
+import { withBigBins } from '../../lib/chores';
+import { haptics } from '../../lib/haptics';
+import { DateField } from '../../components/DobPicker';
+import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, ListGroup, ListRow, Loading, Screen, Subtitle } from '../../components/ui';
+import { colors, space, type } from '../../components/theme';
 
 /** Admin: when each bin goes out. Reminders: 8pm, 10pm and 7am on bin night until someone's done it. */
 export default function BinDays() {

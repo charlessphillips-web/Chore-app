@@ -1,8 +1,8 @@
-import { goBackOrHome } from '../../../lib/nav';
-import { useApp } from '../../../context/AppContext';
-import { updateProfile } from '../../../lib/db';
-import { ProfileForm } from '../../../components/ProfileForm';
-import { Loading, notify, Screen } from '../../../components/ui';
+import { goBackOrHome } from '../../lib/nav';
+import { useApp } from '../../context/AppContext';
+import { updateProfile } from '../../lib/db';
+import { ProfileForm } from '../../components/ProfileForm';
+import { Loading, notify, Screen } from '../../components/ui';
 
 export default function PersonalDetails() {
   const { user, profile } = useApp();

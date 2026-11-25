@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { updateHouse } from '../../../lib/db';
-import { addBathroom, BATHROOM_TASKS, bathroomGroups, bathroomName, QUICK_BATHROOMS, removeBathroom, setBathroomUsers, type HouseChore } from '../../../lib/chores';
-import { track } from '../../../lib/analytics';
-import { haptics } from '../../../lib/haptics';
-import { Button, Card, Chip, ChipRow, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../../components/ui';
-import { colors, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { updateHouse } from '../../lib/db';
+import { addBathroom, BATHROOM_TASKS, bathroomGroups, bathroomName, QUICK_BATHROOMS, removeBathroom, setBathroomUsers, type HouseChore } from '../../lib/chores';
+import { track } from '../../lib/analytics';
+import { haptics } from '../../lib/haptics';
+import { Button, Card, Chip, ChipRow, confirm, ErrorText, Input, Label, Loading, notify, Screen, Subtitle } from '../../components/ui';
+import { colors, type } from '../../components/theme';
 
 /**
  * Admin: one entry per bathroom (e.g. per floor), and who uses it. Only

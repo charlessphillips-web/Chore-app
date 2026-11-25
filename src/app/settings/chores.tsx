@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { useApp } from '../../../context/AppContext';
-import { updateHouse } from '../../../lib/db';
-import { addChore, choreSize, DEFAULT_CHORES, SIZE_NAMES, type ChoreSize, type HouseChore } from '../../../lib/chores';
-import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../../components/ui';
-import { colors, space, type } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { updateHouse } from '../../lib/db';
+import { addChore, choreSize, DEFAULT_CHORES, SIZE_NAMES, type ChoreSize, type HouseChore } from '../../lib/chores';
+import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, Loading, notify, Screen, Subtitle, Toggle } from '../../components/ui';
+import { colors, space, type } from '../../components/theme';
 
 /** Admin: switch chores on/off and add new ones. */
 export default function ChoresSettings() {

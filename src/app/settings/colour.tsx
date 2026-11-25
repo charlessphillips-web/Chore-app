@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useApp } from '../../../context/AppContext';
-import { haptics } from '../../../lib/haptics';
-import { Avatar } from '../../../components/Avatar';
-import { Label, Loading, Screen, Subtitle } from '../../../components/ui';
-import { colors, swatch, YOU_COLORS } from '../../../components/theme';
+import { useApp } from '../../context/AppContext';
+import { haptics } from '../../lib/haptics';
+import { Avatar } from '../../components/Avatar';
+import { Label, Loading, Screen, Subtitle } from '../../components/ui';
+import { colors, swatch, YOU_COLORS } from '../../components/theme';
 
 /** Pick your "you" colour: your bar, name, points and confetti. Only you see it. */
 export default function ColourScreen() {
