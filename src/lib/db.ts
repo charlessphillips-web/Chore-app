@@ -16,13 +16,12 @@ import { awayDaysBetween, type Away } from './away';
 import { afterChore, milestoneHit, seedStreak, type Streak } from './streak';
 import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
-import { sendPush } from './notifications';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
-import { formatPrice, type PayChoice } from './money';
+import type { PayChoice } from './money';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
 import { PRIVACY_VERSION } from './legal';
-import { wants, type NotifyKind, type NotifyPrefs } from './notifyPrefs';
+import { wants, type NotifyPrefs } from './notifyPrefs';
 import type { BinSchedule } from './bins';
 import { track } from './analytics';
 import { STAKE_MAX, type Stake, type StakeKind } from './stakes';
@@ -242,7 +241,7 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     choreCounts: p.chores ?? {},
     lastCompletedAt: ms(d.lastCompletedAt),
     joinedAt: ms(d.joinedAt) ?? Date.now(),
-    pushToken: d.pushToken ?? null,
+    notifOn: d.notifOn === true || typeof d.pushToken === 'string',
     avatar: toAvatar(d.avatar),
     notifPrefs: d.notifPrefs && typeof d.notifPrefs === 'object' ? (d.notifPrefs as NotifyPrefs) : {},
     aways: Array.isArray(d.aways)
@@ -338,8 +337,18 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
   );
 }
 
-export async function setPushToken(houseId: string, uid: string, token: string | null) {
-  await updateDoc(memberRef(houseId, uid), { pushToken: token });
+/**
+ * Saves this phone's push address where only you (and the Rotawise server)
+ * can read it. Housemates just see that notifications are on.
+ */
+let savedToken: string | null = null;
+export async function setPushToken(houseId: string, uid: string, token: string | null, force = false) {
+  const key = `${houseId}/${uid}/${token}`;
+  if (!force && savedToken === key) return;
+  if (token) await setDoc(doc(db, 'pushTokens', uid), { token, updatedAt: serverTimestamp() });
+  else await deleteDoc(doc(db, 'pushTokens', uid)).catch(() => {});
+  await updateDoc(memberRef(houseId, uid), { pushToken: null, notifOn: !!token });
+  savedToken = key;
 }
 
 /** Which notifications you want (only your own). */
@@ -357,10 +366,7 @@ export const REACTIONS = ['👏', '🔥', '💪', '❤️', '😂', '🫡', '�
 /** React to a housemate's chore (tap the same emoji again to take it off). */
 export async function reactToLog(houseId: string, log: ChoreLog, me: { uid: string; username: string }, emoji: string | null, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'logs', log.id), { [`reactions.${me.uid}`]: emoji ?? deleteField() });
-  if (emoji) {
-    track('reaction');
-    await ping(members, [log.userId], houseId, `${me.username} reacted ${emoji}`, `to your ${log.choreName}`, 'reactions');
-  }
+  if (emoji) track('reaction');
 }
 
 /** Save your trips away (see lib/away). */
@@ -450,14 +456,7 @@ export async function logChore(opts: {
   track('chore_log');
   if (!offer && !opts.members.find((m) => m.uid === uid)?.lastCompletedAt) track('first_chore');
 
-  const others = opts.members.filter((m) => m.uid !== uid && m.pushToken && wants(m.notifPrefs, 'check')).map((m) => m.pushToken!);
-  if (others.length) {
-    await sendPush(others, {
-      title: offer ? `${username} did: ${name} (for ${offer.fromName})` : `${username} did: ${name}`,
-      body: 'Check the photo — one of you needs to verify it.',
-      data: { type: 'chore_check', houseId: house.id },
-    });
-  }
+  // The server tells housemates there's a photo to check.
   return { streak, milestone };
 }
 
@@ -485,19 +484,9 @@ export const CHECK_REMINDER_MS = 12 * 60 * 60 * 1000;
  * everyone who hasn't checked it yet. Whichever phone opens the app first
  * sends it; the rules make sure it only goes out once.
  */
-export async function sendCheckReminder(houseId: string, log: ChoreLog, members: Member[]) {
+export async function sendCheckReminder(houseId: string, log: ChoreLog) {
+  // The server sees this flag and reminds whoever hasn't checked yet.
   await updateDoc(doc(db, 'houses', houseId, 'logs', log.id), { checkReminderSent: true });
-  const still = log.checksNeeded - log.checks.length;
-  const to = members
-    .filter((m) => m.uid !== log.userId && !log.checks.includes(m.uid) && m.pushToken && wants(m.notifPrefs, 'check'))
-    .map((m) => m.pushToken!);
-  if (to.length) {
-    await sendPush(to, {
-      title: `📸 ${log.choreName} still needs ${still} more check${still === 1 ? '' : 's'}`,
-      body: `${log.username}'s photo hasn't been fully checked yet. Can you take a look?`,
-      data: { type: 'chore_check', houseId },
-    }).catch(() => false);
-  }
 }
 
 /** One housemate verifies a chore photo. */
@@ -545,14 +534,9 @@ export async function sendBackChore(
   reason: string,
   members: Member[],
 ) {
-  const log = await reviewChore(house.id, logId, reviewer, reason);
+  await reviewChore(house.id, logId, reviewer, reason);
   track('chore_sendback');
-  const owner = members.find((m) => m.uid === log.userId);
-  if (owner?.pushToken && wants(owner.notifPrefs, 'redo')) {
-    await sendPush([owner.pushToken], needsRedo(reason)
-      ? { title: `Redo: ${log.choreName}`, body: `${reviewer.username} sent it back: ${reason}`, data: { type: 'chore_redo', houseId: house.id } }
-      : { title: `${log.choreName} wasn't counted`, body: `${reviewer.username} marked it as logged twice. Nothing to redo.`, data: { type: 'chore_redo', houseId: house.id } });
-  }
+  // The server tells them ("Redo" or "didn't count").
 }
 
 /** reason null = verify; a reason = send back. Returns the chore. */
@@ -621,15 +605,7 @@ export const NUDGE_EVERY_MS = 3 * 60 * 60 * 1000;
 export async function nudgeChore(houseId: string, request: ChoreRequest, from: { uid: string; username: string }, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'requests', request.id), { lastNudgedAt: serverTimestamp(), lastNudgedBy: from.uid });
   track('chore_nudge');
-  const who = members.find((m) => m.uid === request.assignedTo);
-  const to = who && wants(who.notifPrefs, 'nudge') ? who.pushToken : null;
-  if (to) {
-    await sendPush([to], {
-      title: `${from.username} nudged you 👋`,
-      body: `${request.needs}. It's your turn.`,
-      data: { type: 'chore_nudge', houseId },
-    }).catch(() => false);
-  }
+  // The server sends the nudge (and checks it's not too soon).
 }
 
 /**
@@ -679,14 +655,8 @@ export async function requestChore(opts: {
   });
   track('chore_flag');
 
-  let notified = false;
-  if (assignee.pushToken && wants(assignee.notifPrefs, 'turn')) {
-    notified = await sendPush([assignee.pushToken], {
-      title: `${chore.needs}!`,
-      body: "It's your turn to do it. You've done the fewest chores in the house.",
-      data: { type: 'chore_request', houseId: house.id },
-    });
-  }
+  // The server tells them it's their turn.
+  const notified = assignee.notifOn && wants(assignee.notifPrefs, 'turn');
   return { assignee, notified };
 }
 
@@ -822,13 +792,6 @@ export function watchPaidOffers(houseId: string, cb: (o: ChoreOffer[]) => void, 
   );
 }
 
-const tokensOf = (members: Member[], uids: string[], kind: NotifyKind) =>
-  members.filter((m) => uids.includes(m.uid) && m.pushToken && wants(m.notifPrefs, kind)).map((m) => m.pushToken!);
-
-async function ping(members: Member[], uids: string[], houseId: string, title: string, body: string, kind: NotifyKind = 'offers') {
-  const to = tokensOf(members, uids, kind);
-  if (to.length) await sendPush(to, { title, body, data: { type: 'chore_offer', houseId } }).catch(() => false);
-}
 
 /** Offer your chore (a "needs doing" assigned to you) to housemates for a price. */
 export async function createOffer(opts: {
@@ -859,8 +822,6 @@ export async function createOffer(opts: {
     createdAt: serverTimestamp(),
   });
   track('offer_create');
-  const others = opts.members.filter((m) => m.uid !== from.uid).map((m) => m.uid);
-  await ping(opts.members, others, house.id, `${from.username} will pay ${formatPrice(price)}`, `for someone to do: ${request.choreName}. Tap to accept or make an offer.`);
 }
 
 /** A housemate takes the offer at its price. */
@@ -871,7 +832,6 @@ export async function acceptOffer(
     status: 'agreed', doerUid: me.uid, doerName: me.username, agreedPrice: offer.price, doerPay: pay, agreedAt: serverTimestamp(),
   });
   track('offer_accept');
-  await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName}`, `for ${formatPrice(offer.price)}. You'll pay once it's been checked.`);
 }
 
 /** A housemate's one counter offer. */
@@ -881,13 +841,10 @@ export async function counterOffer(
   if (offer.counters[me.uid]) throw new Error('You can only make one counter offer.');
   await updateDoc(offerRef(houseId, offer.id), { [`counters.${me.uid}`]: { name: me.username, price, pay } });
   track('offer_counter');
-  await ping(members, [offer.fromUid], houseId, `${me.username} will do ${offer.choreName} for ${formatPrice(price)}`, 'Tap to accept or decline.');
 }
 
 export async function declineCounter(houseId: string, offer: ChoreOffer, uid: string, members: Member[]) {
   await updateDoc(offerRef(houseId, offer.id), { declined: [...offer.declined, uid] });
-  const c = offer.counters[uid];
-  if (c) await ping(members, [uid], houseId, `${offer.fromName} declined your ${formatPrice(c.price)}`, `for ${offer.choreName}.`);
 }
 
 export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: string, members: Member[]) {
@@ -897,18 +854,11 @@ export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: str
     status: 'agreed', doerUid: uid, doerName: c.name, agreedPrice: c.price, doerPay: c.pay ?? null, agreedAt: serverTimestamp(),
   });
   track('offer_accept');
-  await ping(members, [uid], houseId, `${offer.fromName} accepted your ${formatPrice(c.price)}`, `You're doing: ${offer.choreName}.`);
 }
 
 /** The doer nudges the payer (at most once a day). */
 export async function remindPayer(houseId: string, offer: ChoreOffer, members: Member[]) {
   await updateDoc(offerRef(houseId, offer.id), { remindedAt: serverTimestamp() });
-  await ping(
-    members, [offer.fromUid], houseId,
-    `Reminder: pay ${offer.doerName} ${formatPrice(offer.agreedPrice ?? offer.price)}`,
-    `for ${offer.choreName}. Open Rotawise → Pay.`,
-    'payments',
-  );
 }
 
 /** The offerer withdraws (only before anyone's agreed). */
@@ -934,9 +884,6 @@ export async function markOfferPaid(house: House, offer: ChoreOffer, members: Me
   });
   await batch.commit();
   track('offer_paid');
-  if (offer.doerUid && offer.agreedPrice) {
-    await ping(members, [offer.doerUid], house.id, `${offer.fromName} paid you ${formatPrice(offer.agreedPrice)}`, `for ${offer.choreName}. Check your bank app.`, 'payments');
-  }
 }
 
 // ---------- Owner dashboard ----------

@@ -68,9 +68,9 @@ export default function HouseTab() {
             </View>
             {m.uid === house.adminUid && <Text style={styles.admin}>ADMIN</Text>}
             <Icon
-              name={m.pushToken ? 'notifications' : 'notifications-off-outline'}
+              name={m.notifOn ? 'notifications' : 'notifications-off-outline'}
               size={16}
-              color={m.pushToken ? colors.text : colors.muted}
+              color={m.notifOn ? colors.text : colors.muted}
             />
           </View>
         ))}

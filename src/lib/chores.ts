@@ -161,3 +161,12 @@ export function removeBathroom(list: HouseChore[], group: string): HouseChore[] 
 export function taskName(c: HouseChore): string {
   return c.group && c.name.startsWith(`${c.group}: `) ? c.name.slice(c.group.length + 2) : c.name;
 }
+
+/** The big-bins chore, switched on (added if missing). Needed so bin night reminders have something to tick off. */
+export function withBigBins(list: HouseChore[]): HouseChore[] {
+  const key = 'taking big bins out on bin days';
+  const has = list.find((c) => c.key === key);
+  if (has?.active) return list;
+  if (has) return list.map((c) => (c.key === key ? { ...c, active: true } : c));
+  return [...list, makeChore('Taking big bins out on bin days', 'Big bins need taking out')];
+}

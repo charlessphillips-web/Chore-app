@@ -4,13 +4,14 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// Show notifications as banners even while the app is open.
+// With the app open, NotificationCentre shows its own big purple banner
+// instead of the small system one. Quiet ones make no sound.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
+  handleNotification: async (n) => ({
+    shouldShowBanner: false,
     shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldPlaySound: n.request.content.data?.size !== 'quiet',
+    shouldSetBadge: true,
   }),
 });
 
@@ -45,8 +46,12 @@ export async function registerForPushNotifications({ ask }: { ask: boolean }): P
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Chore requests',
+        name: 'Your turn, bins and payments',
         importance: AndroidImportance.HIGH,
+      });
+      await Notifications.setNotificationChannelAsync('quiet', {
+        name: 'Photos to check, reactions and summaries',
+        importance: AndroidImportance.LOW,
       });
     }
 
@@ -68,21 +73,3 @@ export async function registerForPushNotifications({ ask }: { ask: boolean }): P
   }
 }
 
-/** Sends a push via Expo's push service. Returns true if Expo accepted it. */
-export async function sendPush(
-  to: string[],
-  msg: { title: string; body: string; data?: Record<string, unknown> },
-): Promise<boolean> {
-  if (to.length === 0) return false;
-  try {
-    const res = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(to.map((t) => ({ to: t, sound: 'default', ...msg }))),
-    });
-    const json = await res.json();
-    return res.ok && Array.isArray(json?.data) && json.data.some((r: { status?: string }) => r.status === 'ok');
-  } catch {
-    return false;
-  }
-}

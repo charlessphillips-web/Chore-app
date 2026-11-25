@@ -21,7 +21,7 @@ export function BinBanner({ bins, now, isAdmin }: { bins: BinSchedule[]; now: Da
         <Icon name="trash-outline" size={20} color={colors.text} />
         <View style={{ flex: 1 }}>
           <Text style={[type.body, { fontWeight: '600' }]}>Set up bin day reminders</Text>
-          <Text style={type.small}>Everyone gets a reminder at 8pm the night before</Text>
+          <Text style={type.small}>Reminders on bin night until someone takes them out</Text>
         </View>
         <Icon name="chevron-forward" size={18} color={colors.muted} />
       </Pressable>

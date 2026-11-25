@@ -18,3 +18,14 @@ test('bathrooms: add, names, users, remove', () => {
   assert.equal(removeBathroom(list, 'Top floor bathroom').length, 0);
   assert.equal(choreIcon(list[0].key), 'water-outline');
 });
+
+test('withBigBins adds or switches on the big bins chore once', async () => {
+  const { withBigBins, DEFAULT_CHORES } = await import('./chores.ts');
+  const key = 'taking big bins out on bin days';
+  const without = DEFAULT_CHORES.filter((c) => c.key !== key);
+  const added = withBigBins(without);
+  assert.equal(added.filter((c) => c.key === key).length, 1);
+  assert.equal(withBigBins(added), added);
+  const off = added.map((c) => (c.key === key ? { ...c, active: false } : c));
+  assert.equal(withBigBins(off).find((c) => c.key === key)?.active, true);
+});

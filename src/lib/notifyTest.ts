@@ -3,7 +3,7 @@
  * which one is broken.
  *   1. Phone allows Rotawise notifications
  *   2. This phone has a push address (Expo token)
- *   3. That address is saved on your housemate profile (so others can reach you)
+ *   3. That address is saved (privately, for the Rotawise server)
  *   4. The phone can show a notification at all (a local one)
  *   5. Expo → Apple delivers a real push (with Expo's error if not)
  */
@@ -16,7 +16,7 @@ export interface TestStep { label: string; ok: boolean; detail?: string }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function runNotificationTest(opts: { houseId: string; uid: string; savedToken: string | null }): Promise<TestStep[]> {
+export async function runNotificationTest(opts: { houseId: string; uid: string }): Promise<TestStep[]> {
   const steps: TestStep[] = [];
   if (Platform.OS === 'web') {
     return [{ label: 'Notifications only work in the iPhone/Android app', ok: false, detail: 'The website can’t receive them. Open Rotawise from TestFlight.' }];
@@ -35,14 +35,12 @@ export async function runNotificationTest(opts: { houseId: string; uid: string; 
   steps.push({ label: 'This phone has a push address', ok: !!token, detail: token ? undefined : 'Couldn’t get one from Expo. Check you have internet and try again.' });
   if (!token) return steps;
 
-  let saved = opts.savedToken === token;
-  if (!saved) {
-    await setPushToken(opts.houseId, opts.uid, token).then(() => { saved = true; }).catch(() => {});
-  }
+  let saved = false;
+  await setPushToken(opts.houseId, opts.uid, token, true).then(() => { saved = true; }).catch(() => {});
   steps.push({
-    label: 'Your housemates can reach you',
+    label: 'Rotawise can reach this phone',
     ok: saved,
-    detail: saved ? (opts.savedToken === token ? undefined : 'It wasn’t saved before, so you’d have missed notifications. Fixed now.') : 'Couldn’t save your push address. Try again.',
+    detail: saved ? undefined : 'Couldn’t save your push address. Try again.',
   });
 
   try {

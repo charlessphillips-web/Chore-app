@@ -32,9 +32,9 @@ TaskManager.defineTask(TASK, async ({ data, error }) => {
   if (until > Date.now()) return; // already marked away
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Not home tonight? ✈️',
-      body: 'Tap to pause your chores while you’re away.',
-      data: { url: '/away-quick' },
+      title: 'Away tonight? ✈️',
+      body: 'Tap to pause chores',
+      data: { url: '/away-quick', size: 'normal' },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(awayAskTime(Date.now())) },
   });

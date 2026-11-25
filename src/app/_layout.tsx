@@ -1,8 +1,6 @@
-import { useEffect } from 'react';
-import { router, Stack } from 'expo-router';
-import * as Notifications from 'expo-notifications';
+import { Stack } from 'expo-router';
 import '../lib/homeAway';
-import { Platform, Pressable, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { goBackOrHome } from '../lib/nav';
 import { useFonts } from 'expo-font';
@@ -11,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '../context/AppContext';
 import { colors, darkHeader, isLight } from '../components/theme';
+import { NotificationCentre } from '../components/NotificationCentre';
 import { CelebrationHost } from '../components/Celebration';
 
 /** Pop-up screens: a Back button top left (you can still swipe down to close). */
@@ -25,22 +24,7 @@ function BackButton() {
 }
 const modal = { presentation: 'modal' as const, headerShown: true, headerLeft: () => <BackButton /> };
 
-/** Tapping a notification that carries a screen (e.g. "Not home tonight?") opens that screen. */
-function useNotificationLinks() {
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const open = (r: Notifications.NotificationResponse | null) => {
-      const url = r?.notification.request.content.data?.url;
-      if (typeof url === 'string' && url.startsWith('/')) setTimeout(() => router.push(url as never), 300);
-    };
-    Notifications.getLastNotificationResponseAsync().then(open).catch(() => {});
-    const sub = Notifications.addNotificationResponseReceivedListener(open);
-    return () => sub.remove();
-  }, []);
-}
-
 export default function RootLayout() {
-  useNotificationLinks();
   // Fonts load in a moment; until then the system font is used.
   useFonts({ SpaceMono_400Regular, SpaceMono_700Bold });
   return (
@@ -62,6 +46,7 @@ export default function RootLayout() {
           <Stack.Screen name="sign-in" options={{ ...modal, title: 'SIGN IN' }} />
         </Stack>
         <CelebrationHost />
+        <NotificationCentre />
       </AppProvider>
     </SafeAreaProvider>
   );

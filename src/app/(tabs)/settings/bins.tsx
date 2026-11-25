@@ -4,12 +4,13 @@ import { useApp } from '../../../context/AppContext';
 import { updateHouse } from '../../../lib/db';
 import { BIN_NAMES, MAX_BINS, nextCollections, scheduleLabel, type BinSchedule } from '../../../lib/bins';
 import { toDobString } from '../../../lib/dob';
+import { withBigBins } from '../../../lib/chores';
 import { haptics } from '../../../lib/haptics';
 import { DateField } from '../../../components/DobPicker';
 import { Button, Card, Chip, ChipRow, confirm, ErrorText, Icon, Input, Label, ListGroup, ListRow, Loading, Screen, Subtitle } from '../../../components/ui';
 import { colors, space, type } from '../../../components/theme';
 
-/** Admin: when each bin goes out. Everyone gets a reminder at 8pm the night before. */
+/** Admin: when each bin goes out. Reminders: 8pm, 10pm and 7am on bin night until someone's done it. */
 export default function BinDays() {
   const { house, isAdmin } = useApp();
   const [adding, setAdding] = useState(false);
@@ -27,7 +28,8 @@ export default function BinDays() {
     setBusy(true);
     setError(null);
     try {
-      await updateHouse(house!.id, { bins });
+      // Bin night reminders stop when someone logs "Taking big bins out", so make sure it's on the list.
+      await updateHouse(house!.id, bins.length ? { bins, chores: withBigBins(house!.chores) } : { bins });
       haptics.success();
       return true;
     } catch (e) {
@@ -53,8 +55,8 @@ export default function BinDays() {
   return (
     <Screen edges={['left', 'right']}>
       <Subtitle>
-        Add your bins and everyone in the house gets a reminder at 8pm the night before they go out. Check your
-        council&apos;s website for your collection days.
+        Add your bins. On bin night everyone gets a reminder at 8pm, then 10pm and 7am, until someone takes them
+        out (and logs &quot;Taking big bins out&quot;). Check your council&apos;s website for your collection days.
       </Subtitle>
 
       {house.bins.length > 0 ? (

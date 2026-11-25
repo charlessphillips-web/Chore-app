@@ -41,8 +41,7 @@ export default function NotificationSettings() {
             if (!user || !house) return;
             setTesting(true);
             setSteps(null);
-            const me = members.find((m) => m.uid === user.uid);
-            const result = await runNotificationTest({ houseId: house.id, uid: user.uid, savedToken: me?.pushToken ?? null }).catch((e) => [{ label: 'Test failed', ok: false, detail: (e as Error).message }]);
+            const result = await runNotificationTest({ houseId: house.id, uid: user.uid }).catch((e) => [{ label: 'Test failed', ok: false, detail: (e as Error).message }]);
             setSteps(result);
             setTesting(false);
           }} />

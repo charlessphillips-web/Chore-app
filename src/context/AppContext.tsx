@@ -231,8 +231,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!remindIds || !houseId || !current) return;
     for (const id of remindIds.split(',')) {
       const log = current.logs.find((l) => l.id === id);
-      const members = current.members.map((m) => toMember(m.id, m.data, ''));
-      if (log) sendCheckReminder(houseId, log, members).catch(() => {});
+      if (log) sendCheckReminder(houseId, log).catch(() => {});
     }
     // Only re-run when the set of chores needing a reminder changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps

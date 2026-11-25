@@ -7,9 +7,9 @@ export const NOTIFY_KINDS = {
   reactions: { title: 'Reactions', desc: 'When a housemate reacts 👏 to a chore you did' },
   offers: { title: 'Chore offers', desc: 'Offers, counter offers and accepted deals' },
   payments: { title: 'Payments', desc: 'When you’re paid, or reminded to pay' },
-  bins: { title: 'Bin day', desc: '8pm the night before the bins go out' },
+  bins: { title: 'Bin night', desc: '8pm, 10pm and 7am until someone takes them out' },
   reset: { title: 'Leaderboard reset', desc: 'The day before the leaderboard resets' },
-  weekly: { title: 'Weekly summary', desc: 'Sunday evening: how your house did' },
+  weekly: { title: 'Weekly summary', desc: 'Sunday 6pm: who topped the house' },
 } as const;
 export type NotifyKind = keyof typeof NOTIFY_KINDS;
 export type NotifyPrefs = Partial<Record<NotifyKind, boolean>>;
