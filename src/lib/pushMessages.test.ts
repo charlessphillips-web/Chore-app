@@ -132,3 +132,12 @@ test('phone bin night plan: 8pm, 10pm, 7am; skips done nights; whose turn only f
   const away = binNightPlan({ ...base, aways: [{ from: new Date(2026, 10, 24).getTime(), until: new Date(2026, 10, 28).getTime() }] }, new Date(2026, 10, 25, 12), 2);
   assert.equal(away[0].at.getDate(), 2);
 });
+
+test('bins-done wake-up is recognised in every payload shape', async () => {
+  const { isBinsDone: check } = await import('./binNight.ts');
+  assert.equal(check({ data: { binsDone: true } }), true);
+  assert.equal(check({ data: { dataString: '{"binsDone":true}' } }), true);
+  assert.equal(check({ notification: { request: { content: { data: { binsDone: true } } } } }), true);
+  assert.equal(check({ data: { url: '/home' } }), false);
+  assert.equal(check(null), false);
+});

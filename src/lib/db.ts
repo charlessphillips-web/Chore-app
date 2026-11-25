@@ -19,8 +19,9 @@ import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
 import type { PayChoice } from './money';
 import * as Push from './pushMessages';
-import { logCreated } from './pushEvents';
-import { notifyQuietly, sendNotifications } from './notify';
+import { binNightNow, logCreated } from './pushEvents';
+import { cancelTonightsBinReminders } from './binsDoneTask';
+import { notifyQuietly, sendBinsDone, sendNotifications } from './notify';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
 import { PRIVACY_VERSION } from './legal';
@@ -464,6 +465,11 @@ export async function logChore(opts: {
   track('chore_log');
   if (!offer && !opts.members.find((m) => m.uid === uid)?.lastCompletedAt) track('first_chore');
 
+  // On bin night: stop everyone's bin reminders (this phone's now, others' via an invisible push).
+  if (key === Push.BIG_BINS_KEY && binNightNow(house.bins, new Date()).length) {
+    cancelTonightsBinReminders().catch(() => {});
+    sendBinsDone(opts.members, opts.members.map((m) => m.uid).filter((u) => u !== uid)).catch(() => {});
+  }
   // Tell housemates there's a photo to check (or, on bin night, that the bins are out).
   notifyQuietly(opts.members, logCreated(
     { userId: uid, username, choreKey: key, choreName: name, creditToName: offer?.fromName ?? null },

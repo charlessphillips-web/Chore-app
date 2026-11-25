@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import '../lib/homeAway';
+import '../lib/binsDoneTask';
 import { Pressable, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { goBackOrHome } from '../lib/nav';

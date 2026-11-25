@@ -38,3 +38,15 @@ export function binNightPlan(o: BinNightInput, now: Date, weeks = 4): { at: Date
   return out;
 }
 
+
+/** Is this the "bins are done" wake-up? (The data can arrive as an object or a JSON string.) */
+export function isBinsDone(payload: unknown): boolean {
+  const p = payload as { data?: Record<string, unknown> & { dataString?: string }; notification?: { request?: { content?: { data?: Record<string, unknown> } } } } | null;
+  if (!p) return false;
+  if (p.data?.binsDone || p.notification?.request?.content?.data?.binsDone) return true;
+  try {
+    return !!(p.data?.dataString && JSON.parse(p.data.dataString).binsDone);
+  } catch {
+    return false;
+  }
+}

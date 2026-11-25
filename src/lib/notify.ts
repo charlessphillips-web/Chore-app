@@ -35,3 +35,19 @@ export async function sendNotifications(members: Member[], sends: Send[]): Promi
 
 /** Fire and forget: a notification failing never stops the action. */
 export const notifyQuietly = (members: Member[], sends: Send[]) => { sendNotifications(members, sends).catch(() => {}); };
+
+/**
+ * Invisible wake-up to housemates' phones: "the bins are done", so they
+ * cancel tonight's bin reminders (see binsDoneTask.ts). No sound or banner.
+ */
+export async function sendBinsDone(members: Member[], to: string[]) {
+  const msgs = members
+    .filter((m) => to.includes(m.uid) && m.pushToken)
+    .map((m) => ({ to: m.pushToken!, contentAvailable: true, priority: 'normal', data: { binsDone: true } }));
+  if (!msgs.length) return;
+  await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(msgs),
+  }).catch(() => {});
+}

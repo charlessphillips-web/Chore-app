@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { verifyChore } from '../lib/db';
+import { cancelTonightsBinReminders } from '../lib/binsDoneTask';
 import { needsCheckBy } from '../lib/review';
 import { haptics } from '../lib/haptics';
 import { toast } from './Celebration';
@@ -74,6 +75,11 @@ export function NotificationCentre() {
     // With the app open: our own banner instead of the small system one.
     const got = Notifications.addNotificationReceivedListener((n) => {
       const c = n.request.content;
+      // The invisible "bins are done" wake-up: cancel tonight's bin alarms, show nothing.
+      if (c.data?.binsDone || !c.title) {
+        if (c.data?.binsDone) cancelTonightsBinReminders().catch(() => {});
+        return;
+      }
       const size = typeof c.data?.size === 'string' ? c.data.size : 'normal';
       if (size === 'big') haptics.warning(); else if (size === 'normal') haptics.tap();
       setBanner({ id: n.request.identifier, title: c.title ?? 'Rotawise', body: c.body ?? '', url: urlOf(n), size });
