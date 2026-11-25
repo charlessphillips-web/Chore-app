@@ -26,6 +26,7 @@
     "expo-sqlite": "~58.0.15",
     "expo-status-bar": "~58.0.4",
     "expo-task-manager": "~58.0.13",
+    "expo-updates": "~58.0.21",
     "firebase": "^13.2.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -52,7 +53,8 @@
     "test:rules": "cd rules-tests && npm install && npm test",
     "lint": "expo lint",
     "deploy:web": "expo export --platform web && npx firebase-tools deploy --only hosting --project choreboard-58094",
-    "deploy:server": "npm --prefix functions install && npx firebase-tools deploy --only functions,firestore --project choreboard-58094"
+    "deploy:server": "npm --prefix functions install && npx firebase-tools deploy --only functions,firestore --project choreboard-58094",
+    "update:app": "npx eas-cli@latest update --channel production --environment production --message \"Rotawise update\""
   },
   "private": true
 }
