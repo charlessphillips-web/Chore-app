@@ -18,10 +18,13 @@ import { checksNeededFor, needsRedo } from './review';
 import { DEFAULT_RESET_MONTHS, periodKey, toResetRule, type ResetRule } from './period';
 import type { ChoreLog, ChoreOffer, ChoreRequest, House, Member, ProfileDetails, UserProfile } from './types';
 import type { PayChoice } from './money';
+import * as Push from './pushMessages';
+import { logCreated } from './pushEvents';
+import { notifyQuietly, sendNotifications } from './notify';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
 import { PRIVACY_VERSION } from './legal';
-import { wants, type NotifyPrefs } from './notifyPrefs';
+import type { NotifyPrefs } from './notifyPrefs';
 import type { BinSchedule } from './bins';
 import { track } from './analytics';
 import { STAKE_MAX, type Stake, type StakeKind } from './stakes';
@@ -241,6 +244,7 @@ export const toMember = (id: string, d: DocumentData, period: string): Member =>
     choreCounts: p.chores ?? {},
     lastCompletedAt: ms(d.lastCompletedAt),
     joinedAt: ms(d.joinedAt) ?? Date.now(),
+    pushToken: typeof d.pushToken === 'string' ? d.pushToken : null,
     notifOn: d.notifOn === true || typeof d.pushToken === 'string',
     avatar: toAvatar(d.avatar),
     notifPrefs: d.notifPrefs && typeof d.notifPrefs === 'object' ? (d.notifPrefs as NotifyPrefs) : {},
@@ -338,8 +342,9 @@ export function watchRecentLogs(houseId: string, cb: (l: ChoreLog[]) => void, on
 }
 
 /**
- * Saves this phone's push address where only you (and the Rotawise server)
- * can read it. Housemates just see that notifications are on.
+ * Saves this phone's push address: on your housemate profile (so housemates'
+ * phones can notify you), and privately in pushTokens/ for the Rotawise
+ * server once it's switched on.
  */
 let savedToken: string | null = null;
 export async function setPushToken(houseId: string, uid: string, token: string | null, force = false) {
@@ -347,7 +352,7 @@ export async function setPushToken(houseId: string, uid: string, token: string |
   if (!force && savedToken === key) return;
   if (token) await setDoc(doc(db, 'pushTokens', uid), { token, updatedAt: serverTimestamp() });
   else await deleteDoc(doc(db, 'pushTokens', uid)).catch(() => {});
-  await updateDoc(memberRef(houseId, uid), { pushToken: null, notifOn: !!token });
+  await updateDoc(memberRef(houseId, uid), { pushToken: token, notifOn: !!token });
   savedToken = key;
 }
 
@@ -366,7 +371,10 @@ export const REACTIONS = ['👏', '🔥', '💪', '❤️', '😂', '🫡', '�
 /** React to a housemate's chore (tap the same emoji again to take it off). */
 export async function reactToLog(houseId: string, log: ChoreLog, me: { uid: string; username: string }, emoji: string | null, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'logs', log.id), { [`reactions.${me.uid}`]: emoji ?? deleteField() });
-  if (emoji) track('reaction');
+  if (emoji) {
+    track('reaction');
+    notifyQuietly(members, [{ to: [log.userId], msg: Push.reacted({ who: me.username, emoji, chore: log.choreName }) }]);
+  }
 }
 
 /** Save your trips away (see lib/away). */
@@ -456,7 +464,11 @@ export async function logChore(opts: {
   track('chore_log');
   if (!offer && !opts.members.find((m) => m.uid === uid)?.lastCompletedAt) track('first_chore');
 
-  // The server tells housemates there's a photo to check.
+  // Tell housemates there's a photo to check (or, on bin night, that the bins are out).
+  notifyQuietly(opts.members, logCreated(
+    { userId: uid, username, choreKey: key, choreName: name, creditToName: offer?.fromName ?? null },
+    logRef.id, house, opts.members.map((m) => m.uid), new Date(),
+  ));
   return { streak, milestone };
 }
 
@@ -484,9 +496,10 @@ export const CHECK_REMINDER_MS = 12 * 60 * 60 * 1000;
  * everyone who hasn't checked it yet. Whichever phone opens the app first
  * sends it; the rules make sure it only goes out once.
  */
-export async function sendCheckReminder(houseId: string, log: ChoreLog) {
-  // The server sees this flag and reminds whoever hasn't checked yet.
+export async function sendCheckReminder(houseId: string, log: ChoreLog, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'logs', log.id), { checkReminderSent: true });
+  const to = members.filter((m) => m.uid !== log.userId && !log.checks.includes(m.uid)).map((m) => m.uid);
+  notifyQuietly(members, [{ to, msg: Push.stillToCheck({ who: log.username, chore: log.choreName, logId: log.id }) }]);
 }
 
 /** One housemate verifies a chore photo. */
@@ -534,9 +547,12 @@ export async function sendBackChore(
   reason: string,
   members: Member[],
 ) {
-  await reviewChore(house.id, logId, reviewer, reason);
+  const log = await reviewChore(house.id, logId, reviewer, reason);
   track('chore_sendback');
-  // The server tells them ("Redo" or "didn't count").
+  notifyQuietly(members, [{
+    to: [log.userId],
+    msg: needsRedo(reason) ? Push.redo({ chore: log.choreName, reason, by: reviewer.username }) : Push.notCounted({ chore: log.choreName }),
+  }]);
 }
 
 /** reason null = verify; a reason = send back. Returns the chore. */
@@ -605,7 +621,7 @@ export const NUDGE_EVERY_MS = 3 * 60 * 60 * 1000;
 export async function nudgeChore(houseId: string, request: ChoreRequest, from: { uid: string; username: string }, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'requests', request.id), { lastNudgedAt: serverTimestamp(), lastNudgedBy: from.uid });
   track('chore_nudge');
-  // The server sends the nudge (and checks it's not too soon).
+  notifyQuietly(members, [{ to: [request.assignedTo], msg: Push.nudge({ from: from.username, needs: request.needs, choreKey: request.choreKey }) }]);
 }
 
 /**
@@ -655,8 +671,7 @@ export async function requestChore(opts: {
   });
   track('chore_flag');
 
-  // The server tells them it's their turn.
-  const notified = assignee.notifOn && wants(assignee.notifPrefs, 'turn');
+  const notified = await sendNotifications(opts.members, [{ to: [assignee.uid], msg: Push.yourTurn({ name: assignee.username, needs: chore.needs, choreKey: chore.key }) }]);
   return { assignee, notified };
 }
 
@@ -822,6 +837,7 @@ export async function createOffer(opts: {
     createdAt: serverTimestamp(),
   });
   track('offer_create');
+  notifyQuietly(opts.members, [{ to: opts.members.filter((m) => m.uid !== from.uid).map((m) => m.uid), msg: Push.offerMade({ from: from.username, chore: request.choreName, price, offerId: request.id }) }]);
 }
 
 /** A housemate takes the offer at its price. */
@@ -832,6 +848,7 @@ export async function acceptOffer(
     status: 'agreed', doerUid: me.uid, doerName: me.username, agreedPrice: offer.price, doerPay: pay, agreedAt: serverTimestamp(),
   });
   track('offer_accept');
+  notifyQuietly(members, [{ to: [offer.fromUid], msg: Push.offerTaken({ who: me.username, chore: offer.choreName, price: offer.price, offerId: offer.id }) }]);
 }
 
 /** A housemate's one counter offer. */
@@ -841,10 +858,13 @@ export async function counterOffer(
   if (offer.counters[me.uid]) throw new Error('You can only make one counter offer.');
   await updateDoc(offerRef(houseId, offer.id), { [`counters.${me.uid}`]: { name: me.username, price, pay } });
   track('offer_counter');
+  notifyQuietly(members, [{ to: [offer.fromUid], msg: Push.counterMade({ who: me.username, chore: offer.choreName, price, offerId: offer.id }) }]);
 }
 
 export async function declineCounter(houseId: string, offer: ChoreOffer, uid: string, members: Member[]) {
   await updateDoc(offerRef(houseId, offer.id), { declined: [...offer.declined, uid] });
+  const c = offer.counters[uid];
+  if (c) notifyQuietly(members, [{ to: [uid], msg: Push.counterDeclined({ who: offer.fromName, price: c.price, offerId: offer.id }) }]);
 }
 
 export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: string, members: Member[]) {
@@ -854,11 +874,13 @@ export async function acceptCounter(houseId: string, offer: ChoreOffer, uid: str
     status: 'agreed', doerUid: uid, doerName: c.name, agreedPrice: c.price, doerPay: c.pay ?? null, agreedAt: serverTimestamp(),
   });
   track('offer_accept');
+  notifyQuietly(members, [{ to: [uid], msg: Push.counterAccepted({ chore: offer.choreName, price: c.price, offerId: offer.id }) }]);
 }
 
 /** The doer nudges the payer (at most once a day). */
 export async function remindPayer(houseId: string, offer: ChoreOffer, members: Member[]) {
   await updateDoc(offerRef(houseId, offer.id), { remindedAt: serverTimestamp() });
+  notifyQuietly(members, [{ to: [offer.fromUid], msg: Push.payReminder({ who: offer.doerName ?? 'Your housemate', chore: offer.choreName, price: offer.agreedPrice ?? offer.price, offerId: offer.id }) }]);
 }
 
 /** The offerer withdraws (only before anyone's agreed). */
@@ -884,6 +906,9 @@ export async function markOfferPaid(house: House, offer: ChoreOffer, members: Me
   });
   await batch.commit();
   track('offer_paid');
+  if (offer.doerUid && offer.agreedPrice) {
+    notifyQuietly(members, [{ to: [offer.doerUid], msg: Push.paid({ who: offer.fromName, price: offer.agreedPrice, offerId: offer.id }) }]);
+  }
 }
 
 // ---------- Owner dashboard ----------

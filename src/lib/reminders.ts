@@ -1,18 +1,20 @@
 /**
- * Reminders the phone schedules for itself: the day before the leaderboard
- * resets. (Bin night and the Sunday summary come from the Rotawise server,
- * so bin reminders stop as soon as someone's taken them out.) Phones only:
- * the web version can't schedule notifications.
+ * Reminders the phone schedules for itself: bin night (8pm and 10pm the night
+ * before, 7am on bin day) and the day before the leaderboard resets.
+ * Rescheduled whenever the app sees a change, so once someone's logged the
+ * bins, or the bins have been given to someone, every phone that opens the
+ * app updates. Phones only: the web version can't schedule notifications.
  */
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import type { BinSchedule } from './bins';
 import { wants, type NotifyPrefs } from './notifyPrefs';
+import { binNightPlan, type BinNightInput } from './binNight';
 
 const PREFIX = 'rw-';
+const level = { big: 'timeSensitive', normal: 'active', quiet: 'passive' } as const;
 
 export async function scheduleReminders(opts: {
-  bins: BinSchedule[];
+  binNight: BinNightInput;
   prefs: NotifyPrefs;
   /** When the leaderboard resets (start of the next period). */
   periodEnd: Date;
@@ -22,6 +24,24 @@ export async function scheduleReminders(opts: {
   const existing = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(existing.filter((n) => n.identifier.startsWith(PREFIX)).map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
   const now = new Date();
+
+  if (wants(opts.prefs, 'bins')) {
+    // iPhones allow 64 scheduled notifications per app; this stays well under.
+    for (const r of binNightPlan(opts.binNight, now).slice(0, 30)) {
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${PREFIX}bin-${r.at.getTime()}`,
+        content: {
+          title: r.msg.title,
+          body: r.msg.body,
+          sound: r.msg.size === 'quiet' ? undefined : 'default',
+          interruptionLevel: level[r.msg.size],
+          categoryIdentifier: r.msg.category,
+          data: { url: r.msg.url, size: r.msg.size, kind: 'bins' },
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: r.at },
+      });
+    }
+  }
 
   if (wants(opts.prefs, 'reset')) {
     const e = opts.periodEnd;
@@ -33,5 +53,14 @@ export async function scheduleReminders(opts: {
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: eve },
       });
     }
+  }
+
+  if (wants(opts.prefs, 'weekly')) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${PREFIX}weekly`,
+      content: { title: '🏆 Who topped the house this week?', data: { url: '/leaderboard', size: 'quiet' }, interruptionLevel: 'passive' },
+      // Sunday (1) at 6pm, every week.
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: 1, hour: 18, minute: 0 },
+    });
   }
 }

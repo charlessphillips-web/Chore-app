@@ -11,7 +11,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { wants } from '../../src/lib/notifyPrefs.ts';
 import { isAway } from '../../src/lib/away.ts';
 import { toExpo, weekly, BIG_BINS_KEY, type BinRound, type PushMessage } from '../../src/lib/pushMessages.ts';
-import * as E from './events.ts';
+import * as E from '../../src/lib/pushEvents.ts';
 
 initializeApp();
 const db = getFirestore();

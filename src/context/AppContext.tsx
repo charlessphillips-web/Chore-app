@@ -12,6 +12,7 @@ import { isAway, presentWeight } from '../lib/away';
 import { AWAY_UNTIL_KEY } from '../lib/homeAway';
 import type { Stake } from '../lib/stakes';
 import { scheduleReminders } from '../lib/reminders';
+import { BIG_BINS_KEY } from '../lib/pushMessages';
 import { track } from '../lib/analytics';
 import { getNotificationStatus, registerForPushNotifications, type NotificationStatus } from '../lib/notifications';
 import { jpegUri } from '../lib/photos';
@@ -231,7 +232,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!remindIds || !houseId || !current) return;
     for (const id of remindIds.split(',')) {
       const log = current.logs.find((l) => l.id === id);
-      if (log) sendCheckReminder(houseId, log).catch(() => {});
+      const members = current.members.map((m) => toMember(m.id, m.data, ''));
+      if (log) sendCheckReminder(houseId, log, members).catch(() => {});
     }
     // Only re-run when the set of chores needing a reminder changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,15 +249,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const id of clearIds.split(',')) clearFullPhoto(houseId, id).catch(() => {});
   }, [clearIds, houseId]);
 
-  // 5. Phone reminders (bin night, leaderboard reset, Sunday summary), redone whenever they change.
-  const myPrefs = current?.members.find((m) => m.id === uid)?.data.notifPrefs;
-  const reminderKey = house && notifStatus === 'granted'
-    ? JSON.stringify([house.bins, myPrefs ?? {}, periodEnd(new Date(), house.reset).getTime()])
+  // 5. Phone reminders (bin night, leaderboard reset, Sunday summary), redone whenever they change:
+  // e.g. someone logs the bins (tonight's reminders stop) or they're given to someone.
+  const myDoc = current?.members.find((m) => m.id === uid)?.data;
+  const binLogs = (current?.logs ?? []).filter((l) => l.choreKey === BIG_BINS_KEY && l.status !== 'rejected').map((l) => l.at);
+  const binReq = (current?.openRequests ?? []).find((r) => r.choreKey === BIG_BINS_KEY && r.kind === 'needs');
+  const reminderKey = house && uid && notifStatus === 'granted'
+    ? JSON.stringify({
+      bins: house.bins, prefs: myDoc?.notifPrefs ?? {}, end: periodEnd(new Date(), house.reset).getTime(), binLogs,
+      turn: binReq ? { uid: binReq.assignedTo, name: binReq.assignedToName } : null, me: uid, aways: myDoc?.aways ?? [],
+    })
     : null;
   useEffect(() => {
     if (!reminderKey) return;
-    const [bins, prefs, end] = JSON.parse(reminderKey);
-    scheduleReminders({ bins, prefs, periodEnd: new Date(end) }).catch(() => {});
+    const r = JSON.parse(reminderKey);
+    scheduleReminders({
+      binNight: { bins: r.bins, binLogs: r.binLogs, turn: r.turn, me: r.me, aways: r.aways },
+      prefs: r.prefs,
+      periodEnd: new Date(r.end),
+    }).catch(() => {});
   }, [reminderKey]);
   // Scores for the current period, using the house's reset setting.
   const period = periodKey(new Date(), house?.reset);

@@ -3,12 +3,11 @@
  * notification. Pure functions (no Firebase), so they can be tested.
  * Messages are built from what actually changed, never from text a phone sends.
  */
-import * as M from '../../src/lib/pushMessages.ts';
-import { needsRedo } from '../../src/lib/review.ts';
-import { binsOn } from '../../src/lib/bins.ts';
-import type { PushMessage } from '../../src/lib/pushMessages.ts';
+import * as M from './pushMessages.ts';
+import { needsRedo } from './review.ts';
+import { binsOn } from './bins.ts';
+import type { PushMessage } from './pushMessages.ts';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Doc = Record<string, any>;
 export interface Send { to: string[]; msg: PushMessage }
 

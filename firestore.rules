@@ -303,12 +303,13 @@ service cloud.firestore {
         allow create: if signedIn() && me() == uid
           && getAfter(/databases/$(database)/documents/houseCodes/$(request.resource.data.joinCode)).data.houseId == houseId
           && request.resource.data.stats == {};
-        // Your own doc: name, notifications on/off, profile picture, and your score up by at most 1.
-        // (Push addresses live in pushTokens/, which housemates can't read.)
+        // Your own doc: name, push address, notifications on/off, profile picture, and your score up by at most 1.
+        // (Push addresses also go in pushTokens/, private, for when the Rotawise server sends notifications.)
         allow update: if signedIn() && me() == uid
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['username', 'pushToken', 'notifOn', 'stats', 'lastCompletedAt', 'currentPeriod', 'avatar', 'lastSeenAt', 'notifPrefs', 'aways', 'streak'])
-          && request.resource.data.get('pushToken', null) == null
+          && (request.resource.data.get('pushToken', null) == null
+              || (request.resource.data.pushToken is string && request.resource.data.pushToken.size() < 300))
           && (!('notifOn' in request.resource.data) || request.resource.data.notifOn is bool)
           && (!('streak' in request.resource.data) || (request.resource.data.streak.keys().hasOnly(['weeks', 'lastWeek'])
               && request.resource.data.streak.weeks is int && request.resource.data.streak.weeks >= 1

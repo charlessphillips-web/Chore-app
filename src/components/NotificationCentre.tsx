@@ -15,7 +15,6 @@ import { verifyChore } from '../lib/db';
 import { needsCheckBy } from '../lib/review';
 import { haptics } from '../lib/haptics';
 import { toast } from './Celebration';
-import { colors } from './theme';
 
 interface Banner { id: string; title: string; body: string; url: string | null; size: string }
 
@@ -119,28 +118,31 @@ export function NotificationCentre() {
         accessibilityRole="button"
         accessibilityLabel={`${banner.title}. ${banner.body}`}
         onPress={() => { close(); if (banner.url) router.push(banner.url as never); }}
-        style={({ pressed }) => [styles.banner, banner.size === 'quiet' && styles.quiet, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.banner, { backgroundColor: BANNER[banner.size] ?? BANNER.normal }, pressed && { opacity: 0.85 }]}
       >
         <View style={{ flex: 1 }}>
-          <Text style={[styles.title, banner.size === 'quiet' && { color: colors.text }]} numberOfLines={2}>{banner.title}</Text>
-          {!!banner.body && <Text style={[styles.body, banner.size === 'quiet' && { color: colors.muted }]} numberOfLines={2}>{banner.body}</Text>}
+          <Text style={styles.title} numberOfLines={2}>{banner.title}</Text>
+          {!!banner.body && <Text style={styles.body} numberOfLines={2}>{banner.body}</Text>}
         </View>
-        {banner.url && <View style={styles.go}><Text style={styles.goText}>Open</Text></View>}
+        {banner.url && <View style={styles.go}><Text style={[styles.goText, { color: BANNER[banner.size] ?? BANNER.normal }]}>Open</Text></View>}
       </Pressable>
     </Animated.View>
   );
 }
 
+/** Amber = big (your turn, bins, pay up), yellow = normal (nudges, offers), white = quiet (checks, reactions). */
+const BANNER: Record<string, string> = { big: '#FF9F0A', normal: '#FFD60A', quiet: '#F2F2F4' };
+const INK = '#141414';
+
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 10, right: 10, zIndex: 100 },
   banner: {
-    backgroundColor: colors.brand, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16,
+    borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
     shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10,
   },
-  quiet: { backgroundColor: colors.cardRaised },
-  title: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  body: { color: 'rgba(255,255,255,0.88)', fontSize: 14, marginTop: 2 },
-  go: { backgroundColor: '#FFFFFF', borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12 },
-  goText: { color: colors.brand, fontWeight: '700', fontSize: 14 },
+  title: { color: INK, fontSize: 16, fontWeight: '700' },
+  body: { color: 'rgba(20,20,20,0.75)', fontSize: 14, marginTop: 2 },
+  go: { backgroundColor: INK, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12 },
+  goText: { fontWeight: '700', fontSize: 14 },
 });

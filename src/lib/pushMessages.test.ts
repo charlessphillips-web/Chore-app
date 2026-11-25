@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as M from './pushMessages.ts';
-import * as E from '../../functions/src/events.ts';
+import * as E from './pushEvents.ts';
 
-const house = { bins: [{ id: '1', name: 'Recycling', every: 1, anchor: '2026-11-26' }] };
+const house = { bins: [{ id: '1', name: 'Recycling', every: 1 as const, anchor: '2026-11-26' }] };
 const tue8pm = new Date(2026, 10, 25, 20, 0);
 const members = ['a', 'b', 'c'].map((uid) => ({ uid, username: uid.toUpperCase() + 'name', away: false }));
 
@@ -114,4 +114,21 @@ test('weekly top', () => {
   const top = E.weeklyTop([{ userId: 'a', username: 'Fabio', points: 3 }, { userId: 'b', username: 'Sam', points: 2 }, { userId: 'b', username: 'Sam', points: 1 }]);
   assert.deepEqual(top.names, ['Fabio', 'Sam']);
   assert.equal(M.weekly({ top: ['Fabio'], me: false }).title, '🏆 Fabio topped the house this week');
+});
+
+test('phone bin night plan: 8pm, 10pm, 7am; skips done nights; whose turn only for the coming night', async () => {
+  const { binNightPlan } = await import('./binNight.ts');
+  const base = { bins: house.bins, binLogs: [] as number[], turn: null as { uid: string; name: string } | null, me: 'a', aways: [] as { from: number; until: number }[] };
+  const plan = binNightPlan(base, new Date(2026, 10, 25, 12), 2);
+  assert.deepEqual(plan.slice(0, 3).map((p) => [p.at.getDate(), p.at.getHours(), p.msg.size]), [[25, 20, 'big'], [25, 22, 'big'], [26, 7, 'big']]);
+  assert.equal(plan.length, 6);
+  const done = binNightPlan({ ...base, binLogs: [new Date(2026, 10, 25, 21).getTime()] }, new Date(2026, 10, 25, 21, 30), 2);
+  assert.equal(done[0].at.getDate(), 2); // next week's bin night (Wed 2 Dec)
+  const mine = binNightPlan({ ...base, turn: { uid: 'a', name: 'Charlie' } }, new Date(2026, 10, 25, 12), 2);
+  assert.equal(mine[0].msg.title, 'Charlie, your turn for the bins! 🗑');
+  assert.equal(mine[3].msg.title, 'Bin night! 🗑'); // next week: nobody's turn yet
+  const theirs = binNightPlan({ ...base, turn: { uid: 'b', name: 'Fabio' } }, new Date(2026, 10, 25, 12), 2);
+  assert.equal(theirs[0].msg.size, 'quiet');
+  const away = binNightPlan({ ...base, aways: [{ from: new Date(2026, 10, 24).getTime(), until: new Date(2026, 10, 28).getTime() }] }, new Date(2026, 10, 25, 12), 2);
+  assert.equal(away[0].at.getDate(), 2);
 });

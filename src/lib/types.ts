@@ -54,7 +54,9 @@ export interface House {
  * totalCompleted / points / choreCounts are for the CURRENT period.
  */
 export interface Member extends MemberStats {
-  /** Notifications are on (their push address is saved privately). */
+  /** Their phone's push address (null = notifications off). */
+  pushToken: string | null;
+  /** Notifications are on. */
   notifOn: boolean;
   /** Profile picture: photo or drawn character (null = their initial). */
   avatar: Avatar | null;

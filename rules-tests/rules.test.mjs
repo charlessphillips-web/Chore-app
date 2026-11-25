@@ -286,11 +286,11 @@ test('push token update, leaving, admin hand-over on leave', async () => {
   await createHouse('alice');
   await joinHouse('sam');
   const s = db('sam');
-  // Push addresses no longer go on the member doc (housemates could read them)...
-  await assertFails(updateDoc(doc(s, 'houses', 'h1', 'members', 'sam'), { pushToken: 'ExponentPushToken[x]' }));
-  await assertSucceeds(updateDoc(doc(s, 'houses', 'h1', 'members', 'sam'), { pushToken: null, notifOn: true }));
+  await assertSucceeds(updateDoc(doc(s, 'houses', 'h1', 'members', 'sam'), { pushToken: 'ExponentPushToken[x]', notifOn: true }));
+  await assertFails(updateDoc(doc(s, 'houses', 'h1', 'members', 'sam'), { pushToken: 'x'.repeat(400) }));
+  await assertSucceeds(updateDoc(doc(s, 'houses', 'h1', 'members', 'sam'), { pushToken: null, notifOn: false }));
   await assertFails(updateDoc(doc(s, 'houses', 'h1', 'members', 'sam'), { notifOn: 'yes' }));
-  // ...they go in pushTokens/, which only you can read.
+  // The private copy (for the server, later) only you can read.
   await assertSucceeds(setDoc(doc(s, 'pushTokens', 'sam'), { token: 'ExponentPushToken[x]', updatedAt: serverTimestamp() }));
   await assertSucceeds(getDoc(doc(s, 'pushTokens', 'sam')));
   await assertFails(getDoc(doc(db('alice'), 'pushTokens', 'sam')));
