@@ -54,6 +54,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         // Fade between tabs instead of jumping.
@@ -98,7 +99,8 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="house" options={{ title: 'House', tabBarIcon: icon('people-outline', 'people', 'house'), tabBarLabel: label('House', 'house') }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: icon('settings-outline', 'settings', 'settings'), tabBarLabel: label('Settings', 'settings') }} />
+      {/* Settings: opened from the cog on Home, not the tab bar. */}
+      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarButton: () => null, tabBarItemStyle: { display: 'none' }, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
 }

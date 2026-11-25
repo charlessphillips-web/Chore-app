@@ -34,7 +34,7 @@ export function GettingStarted() {
       action: () => router.push('/settings/avatar'), actionLabel: 'Add' },
     { key: 'invite', title: 'Invite your housemates', desc: `Share your house code (${house.code}). Everyone joins with it.`, done: members.length > 1,
       action: share, actionLabel: 'Share' },
-    ...(isAdmin ? [{ key: 'bins', title: 'Set your bin days', desc: 'Everyone gets a reminder at 8pm the night before.', done: house.bins.length > 0,
+    ...(isAdmin ? [{ key: 'bins', title: 'Set your bin days', desc: 'Bin night reminders until someone takes them out.', done: house.bins.length > 0,
       action: () => router.push('/settings/bins'), actionLabel: 'Set' }] : []),
     { key: 'log', title: 'Log your first chore', desc: 'Tap a chore → "I’ve done it" → take a photo.',
       action: firstChore ? () => router.push({ pathname: '/chore/[key]', params: { key: firstChore } }) : undefined, actionLabel: 'Log',

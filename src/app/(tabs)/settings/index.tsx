@@ -91,6 +91,12 @@ export default function SettingsIndex() {
 
   return (
     <Screen>
+      <Pressable accessibilityRole="button" accessibilityLabel="Back to Home" hitSlop={10}
+        onPress={() => { haptics.tap(); if (router.canGoBack()) router.back(); else router.replace('/home'); }}
+        style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' }, pressed && { opacity: 0.6 }]}>
+        <Icon name="chevron-back" size={22} color={colors.brand} />
+        <Text style={{ color: colors.brand, fontSize: 16, fontWeight: '600' }}>Home</Text>
+      </Pressable>
       <Title>Settings</Title>
       {!myAvatar && <Tip id="settings">Add a profile picture so your housemates know it&apos;s you. Tap your name below.</Tip>}
 
@@ -190,7 +196,7 @@ export default function SettingsIndex() {
             <ListRow icon="list-outline" title="Chores" subtitle="Choose and add chores" onPress={() => router.push('/settings/chores')} />
             <ListRow icon="water-outline" title="Bathrooms" subtitle={bathroomGroups(house.chores).length ? `${bathroomGroups(house.chores).length} set up · who uses which` : 'Per floor: only the people who use it get asked'} onPress={() => router.push('/settings/bathrooms')} />
             <ListRow icon="people-outline" title="Housemates" subtitle="Remove people, hand over admin" onPress={() => router.push('/settings/housemates')} />
-            <ListRow icon="trash-outline" title="Bin days" subtitle={house.bins.length ? `${house.bins.length} bin${house.bins.length > 1 ? 's' : ''} set · reminders the night before` : 'Set them up for night-before reminders'} onPress={() => router.push('/settings/bins')} />
+            <ListRow icon="trash-outline" title="Bin days" subtitle={house.bins.length ? `${house.bins.length} bin${house.bins.length > 1 ? 's' : ''} set · bin night reminders` : 'Set them up for bin night reminders'} onPress={() => router.push('/settings/bins')} />
             <ListRow icon="options-outline" title="House details" subtitle="Name, leaderboard reset, wallpaper" onPress={() => router.push('/settings/house-details')} />
           </ListGroup>
         </>

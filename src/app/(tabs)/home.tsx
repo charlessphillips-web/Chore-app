@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChoreIcon } from '../../components/ChoreIcon';
@@ -8,18 +8,22 @@ import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
 import { GettingStarted } from '../../components/GettingStarted';
 import { BinBanner } from '../../components/BinBanner';
+import { TodayCard } from '../../components/TodayCard';
+import { setIntroTarget } from '../../components/IntroSplash';
+import { todayItems } from '../../lib/today';
+import { effectiveStatus, needsCheckBy } from '../../lib/review';
+import { choreSize } from '../../lib/chores';
 import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
 
-import { formatPrice } from '../../lib/money';
-import { periodStart, previousPeriodKey } from '../../lib/period';
+import { periodEnd, periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
 import { needsStakeVote } from '../../components/StakesCard';
-import { standing } from '../../lib/standing';
-import { awayDaysBetween, awayLabel, currentOrNextAway, endAway } from '../../lib/away';
+import { pointsToFairShare, standing } from '../../lib/standing';
+import { awayDaysBetween, awayLabel, currentOrNextAway, endAway, tillLabel } from '../../lib/away';
 import { setAways } from '../../lib/db';
 import { currentStreak, daysLeftThisWeek, doneThisWeek, seedStreak } from '../../lib/streak';
-import { Button, confirm, Icon, Label, Loading, Logo, notify, RowButton, Screen, timeAgo } from '../../components/ui';
+import { Button, confirm, Icon, Label, Loading, Logo, notify, RowButton, Screen } from '../../components/ui';
 import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
 import { track } from '../../lib/analytics';
@@ -43,8 +47,9 @@ function useWrappedOnce(houseId: string | undefined, prevKey: string, show: bool
 }
 
 export default function Home() {
-  const { user, profile, house, members, openRequests, offers, wallpaper, isAdmin, stakes, membersIn } = useApp();
+  const { user, profile, house, members, openRequests, offers, logs, wallpaper, isAdmin, stakes, membersIn } = useApp();
   const [peek, setPeek] = useState(false);
+  const logoRef = useRef<React.ComponentRef<typeof View>>(null);
   const today = new Date();
   const prevKey = house ? previousPeriodKey(today, house.reset) : '';
   const freshPeriod = !!house && today.getTime() - periodStart(today, house.reset).getTime() < 14 * 24 * 3_600_000;
@@ -52,7 +57,6 @@ export default function Home() {
   useWrappedOnce(house?.id, prevKey, prevHadChores);
   if (!user || !house) return <Loading />;
 
-  const mine = openRequests.filter((r) => r.assignedTo === user.uid);
   const others = openRequests.filter((r) => r.assignedTo !== user.uid);
   const chores = house.chores.filter((c) => c.active);
   // Bathrooms show as one tile each (tap to pick toilet / shower / sink / whole).
@@ -84,17 +88,37 @@ export default function Home() {
     }
   }
   const nowMs = new Date().getTime();
+  // "Your house, today": what matters most to you right now.
+  const checkedLog = (id: string | null) => {
+    const l = logs.find((x) => x.id === id);
+    const st = l ? effectiveStatus(l) : null;
+    return st === 'verified' || st === 'auto_verified';
+  };
+  const quickest = [...house.chores].filter((c) => c.active && !c.group).sort((a, b) => choreSize(a) - choreSize(b))[0];
+  const total0 = members.reduce((n, m) => n + (m.points ?? m.totalCompleted), 0);
   const myStreak = seedStreak(me?.streak, me?.lastCompletedAt);
   const streakWeeks = currentStreak(myStreak, nowMs, (a, b) => awayDaysBetween(me?.aways, a, b));
   const streakDone = doneThisWeek(myStreak, nowMs);
   const needsVote = needsStakeVote(user.uid, house, stakes);
   const openChore = (key: string, requestId?: string) =>
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
-  const openOffer = (id: string) => router.push({ pathname: '/offer/[id]', params: { id } });
-  // Chores you agreed to do for someone (the rest is in the Pay tab).
-  const toDo = offers.filter((o) => o.status === 'agreed' && o.doerUid === user.uid);
   const total = me?.totalCompleted ?? 0;
   const now = new Date();
+  const todayList = todayItems({
+    now,
+    me: user.uid,
+    bins: house.bins,
+    members: members.map((m) => ({ uid: m.uid, username: m.username, points: m.points ?? m.totalCompleted, away: !!m.away, awayTill: m.away ? tillLabel(m.aways, nowMs) : undefined })),
+    // Chores you've offered money for live in Pay, not here.
+    requests: openRequests.filter((r) => !offers.some((o) => o.id === r.id)),
+    logs,
+    toCheck: logs.filter((l) => needsCheckBy(l, user.uid)).map((l) => l.id),
+    offers: offers.map((o) => ({ ...o, checked: checkedLog(o.logId) })),
+    streak: { weeks: streakWeeks, doneThisWeek: streakDone },
+    toFair: s.active ? pointsToFairShare(me?.points ?? total, total0, s.fairPct / 100) : 0,
+    suggestion: quickest?.name ?? null,
+    periodEnd: periodEnd(now, house.reset),
+  });
   // First week of a new period: show how last period's house stakes ended.
   const prev = previousPeriodKey(now, house.reset);
   const stakesNews = house.stakes && now.getTime() - periodStart(now, house.reset).getTime() < 7 * 24 * 3_600_000
@@ -104,7 +128,10 @@ export default function Home() {
   return (
     <Screen background={wallpaper}>
       <View style={styles.top}>
-        <Logo size={26} />
+        {/* The intro's flying logo lands exactly here. */}
+        <View ref={logoRef} onLayout={() => logoRef.current?.measureInWindow((x, y, w) => w && setIntroTarget({ x, y, size: w }))}>
+          <Logo size={26} />
+        </View>
         <Text style={styles.house} numberOfLines={1}>{house.name}</Text>
         <Pressable
           accessibilityRole="switch"
@@ -115,6 +142,15 @@ export default function Home() {
         >
           <Icon name="airplane" size={13} color={awayNow ? colors.inverse : colors.text} />
           <Text style={[styles.awayText, awayNow && { color: colors.inverse }]}>{awayNow ? 'Away' : 'Away?'}</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          hitSlop={10}
+          onPress={() => { haptics.tap(); router.push('/settings'); }}
+          style={({ pressed }) => [styles.cog, pressed && { opacity: 0.6 }]}
+        >
+          <Icon name="settings-outline" size={22} color={colors.text} />
         </Pressable>
       </View>
 
@@ -179,59 +215,10 @@ export default function Home() {
         />
       )}
       <VerifyEmailBanner />
+      <TodayCard items={todayList} now={now} />
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
       <GettingStarted />
       <NotificationCard />
-
-      {mine.length + toDo.length > 0 && (
-        <>
-          <Label>Needs doing now</Label>
-          {mine.map((r) => {
-            const o = offers.find((x) => x.id === r.id);
-            if (o) {
-              const counters = Object.keys(o.counters).filter((u) => !o.declined.includes(u)).length;
-              return (
-                <RowButton
-                  key={r.id}
-                  icon="cash-outline"
-                  title={r.needs}
-                  highlight={counters > 0}
-                  subtitle={
-                    o.status === 'open'
-                      ? `You offered ${formatPrice(o.price)} · ${counters ? `${counters} counter offer${counters > 1 ? 's' : ''}` : 'waiting for a taker'}`
-                      : `${o.doerName} is doing it for ${formatPrice(o.agreedPrice ?? o.price)}`
-                  }
-                  onPress={() => openOffer(o.id)}
-                />
-              );
-            }
-            return (
-              <RowButton
-                key={r.id}
-                icon={r.kind === 'redo' ? 'arrow-undo' : 'alert-circle-outline'}
-                title={r.needs}
-                highlight
-                subtitle={
-                  r.kind === 'redo'
-                    ? `${r.requestedByName} sent it back: ${r.reason ?? ''}`
-                    : `Someone flagged this · ${timeAgo(r.createdAt)} · it's your turn`
-                }
-                onPress={() => openChore(r.choreKey, r.id)}
-              />
-            );
-          })}
-          {toDo.map((o) => (
-            <RowButton
-              key={o.id}
-              icon="cash-outline"
-              highlight
-              title={`${o.choreName} for ${o.fromName}`}
-              subtitle={`You agreed to do it for ${formatPrice(o.agreedPrice ?? o.price)}`}
-              onPress={() => openChore(o.choreKey, o.requestId)}
-            />
-          ))}
-        </>
-      )}
 
       <Label>Chores</Label>
       <Tip id="home">Tap a chore to log it with a photo, or to say it needs doing. Whoever is furthest below their fair share gets asked.</Tip>
@@ -341,6 +328,7 @@ function FairBar({ share, fair }: { share: number; fair: number }) {
 }
 
 const styles = StyleSheet.create({
+  cog: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   house: { flex: 1, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.text, textTransform: 'uppercase' },
   period: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.muted, textTransform: 'uppercase' },

@@ -33,7 +33,7 @@ export default function HouseTab() {
       {house.bins.length === 0 && (
         <Card>
           <Text style={type.small}>
-            {isAdmin ? 'No bin days yet. Add them in Settings → Bin days, and everyone gets a reminder the night before.' : 'No bin days yet. Ask your house admin to add them in Settings → Bin days.'}
+            {isAdmin ? 'No bin days yet. Add them in Settings → Bin days, and everyone is reminded on bin night until someone takes them out.' : 'No bin days yet. Ask your house admin to add them in Settings → Bin days.'}
           </Text>
           {isAdmin && <Button title="Set bin days" icon="trash-outline" variant="secondary" onPress={() => router.push('/settings/bins')} />}
         </Card>

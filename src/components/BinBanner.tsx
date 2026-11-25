@@ -7,7 +7,7 @@ import { colors, space, type } from './theme';
 
 /**
  * Bin days on Home:
- *  - the night before / that morning: a highlighted "Bins go out tonight" card
+ *  - the night before / that morning: nothing here (it's on the "Your house, today" card)
  *  - otherwise: a small "Next bins: Recycling · Tue 17 Nov" line
  *  - no bins set: the admin sees "Set up bin day reminders"
  */
@@ -30,17 +30,8 @@ export function BinBanner({ bins, now, isAdmin }: { bins: BinSchedule[]; now: Da
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const t = binsOn(bins, tomorrow);
   const today = now.getHours() < 12 ? binsOn(bins, now) : [];
-  if (t.length || today.length) {
-    return (
-      <View style={[rowStyle, { backgroundColor: colors.cardRaised }]} accessibilityLabel="Bin day">
-        <Icon name="trash-outline" size={22} color={colors.text} />
-        <View style={{ flex: 1 }}>
-          <Text style={[type.body, { fontWeight: '600' }]}>{today.length ? 'Bins go out this morning' : 'Bins go out tonight'}</Text>
-          <Text style={type.small}>{listNames(today.length ? today : t)}</Text>
-        </View>
-      </View>
-    );
-  }
+  // Bin night itself is on the "Your house, today" card.
+  if (t.length || today.length) return null;
   // The next collection day, and which bins.
   const nextDay = bins
     .map((b) => nextCollections(b, now, 1)[0])

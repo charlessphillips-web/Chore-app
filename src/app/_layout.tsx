@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '../context/AppContext';
 import { colors, darkHeader, isLight } from '../components/theme';
 import { NotificationCentre } from '../components/NotificationCentre';
+import { IntroSplash } from '../components/IntroSplash';
 import { CelebrationHost } from '../components/Celebration';
 
 /** Pop-up screens: a Back button top left (you can still swipe down to close). */
@@ -48,6 +49,7 @@ export default function RootLayout() {
         </Stack>
         <CelebrationHost />
         <NotificationCentre />
+        <IntroSplash />
       </AppProvider>
     </SafeAreaProvider>
   );
