@@ -162,7 +162,7 @@ function Columns({ bars }: { bars: Bar[] }) {
       {bars.map((b) => (
         <View key={b.label} style={{ flex: 1, alignItems: 'center', gap: 4, justifyContent: 'flex-end', height: '100%' }}>
           <Text style={styles.num}>{b.count}</Text>
-          <View style={{ width: '100%', height: `${Math.max(3, b.share * 70)}%`, backgroundColor: colors.text, borderRadius: 4 }} />
+          <View style={{ width: '100%', height: `${Math.max(3, b.share * 70)}%`, backgroundColor: colors.text, borderRadius: 4, borderCurve: 'continuous' }} />
           <Text style={[styles.num, { fontSize: 9 }]} numberOfLines={1}>{b.label}</Text>
         </View>
       ))}
@@ -172,11 +172,11 @@ function Columns({ bars }: { bars: Bar[] }) {
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
-  stat: { width: '49%', backgroundColor: colors.card, borderRadius: 16, padding: 14, gap: 2 },
+  stat: { width: '49%', backgroundColor: colors.card, borderRadius: 16, borderCurve: 'continuous' as const, padding: 14, gap: 2 },
   statValue: { fontSize: 30, fontWeight: '700', color: colors.text, letterSpacing: -1 },
   statLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
-  card: { backgroundColor: colors.card, borderRadius: 16, padding: 14, gap: 12 },
-  track: { height: 6, backgroundColor: colors.line, borderRadius: 3, overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: colors.text, borderRadius: 3 },
+  card: { backgroundColor: colors.card, borderRadius: 16, borderCurve: 'continuous' as const, padding: 14, gap: 12 },
+  track: { height: 6, backgroundColor: colors.line, borderRadius: 3, borderCurve: 'continuous' as const, overflow: 'hidden' },
+  fill: { height: '100%', backgroundColor: colors.text, borderRadius: 3, borderCurve: 'continuous' },
   num: { fontFamily: fonts.mono, fontSize: 11, color: colors.muted },
 });

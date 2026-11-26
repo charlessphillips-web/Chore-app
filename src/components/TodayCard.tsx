@@ -4,11 +4,13 @@
  * big buttons for the most urgent ones.
  */
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { allClear, partOfDay, type TodayItem } from '../lib/today';
 import { haptics } from '../lib/haptics';
 import { colors, fonts, isLight, soft } from './theme';
+import { Tap } from './Tap';
+import { Item } from './Motion';
 
 export function TodayCard({ items, now }: { items: TodayItem[]; now: Date }) {
   const [open, setOpen] = useState(false);
@@ -26,33 +28,35 @@ export function TodayCard({ items, now }: { items: TodayItem[]; now: Date }) {
       <View style={styles.rule} />
       {shown.length === 0 && <Text style={styles.sub}>Nothing new in the house yet.</Text>}
       {shown.map((it, n) => (
-        <Pressable key={it.id} onPress={() => go(it.url)} accessibilityRole="button" accessibilityLabel={`${it.title}. ${it.sub ?? ''}`}
-          style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
+        <Item key={it.id} index={n}>
+        <Tap scaleTo={0.98} onPress={() => go(it.url)} accessibilityRole="button" accessibilityLabel={`${it.title}. ${it.sub ?? ''}`}
+          style={styles.row}>
           <Text style={styles.num}>{n + 1}</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>{it.title}</Text>
             {!!it.sub && <Text style={styles.sub}>{it.sub}</Text>}
           </View>
-        </Pressable>
+        </Tap>
+        </Item>
       ))}
       {more > 0 && (
-        <Pressable onPress={() => { haptics.select(); setOpen(true); }} accessibilityRole="button" style={styles.row}>
+        <Tap onPress={() => { haptics.select(); setOpen(true); }} accessibilityRole="button" style={styles.row}>
           <Text style={[styles.num, { color: colors.muted }]}>+</Text>
           <Text style={[styles.sub, { marginTop: 0 }]}>{more} more</Text>
-        </Pressable>
+        </Tap>
       )}
       {open && items.length > 3 && (
-        <Pressable onPress={() => { haptics.select(); setOpen(false); }} accessibilityRole="button" style={styles.row}>
+        <Tap onPress={() => { haptics.select(); setOpen(false); }} accessibilityRole="button" style={styles.row}>
           <Text style={[styles.sub, { marginTop: 0, marginLeft: 22 }]}>Show less</Text>
-        </Pressable>
+        </Tap>
       )}
       {actions.length > 0 && !clear && (
         <View style={styles.btns}>
           {actions.map((a, i) => (
-            <Pressable key={a.id} onPress={() => go(a.url)} accessibilityRole="button"
-              style={({ pressed }) => [styles.btn, i === 0 ? styles.btnMain : styles.btnOther, pressed && { opacity: 0.75 }]}>
+            <Tap key={a.id} onPress={() => go(a.url)} accessibilityRole="button"
+              style={[styles.btn, i === 0 ? styles.btnMain : styles.btnOther]}>
               <Text style={[styles.btnText, i === 0 && { color: isLight ? '#FFFFFF' : '#0B0B0F' }]} numberOfLines={1}>{a.action}</Text>
-            </Pressable>
+            </Tap>
           ))}
         </View>
       )}
@@ -61,8 +65,8 @@ export function TodayCard({ items, now }: { items: TodayItem[]; now: Date }) {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: soft(colors.brand) },
-  pill: { alignSelf: 'flex-start', backgroundColor: soft(colors.brand), borderRadius: 7, paddingVertical: 3, paddingHorizontal: 8 },
+  card: { backgroundColor: colors.card, borderRadius: 20, borderCurve: 'continuous' as const, padding: 16, borderWidth: 1, borderColor: soft(colors.brand) },
+  pill: { alignSelf: 'flex-start', backgroundColor: soft(colors.brand), borderRadius: 7, borderCurve: 'continuous' as const, paddingVertical: 3, paddingHorizontal: 8 },
   pillText: { color: colors.brand, fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', fontFamily: fonts.mono },
   big: { color: colors.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.8, marginTop: 8 },
   clearSub: { color: colors.muted, fontSize: 14, marginTop: 4 },
@@ -72,7 +76,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 15, fontWeight: '600', lineHeight: 20 },
   sub: { color: colors.muted, fontSize: 13, marginTop: 1 },
   btns: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  btn: { flex: 1, borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
+  btn: { flex: 1, borderRadius: 12, borderCurve: 'continuous' as const, paddingVertical: 11, alignItems: 'center' },
   btnMain: { backgroundColor: colors.brand },
   btnOther: { backgroundColor: colors.cardRaised },
   btnText: { color: colors.text, fontWeight: '700', fontSize: 14 },

@@ -153,7 +153,7 @@ export default function SettingsIndex() {
           icon="color-palette-outline"
           title="Your colour"
           subtitle="Your bar, name and confetti"
-          right={<View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.you }} />}
+          right={<View style={{ width: 18, height: 18, borderRadius: 9, borderCurve: 'continuous' as const, backgroundColor: colors.you }} />}
           onPress={() => router.push('/settings/colour')}
         />
         <ListRow
@@ -230,5 +230,5 @@ export default function SettingsIndex() {
 
 const styles = StyleSheet.create({
   me: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.warning },
+  dot: { width: 8, height: 8, borderRadius: 4, borderCurve: 'continuous' as const, backgroundColor: colors.warning },
 });

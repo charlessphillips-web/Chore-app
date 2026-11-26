@@ -87,7 +87,7 @@ export default function Feedback() {
 
       <Label>Screenshot (optional)</Label>
       {screenshot && (
-        <View style={{ alignSelf: 'center', width: '45%', borderRadius: radius, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}>
+        <View style={{ alignSelf: 'center', width: '45%', borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card }}>
           <Image source={{ uri: jpegUri(screenshot) }} style={{ width: '100%', aspectRatio: 9 / 16 }} resizeMode="contain" />
         </View>
       )}

@@ -101,7 +101,7 @@ function Popup({ c, onDone }: { c: Shown; onDone: () => void }) {
     Animated.parallel([
       Animated.spring(pop, { toValue: 1, useNativeDriver: true, friction: 6, tension: 90 }),
       Animated.timing(burst, { toValue: 1, duration: big ? 1600 : 1000, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(bar, { toValue: 1, duration: 700, delay: 250, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      Animated.spring(bar, { toValue: 1, delay: 250, useNativeDriver: true, damping: 20, stiffness: 140, mass: 0.8 }),
     ]).start();
     // Medium/Big close themselves; hitting fair share stays until you tap.
     const t = big ? null : setTimeout(onDone, 2600);
@@ -150,7 +150,7 @@ function Popup({ c, onDone }: { c: Shown; onDone: () => void }) {
               </View>
               <View style={styles.track}>
                 <Animated.View
-                  style={[styles.fill, { backgroundColor: colors.you, width: bar.interpolate({ inputRange: [0, 1], outputRange: [`${fill(c.beforePct)}%`, `${fill(c.afterPct)}%`] }) }]}
+                  style={[styles.fill, { backgroundColor: colors.you, width: '100%', transformOrigin: 'left', transform: [{ scaleX: bar.interpolate({ inputRange: [0, 1], outputRange: [fill(c.beforePct) / 100, fill(c.afterPct) / 100] }) }] }]}
                 />
               </View>
               {big && c.afterPct >= c.fairPct && !c.line.endsWith('streak!') && <Text style={[styles.label, { color: colors.you }]}>🎯 Fair share reached</Text>}
@@ -197,25 +197,25 @@ function confetti(n: number, big: boolean) {
 const styles = StyleSheet.create({
   toast: {
     position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '90%',
-    backgroundColor: colors.cardRaised, borderColor: colors.line, borderWidth: 1, borderRadius: 999,
+    backgroundColor: colors.cardRaised, borderColor: colors.line, borderWidth: 1, borderRadius: 999, borderCurve: 'continuous' as const,
     paddingVertical: 10, paddingHorizontal: 16,
   },
   toastPts: { fontWeight: '700', fontSize: 15 },
   toastText: { color: colors.text, fontSize: 14, fontWeight: '500', flexShrink: 1 },
   dim: { backgroundColor: 'rgba(0,0,0,0.72)', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  piece: { position: 'absolute', borderRadius: 2 },
+  piece: { position: 'absolute', borderRadius: 2, borderCurve: 'continuous' },
   card: {
     width: '100%', maxWidth: 340, backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1,
-    borderRadius: 22, paddingTop: 22, paddingBottom: 14, paddingHorizontal: 18,
+    borderRadius: 22, borderCurve: 'continuous' as const, paddingTop: 22, paddingBottom: 14, paddingHorizontal: 18,
   },
   pts: { fontSize: 52, fontWeight: '700', letterSpacing: -2 },
   line: { fontSize: 20, fontWeight: '600', color: colors.text, textAlign: 'center', marginTop: 2 },
   barBlock: { alignSelf: 'stretch', gap: 6, marginTop: 18 },
   barTop: { flexDirection: 'row', justifyContent: 'space-between' },
   label: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1, color: colors.muted, textTransform: 'uppercase' },
-  track: { height: 8, borderRadius: 4, backgroundColor: colors.line, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 4 },
-  btn: { alignSelf: 'stretch', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 18 },
+  track: { height: 8, borderRadius: 4, borderCurve: 'continuous' as const, backgroundColor: colors.line, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 4, borderCurve: 'continuous' },
+  btn: { alignSelf: 'stretch', backgroundColor: colors.primary, borderRadius: 12, borderCurve: 'continuous' as const, paddingVertical: 13, alignItems: 'center', marginTop: 18 },
   btnText: { color: colors.primaryText, fontWeight: '600', fontSize: 15 },
   off: { color: colors.muted, fontSize: 13, marginTop: 12 },
 });

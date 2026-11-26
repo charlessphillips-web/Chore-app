@@ -62,14 +62,14 @@ function Row({ avatar, name, pct, you }: { avatar: React.ReactNode; name: string
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 18, padding: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 18, borderCurve: 'continuous' as const, padding: 16 },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  ring: { width: 50, height: 50, borderRadius: 25, borderWidth: 3, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
-  swatch: { width: 38, height: 38, borderRadius: 19 },
+  ring: { width: 50, height: 50, borderRadius: 25, borderCurve: 'continuous' as const, borderWidth: 3, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  swatch: { width: 38, height: 38, borderRadius: 19, borderCurve: 'continuous' },
   name: { color: colors.muted, fontSize: 13, marginTop: 10 },
   rowName: { width: 70, fontSize: 15, color: colors.text },
-  track: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.line, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3 },
+  track: { flex: 1, height: 6, borderRadius: 3, borderCurve: 'continuous' as const, backgroundColor: colors.line, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 3, borderCurve: 'continuous' },
   pct: { width: 40, textAlign: 'right', fontSize: 12, color: colors.muted },
   pts: { fontSize: 44, fontWeight: '700', letterSpacing: -2 },
   line: { fontSize: 17, fontWeight: '600', color: colors.text },

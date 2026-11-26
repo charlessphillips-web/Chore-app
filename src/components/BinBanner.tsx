@@ -50,4 +50,4 @@ export function BinBanner({ bins, now, isAdmin }: { bins: BinSchedule[]; now: Da
   );
 }
 
-const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: space.md, backgroundColor: colors.card, borderRadius: 16, padding: 14 };
+const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: space.md, backgroundColor: colors.card, borderRadius: 16, borderCurve: 'continuous' as const, padding: 14 };

@@ -67,7 +67,7 @@ export default function AppIconScreen() {
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 18 },
   item: { width: '31%', alignItems: 'center', gap: 6 },
-  ring: { borderWidth: 3, borderColor: 'transparent', borderRadius: 24, padding: 3 },
-  icon: { width: 76, height: 76, borderRadius: 18 },
+  ring: { borderWidth: 3, borderColor: 'transparent', borderRadius: 24, borderCurve: 'continuous' as const, padding: 3 },
+  icon: { width: 76, height: 76, borderRadius: 18, borderCurve: 'continuous' },
   label: { fontSize: 13, color: colors.muted },
 });

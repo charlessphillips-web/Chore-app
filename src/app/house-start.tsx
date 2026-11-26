@@ -112,7 +112,7 @@ export default function HouseStart() {
 
 const styles = StyleSheet.create({
   big: { fontSize: 17, fontWeight: '600', color: colors.text },
-  list: { borderRadius: 16, backgroundColor: colors.card, overflow: 'hidden' },
+  list: { borderRadius: 16, borderCurve: 'continuous' as const, backgroundColor: colors.card, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   name: { fontSize: 15, fontWeight: '600', color: colors.text },

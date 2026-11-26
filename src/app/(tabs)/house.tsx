@@ -87,5 +87,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 12 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   admin: { fontSize: 10, fontFamily: fonts.mono, color: colors.muted, letterSpacing: 1.2 },
-  thumb: { width: 52, height: 52, borderRadius: 8 },
+  thumb: { width: 52, height: 52, borderRadius: 8, borderCurve: 'continuous' },
 });

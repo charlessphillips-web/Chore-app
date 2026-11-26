@@ -155,11 +155,11 @@ function Swatches({ colors: list, value, onPick }: { colors: string[]; value: nu
 
 const styles = StyleSheet.create({
   preview: { alignItems: 'center', paddingVertical: space.md },
-  segment: { flexDirection: 'row', borderRadius: 999, borderWidth: 1, borderColor: colors.line, padding: 3 },
-  segBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, alignItems: 'center' },
+  segment: { flexDirection: 'row', borderRadius: 999, borderCurve: 'continuous' as const, borderWidth: 1, borderColor: colors.line, padding: 3 },
+  segBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, borderCurve: 'continuous' as const, alignItems: 'center' },
   segOn: { backgroundColor: colors.text },
   segText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1.2, color: colors.muted },
   swatches: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  swatch: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.line },
+  swatch: { width: 34, height: 34, borderRadius: 17, borderCurve: 'continuous' as const, borderWidth: 1, borderColor: colors.line },
   swatchOn: { borderWidth: 3, borderColor: colors.text },
 });

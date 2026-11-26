@@ -51,7 +51,7 @@ export default function AwayQuick() {
       <View style={styles.card}>
         {options.map((o, i) => (
           <Pressable key={o.label} disabled={busy} onPress={() => pick(o.last)} accessibilityRole="button" accessibilityLabel={o.label}
-            style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}>
+            style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { backgroundColor: colors.cardRaised }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>{o.label}</Text>
               <Text style={styles.sub}>{o.sub}</Text>
@@ -60,7 +60,7 @@ export default function AwayQuick() {
           </Pressable>
         ))}
         <Pressable onPress={() => router.replace('/settings/away')} accessibilityRole="button" accessibilityLabel="Pick dates"
-          style={({ pressed }) => [styles.row, styles.divider, pressed && { opacity: 0.6 }]}>
+          style={({ pressed }) => [styles.row, styles.divider, pressed && { backgroundColor: colors.cardRaised }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Pick dates</Text>
             <Text style={styles.sub}>Going later, or for longer</Text>
@@ -74,7 +74,7 @@ export default function AwayQuick() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 18, paddingHorizontal: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 18, borderCurve: 'continuous' as const, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   label: { fontSize: 17, fontWeight: '600', color: colors.text },

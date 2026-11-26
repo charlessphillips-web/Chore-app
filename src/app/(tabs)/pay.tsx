@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChoreIcon } from '../../components/ChoreIcon';
 import { useApp } from '../../context/AppContext';
@@ -13,6 +13,9 @@ import type { ChoreOffer } from '../../lib/types';
 import { Avatar } from '../../components/Avatar';
 import { Icon, Label, Loading, Screen, timeAgo, Title } from '../../components/ui';
 import { colors, fonts } from '../../components/theme';
+import { Tap } from '../../components/Tap';
+import { SkeletonCard, SkeletonList } from '../../components/Skeleton';
+import { Item } from '../../components/Motion';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
@@ -22,11 +25,12 @@ type IconName = React.ComponentProps<typeof Icon>['name'];
  * cards with the price big.
  */
 export default function Pay() {
-  const { user, house, members, openRequests, offers, logs } = useApp();
+  const { user, house, members, openRequests, offers, logs, houseLoaded } = useApp();
   const [paid, setPaid] = useState<ChoreOffer[]>([]);
   const houseId = house?.id;
   useEffect(() => (houseId ? watchPaidOffers(houseId, setPaid, () => {}) : undefined), [houseId]);
   if (!user || !house) return <Loading />;
+  if (!houseLoaded) return <Screen><Title>Pay</Title><SkeletonCard lines={2} title={false} /><SkeletonList rows={2} thumb={false} /></Screen>;
 
   const uid = user.uid;
   const open = (id: string) => { haptics.tap(); router.push({ pathname: '/offer/[id]', params: { id } }); };
@@ -107,7 +111,7 @@ export default function Pay() {
               ? o.declined.includes(uid) ? `${o.fromName} declined your ${formatPrice(c.price)}` : `You offered ${formatPrice(c.price)} · waiting for ${o.fromName}`
               : null;
             return (
-              <View key={o.id} style={styles.card}>
+              <Item key={o.id} style={styles.card}>
                 <View style={styles.row}>
                   <ChoreIcon choreKey={o.choreKey} size={34} />
                   <View style={{ flex: 1 }}>
@@ -126,7 +130,7 @@ export default function Pay() {
                     </>
                   )}
                 </View>
-              </View>
+              </Item>
             );
           })}
         </>
@@ -137,8 +141,8 @@ export default function Pay() {
           <Label>In progress</Label>
           <View style={styles.card}>
             {waiting.map((o, i) => (
-              <Pressable key={o.id} onPress={() => open(o.id)} accessibilityRole="button"
-                style={({ pressed }) => [styles.row, styles.waitRow, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}>
+              <Tap key={o.id} onPress={() => open(o.id)} accessibilityRole="button"
+                style={({ pressed }) => [styles.row, styles.waitRow, i > 0 && styles.divider, pressed && { backgroundColor: colors.cardRaised }]}>
                 <Icon name="time-outline" size={18} color={colors.muted} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.waitTitle} numberOfLines={1}>{o.choreName}</Text>
@@ -150,7 +154,7 @@ export default function Pay() {
                   </Text>
                 </View>
                 <Text style={styles.waitPrice}>{price(o)}</Text>
-              </Pressable>
+              </Tap>
             ))}
           </View>
         </>
@@ -182,8 +186,9 @@ function ActionCard(p: {
   avatar?: { data: React.ComponentProps<typeof Avatar>['avatar']; name: string }; icon?: IconName;
 }) {
   return (
-    <Pressable onPress={p.onPress} accessibilityRole="button" accessibilityLabel={`${p.title}. ${p.button}`}
-      style={({ pressed }) => [styles.card, styles.row, p.highlight && [styles.highlight, { borderColor: colors.you }], pressed && { opacity: 0.7 }]}>
+    <Item>
+    <Tap onPress={p.onPress} accessibilityRole="button" accessibilityLabel={`${p.title}. ${p.button}`}
+      style={[styles.card, styles.row, p.highlight && [styles.highlight, { borderColor: colors.you }]]}>
       {p.avatar ? <Avatar avatar={p.avatar.data} name={p.avatar.name} size={32} />
         : p.icon ? <Icon name={p.icon} size={22} color={colors.text} /> : null}
       <View style={{ flex: 1 }}>
@@ -191,21 +196,22 @@ function ActionCard(p: {
         <Text style={styles.sub} numberOfLines={2}>{p.subtitle}</Text>
       </View>
       <View style={styles.pill}><Text style={styles.pillText}>{p.button}</Text></View>
-    </Pressable>
+    </Tap>
+    </Item>
   );
 }
 
 function Btn({ title, onPress, ghost }: { title: string; onPress: () => void; ghost?: boolean }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button"
-      style={({ pressed }) => [styles.btn, ghost ? styles.btnGhost : styles.btnFill, pressed && { opacity: 0.7 }]}>
+    <Tap onPress={onPress} accessibilityRole="button"
+      style={[styles.btn, ghost ? styles.btnGhost : styles.btnFill]}>
       <Text style={[styles.btnText, !ghost && { color: colors.primaryText }]}>{title}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 18, padding: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 18, borderCurve: 'continuous' as const, padding: 16 },
   wallet: { flexDirection: 'row', justifyContent: 'space-between' },
   highlight: { borderWidth: 1.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -213,9 +219,9 @@ const styles = StyleSheet.create({
   money: { fontSize: 30, fontWeight: '700', letterSpacing: -1, color: colors.text },
   title: { fontSize: 16, fontWeight: '600', color: colors.text },
   sub: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  pill: { backgroundColor: colors.primary, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 14 },
+  pill: { backgroundColor: colors.primary, borderRadius: 11, borderCurve: 'continuous' as const, paddingVertical: 9, paddingHorizontal: 14 },
   pillText: { color: colors.primaryText, fontWeight: '600', fontSize: 14 },
-  btn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  btn: { flex: 1, borderRadius: 12, borderCurve: 'continuous' as const, paddingVertical: 12, alignItems: 'center' },
   btnFill: { backgroundColor: colors.primary },
   btnGhost: { borderWidth: 1, borderColor: colors.line },
   btnText: { fontWeight: '600', fontSize: 15, color: colors.text },
@@ -227,5 +233,5 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 4 },
   steps: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
   stepWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  step: { backgroundColor: colors.cardRaised, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 9, fontSize: 12, color: colors.text, overflow: 'hidden' },
+  step: { backgroundColor: colors.cardRaised, borderRadius: 8, borderCurve: 'continuous' as const, paddingVertical: 4, paddingHorizontal: 9, fontSize: 12, color: colors.text, overflow: 'hidden' },
 });

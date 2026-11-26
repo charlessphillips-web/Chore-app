@@ -35,7 +35,7 @@ export default function PhotoScreen() {
       <StatusBadge log={log} />
       {log.note && <Text style={{ color: colors.text, fontSize: 16, fontStyle: 'italic' }}>&ldquo;{log.note}&rdquo;</Text>}
       {log.beforePhoto && <Text style={{ color: colors.muted, fontSize: 12, letterSpacing: 1 }}>AFTER</Text>}
-      <View style={{ borderRadius: radius, overflow: 'hidden', aspectRatio: 3 / 4, backgroundColor: colors.card }}>
+      <View style={{ borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden', aspectRatio: 3 / 4, backgroundColor: colors.card }}>
         {src && <Image source={{ uri: jpegUri(src) }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />}
         {!full && !error && !kept && (
           <ActivityIndicator style={{ position: 'absolute', top: '50%', alignSelf: 'center' }} color={colors.primaryBright} />
@@ -44,7 +44,7 @@ export default function PhotoScreen() {
       {log.beforePhoto && (
         <>
           <Text style={{ color: colors.muted, fontSize: 12, letterSpacing: 1 }}>BEFORE</Text>
-          <View style={{ borderRadius: radius, overflow: 'hidden', aspectRatio: 3 / 4, backgroundColor: colors.card }}>
+          <View style={{ borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden', aspectRatio: 3 / 4, backgroundColor: colors.card }}>
             <Image source={{ uri: jpegUri(log.beforePhoto) }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           </View>
         </>

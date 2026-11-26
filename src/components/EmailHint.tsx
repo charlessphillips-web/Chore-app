@@ -12,7 +12,7 @@ export function EmailHint({ email, onUse }: { email: string; onUse: (fixed: stri
       <Text style={{ color: colors.warning, fontSize: 14 }}>Did you mean <Text style={{ fontWeight: '700' }}>{s}</Text>?</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={`Use ${s}`} hitSlop={8}
         onPress={() => { haptics.tap(); onUse(s); }}
-        style={{ borderWidth: 1, borderColor: colors.warning, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 10 }}>
+        style={{ borderWidth: 1, borderColor: colors.warning, borderRadius: 999, borderCurve: 'continuous' as const, paddingVertical: 3, paddingHorizontal: 10 }}>
         <Text style={{ color: colors.warning, fontSize: 13, fontWeight: '600' }}>Yes, fix it</Text>
       </Pressable>
     </View>

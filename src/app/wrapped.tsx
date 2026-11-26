@@ -139,7 +139,7 @@ function ordinal(n: number): string {
 const styles = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: 22 },
   bars: { flexDirection: 'row', gap: 4 },
-  bar: { flex: 1, height: 3, borderRadius: 2 },
+  bar: { flex: 1, height: 3, borderRadius: 2, borderCurve: 'continuous' },
   close: { position: 'absolute', right: 18, top: 56, zIndex: 3 },
   body: { flex: 1, justifyContent: 'center', gap: 10 },
   kicker: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.8 },
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   text: { fontSize: 17, color: W, opacity: 0.85, lineHeight: 24 },
   taps: { position: 'absolute', left: 0, right: 0, top: 90, bottom: 140, flexDirection: 'row' },
   footer: { gap: 10, alignItems: 'stretch' },
-  btn: { backgroundColor: W, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  btn: { backgroundColor: W, borderRadius: 14, borderCurve: 'continuous' as const, paddingVertical: 15, alignItems: 'center' },
   btnText: { color: '#000000', fontWeight: '700', fontSize: 16 },
   ghost: { paddingVertical: 10, alignItems: 'center' },
   ghostText: { color: W, fontSize: 15 },

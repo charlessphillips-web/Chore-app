@@ -148,7 +148,7 @@ export default function HouseDetails() {
 
       <Label>Wallpaper</Label>
       <Subtitle>Shown faintly behind everyone&apos;s Home screen.</Subtitle>
-      <View style={{ borderRadius: radius, overflow: 'hidden', aspectRatio: 9 / 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
+      <View style={{ borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden', aspectRatio: 9 / 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
         {wallpaper ? (
           <Image source={{ uri: wallpaper }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         ) : (

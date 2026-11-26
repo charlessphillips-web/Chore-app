@@ -38,7 +38,7 @@ export function PrivacyPolicy() {
 
       <Label>What we collect</Label>
       {ROWS.map(([what, why, who]) => (
-        <View key={what} style={{ backgroundColor: colors.card, borderRadius: 14, padding: 14, gap: 4 }}>
+        <View key={what} style={{ backgroundColor: colors.card, borderRadius: 14, borderCurve: 'continuous' as const, padding: 14, gap: 4 }}>
           <Text style={[type.body, { fontWeight: '600' }]}>{what}</Text>
           <Text style={type.small}>Why: {why}</Text>
           <Text style={type.small}>Who sees it: {who}</Text>

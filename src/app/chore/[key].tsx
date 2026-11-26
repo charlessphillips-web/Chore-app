@@ -372,11 +372,11 @@ function Choice(p: { icon: React.ComponentProps<typeof Icon>['name']; title: str
 
 const styles = StyleSheet.create({
   beforeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  beforeThumb: { width: 52, height: 52, borderRadius: 8 },
+  beforeThumb: { width: 52, height: 52, borderRadius: 8, borderCurve: 'continuous' },
   choice: {
     flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg,
-    borderWidth: 1, borderColor: colors.outline, borderRadius: radius, backgroundColor: colors.card,
+    borderWidth: 1, borderColor: colors.outline, borderRadius: radius, borderCurve: 'continuous' as const, backgroundColor: colors.card,
   },
-  preview: { borderRadius: radius, overflow: 'hidden', aspectRatio: 4 / 3, backgroundColor: colors.card },
+  preview: { borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden', aspectRatio: 4 / 3, backgroundColor: colors.card },
   empty: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, gap: space.sm },
 });

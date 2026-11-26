@@ -69,7 +69,7 @@ export function GettingStarted() {
             accessibilityLabel={s.done ? `${s.title}, done` : s.title}
             disabled={!tappable}
             onPress={() => { haptics.tap(); s.action!(); }}
-            style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { backgroundColor: colors.cardRaised }]}
           >
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={[styles.title, s.done && styles.titleDone]}>{s.title}</Text>
@@ -87,10 +87,10 @@ export function GettingStarted() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 18, gap: 10 },
+  card: { backgroundColor: colors.card, borderRadius: 20, borderCurve: 'continuous' as const, padding: 18, gap: 10 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   count: { fontFamily: fonts.mono, fontSize: 11, color: colors.muted },
-  bar: { height: 3, backgroundColor: colors.line, borderRadius: 2, overflow: 'hidden' },
+  bar: { height: 3, backgroundColor: colors.line, borderRadius: 2, borderCurve: 'continuous' as const, overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: colors.text },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },

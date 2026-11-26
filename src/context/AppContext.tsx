@@ -35,6 +35,8 @@ interface AppState {
   logs: ChoreLog[];
   /** Chore offers still in progress. */
   offers: ChoreOffer[];
+  /** Everything about the house has arrived (so screens can show it all at once, not bit by bit). */
+  houseLoaded: boolean;
   /** House wallpaper as a data URI, if the admin set one. */
   wallpaper: string | null;
   /** House stakes suggestions for this period and the last one. */
@@ -69,6 +71,8 @@ interface HouseData {
   logs: ChoreLog[];
   offers: ChoreOffer[];
   wallpaper: string | null;
+  /** Which of the live lists have arrived at least once. */
+  got: string[];
 }
 
 const MAX_RETRIES = 5;
@@ -126,12 +130,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!houseId || !uid) return;
     const update = (patch: Partial<HouseData>) =>
-      setHouseData((prev) => ({
-        ...(prev?.houseId === houseId
+      setHouseData((prev) => {
+        const base: HouseData = prev?.houseId === houseId
           ? prev
-          : { houseId, house: null, members: [], openRequests: [], logs: [], offers: [], wallpaper: null }),
-        ...patch,
-      }));
+          : { houseId, house: null, members: [], openRequests: [], logs: [], offers: [], wallpaper: null, got: [] };
+        const keys = Object.keys(patch);
+        const got = keys.every((k) => base.got.includes(k)) ? base.got : [...new Set([...base.got, ...keys])];
+        return { ...base, ...patch, got };
+      });
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let failed = false;
     const onError = (e: FirestoreError) => {
@@ -311,6 +317,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     logs: current?.logs ?? EMPTY,
     offers: current?.offers ?? EMPTY,
     wallpaper: current?.wallpaper ?? null,
+    houseLoaded: !!current && ['house', 'members', 'openRequests', 'logs', 'offers'].every((k) => current.got.includes(k)),
     stakes,
     membersIn,
     notifStatus,

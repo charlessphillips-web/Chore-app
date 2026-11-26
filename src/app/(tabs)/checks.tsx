@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChoreIcon } from '../../components/ChoreIcon';
 import { useApp } from '../../context/AppContext';
@@ -14,13 +14,17 @@ import { toast } from '../../components/Celebration';
 
 import { periodStart } from '../../lib/period';
 import { colors, radius, space, type } from '../../components/theme';
+import { Tap } from '../../components/Tap';
+import { SkeletonList } from '../../components/Skeleton';
+import { Item } from '../../components/Motion';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
 /** Photos waiting for a check. One housemate's decision is enough; then it disappears. */
 export default function Checks() {
-  const { user, profile, house, logs } = useApp();
+  const { user, profile, house, logs, houseLoaded } = useApp();
   if (!user || !profile || !house) return <Loading />;
+  if (!houseLoaded) return <Screen><Title>Checks</Title><SkeletonList rows={3} /></Screen>;
 
   const toCheck = logs.filter((l) => needsCheckBy(l, user.uid));
   const minePending = logs.filter((l) => l.userId === user.uid && effectiveStatus(l) === 'pending');
@@ -55,7 +59,7 @@ export default function Checks() {
           </Card>
         </>
       ) : (
-        toCheck.map((l) => <CheckCard key={l.id} log={l} reviewer={{ uid: user.uid, username: profile.username }} />)
+        toCheck.map((l, i) => <Item key={l.id} index={i}><CheckCard log={l} reviewer={{ uid: user.uid, username: profile.username }} /></Item>)
       )}
 
       {minePending.length > 0 && (
@@ -137,7 +141,7 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
   return (
     <Animated.View style={{ opacity: slide.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }), transform: [{ translateX: slide.interpolate({ inputRange: [0, 1], outputRange: [0, 80] }) }] }}>
     <Card style={{ padding: 10 }}>
-      <Pressable
+      <Tap
         onPress={() => router.push({ pathname: '/photo/[logId]', params: { logId: log.id } })}
         accessibilityRole="imagebutton"
         accessibilityLabel={`Photo of ${log.choreName}`}
@@ -162,7 +166,7 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
             <Text style={styles.enlarge}>tap to enlarge</Text>
           </>
         )}
-      </Pressable>
+      </Tap>
       <View style={{ padding: 6, paddingTop: 12, gap: space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Avatar avatar={who?.avatar} name={log.username} size={32} />
@@ -214,17 +218,17 @@ function CheckCard({ log, reviewer }: { log: ChoreLog; reviewer: { uid: string; 
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  count: { fontSize: 12, color: colors.text, backgroundColor: colors.cardRaised, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 9, overflow: 'hidden' },
-  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius - 4 },
+  count: { fontSize: 12, color: colors.text, backgroundColor: colors.cardRaised, borderRadius: 8, borderCurve: 'continuous' as const, paddingVertical: 4, paddingHorizontal: 9, overflow: 'hidden' },
+  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius - 4, borderCurve: 'continuous' },
   enlarge: {
     position: 'absolute', left: 10, top: 10, fontSize: 11, color: '#FFFFFF', backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, overflow: 'hidden',
+    borderRadius: 8, borderCurve: 'continuous' as const, paddingVertical: 3, paddingHorizontal: 8, overflow: 'hidden',
   },
-  empty: { backgroundColor: colors.card, borderRadius: 20, alignItems: 'center', paddingVertical: 32, paddingHorizontal: 18, gap: 6 },
+  empty: { backgroundColor: colors.card, borderRadius: 20, borderCurve: 'continuous' as const, alignItems: 'center', paddingVertical: 32, paddingHorizontal: 18, gap: 6 },
   emptyTitle: { fontSize: 20, fontWeight: '600', color: colors.text },
   mineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   dots: { flexDirection: 'row', gap: 4 },
-  dot: { width: 18, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  dot: { width: 18, height: 5, borderRadius: 3, borderCurve: 'continuous' as const, backgroundColor: colors.line },
   dotOn: { backgroundColor: colors.text },
 });

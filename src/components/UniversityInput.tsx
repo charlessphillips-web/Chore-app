@@ -99,7 +99,7 @@ export function UniversityInput({ value, onChange }: { value: string; onChange: 
 
 const styles = StyleSheet.create({
   chosen: {
-    flexDirection: 'row', alignItems: 'center', gap: space.sm, backgroundColor: colors.card, borderRadius: radius,
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, backgroundColor: colors.card, borderRadius: radius, borderCurve: 'continuous' as const,
     borderWidth: 1, borderColor: colors.line, paddingHorizontal: space.md, paddingVertical: 14,
   },
   list: {
@@ -109,5 +109,5 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, paddingVertical: 13 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   itemText: { fontSize: 15, color: colors.text, flex: 1 },
-  option: { borderWidth: 1, borderColor: colors.line, borderRadius: radius, paddingHorizontal: space.md, paddingVertical: 13 },
+  option: { borderWidth: 1, borderColor: colors.line, borderRadius: radius, borderCurve: 'continuous' as const, paddingHorizontal: space.md, paddingVertical: 13 },
 });

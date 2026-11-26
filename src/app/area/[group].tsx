@@ -35,7 +35,7 @@ export default function AreaScreen() {
               accessibilityRole="button"
               accessibilityLabel={taskName(c)}
               onPress={() => { haptics.tap(); router.push({ pathname: '/chore/[key]', params: { key: c.key } }); }}
-              style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { backgroundColor: colors.cardRaised }]}
             >
               <ChoreIcon choreKey={c.key} size={34} />
               <View style={{ flex: 1 }}>
@@ -55,7 +55,7 @@ export default function AreaScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 18, paddingHorizontal: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 18, borderCurve: 'continuous' as const, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   name: { fontSize: 17, fontWeight: '600', color: colors.text },

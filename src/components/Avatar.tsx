@@ -8,7 +8,7 @@ const INK = '#111111';
 
 /** A round profile picture: photo, drawn character, or the person's initial. */
 export function Avatar({ avatar, name, size = 40 }: { avatar: AvatarData | null | undefined; name: string; size?: number }) {
-  const round = { width: size, height: size, borderRadius: size / 2, overflow: 'hidden' as const };
+  const round = { width: size, height: size, borderRadius: size / 2, borderCurve: 'continuous' as const, overflow: 'hidden' as const };
   if (avatar?.kind === 'photo') {
     return <Image source={{ uri: jpegUri(avatar.data) }} style={round} accessibilityLabel={`${name}'s photo`} />;
   }

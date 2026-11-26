@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, space, type } from './theme';
 import { haptics } from '../lib/haptics';
+import { Tap } from './Tap';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -106,7 +107,8 @@ export function Button({
   const fg = filled ? colors.inverse : variant === 'danger' ? colors.danger : colors.text;
   const off = disabled || loading;
   return (
-    <Pressable
+    <Tap
+      scaleTo={0.96}
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityState={{ disabled: !!off }}
@@ -120,7 +122,7 @@ export function Button({
         filled && { backgroundColor: colors.primary, borderColor: colors.primary },
         variant === 'danger' && { borderColor: colors.danger },
         variant === 'ghost' && { borderColor: 'transparent' },
-        { opacity: off ? 0.4 : pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+        { opacity: off ? 0.4 : pressed ? 0.9 : 1 },
         style,
       ]}
     >
@@ -132,7 +134,7 @@ export function Button({
           <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -150,7 +152,8 @@ export function RowButton({
   highlight?: boolean;
 }) {
   return (
-    <Pressable
+    <Tap
+      scaleTo={0.98}
       accessibilityRole="button"
       accessibilityLabel={title}
       testID={testID}
@@ -168,7 +171,7 @@ export function RowButton({
       {highlight && <View style={styles.dot} />}
       {right}
       <Icon name="chevron-forward" size={18} color={colors.muted} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -232,7 +235,8 @@ export function Input(props: TextInputProps) {
 
 export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
-    <Pressable
+    <Tap
+      scaleTo={0.94}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={label}
@@ -243,7 +247,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected: bo
       style={[styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.primary }]}
     >
       <Text style={[styles.chipText, selected && { color: colors.inverse }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -301,7 +305,7 @@ export function Loading({ message = 'Getting your house…' }: { message?: strin
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View
             style={{
-              position: 'absolute', width: 120, height: 120, borderRadius: 34, backgroundColor: colors.brand,
+              position: 'absolute', width: 120, height: 120, borderRadius: 34, borderCurve: 'continuous' as const, backgroundColor: colors.brand,
               opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.25] }),
               transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.08] }) }],
             }}
@@ -352,30 +356,30 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1 },
   screenInner: { paddingHorizontal: 16, paddingTop: space.md, gap: 12, paddingBottom: 160 },
-  card: { backgroundColor: colors.card, borderRadius: 18, padding: space.md, gap: space.sm },
+  card: { backgroundColor: colors.card, borderRadius: 18, borderCurve: 'continuous' as const, padding: space.md, gap: space.sm },
   button: {
-    borderRadius: 999, paddingVertical: 15, paddingHorizontal: space.lg, alignItems: 'center',
+    borderRadius: 999, borderCurve: 'continuous' as const, paddingVertical: 15, paddingHorizontal: space.lg, alignItems: 'center',
     borderWidth: 1, borderColor: colors.line,
   },
   buttonInner: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   buttonText: { fontSize: 16, fontWeight: '600', letterSpacing: -0.2 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: radius,
+    flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: radius, borderCurve: 'continuous' as const,
     paddingVertical: 16, paddingHorizontal: space.md, backgroundColor: colors.card,
   },
   rowTitle: { fontSize: 16, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.text },
-  group: { backgroundColor: colors.card, borderRadius: radius, overflow: 'hidden' },
+  dot: { width: 7, height: 7, borderRadius: 4, borderCurve: 'continuous' as const, backgroundColor: colors.text },
+  group: { backgroundColor: colors.card, borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden' },
   groupLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: space.md },
   listTitle: { fontSize: 16, color: colors.text, letterSpacing: -0.2 },
   input: {
-    backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.line,
+    backgroundColor: colors.card, borderRadius: radius, borderCurve: 'continuous' as const, borderWidth: 1, borderColor: colors.line,
     paddingHorizontal: space.md, paddingVertical: 14, fontSize: 16, color: colors.text,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderCurve: 'continuous' as const, borderWidth: 1,
     borderColor: colors.line, backgroundColor: 'transparent',
   },
   chipText: { fontSize: 14, color: colors.text, fontWeight: '500' },
@@ -385,7 +389,7 @@ const styles = StyleSheet.create({
 
 /**
  * On/off toggle: grey with the dot on the left when off, your colour with
- * the dot on the right when on. A short, plain slide (no bounce).
+ * the dot on the right when on. Slides over with a gentle spring, like Apple's.
  */
 export function Toggle({ value, onValueChange, accessibilityLabel, disabled }: {
   value: boolean;
@@ -395,7 +399,7 @@ export function Toggle({ value, onValueChange, accessibilityLabel, disabled }: {
 }) {
   const [x] = useState(() => new Animated.Value(value ? 1 : 0));
   useEffect(() => {
-    Animated.timing(x, { toValue: value ? 1 : 0, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    Animated.spring(x, { toValue: value ? 1 : 0, useNativeDriver: true, damping: 18, stiffness: 320, mass: 0.7 }).start();
   }, [value, x]);
   return (
     <Pressable
@@ -413,6 +417,6 @@ export function Toggle({ value, onValueChange, accessibilityLabel, disabled }: {
 }
 
 const toggleStyles = StyleSheet.create({
-  track: { width: 48, height: 28, borderRadius: 14, padding: 3, justifyContent: 'center' },
-  thumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF' },
+  track: { width: 48, height: 28, borderRadius: 14, borderCurve: 'continuous' as const, padding: 3, justifyContent: 'center' },
+  thumb: { width: 22, height: 22, borderRadius: 11, borderCurve: 'continuous' as const, backgroundColor: '#FFFFFF' },
 });

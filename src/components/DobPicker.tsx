@@ -46,7 +46,7 @@ export function DateField({ value, onChange, label = 'Date', placeholder = 'Sele
         onPress={() => setOpen((o) => !o)}
         style={{
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-          backgroundColor: colors.card, borderRadius: radius, borderWidth: 1,
+          backgroundColor: colors.card, borderRadius: radius, borderCurve: 'continuous' as const, borderWidth: 1,
           borderColor: open ? colors.primaryBright : colors.border, paddingHorizontal: space.md, paddingVertical: 14,
         }}
       >

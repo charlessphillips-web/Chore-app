@@ -90,7 +90,7 @@ function Report({ item }: { item: FeedbackItem }) {
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 999, borderCurve: 'continuous' as const, paddingHorizontal: 8, paddingVertical: 2 },
   tagText: { fontSize: 12, fontWeight: '600' },
-  shot: { aspectRatio: 9 / 16, borderRadius: radius, overflow: 'hidden', backgroundColor: colors.cardRaised },
+  shot: { aspectRatio: 9 / 16, borderRadius: radius, borderCurve: 'continuous' as const, overflow: 'hidden', backgroundColor: colors.cardRaised },
 });

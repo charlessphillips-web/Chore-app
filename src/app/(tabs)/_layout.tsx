@@ -27,7 +27,7 @@ function label(text: string, tab: TabName) {
     return (
       <View style={{ alignItems: 'center', marginTop: 4 }}>
         <Text style={{ fontSize: 11, lineHeight: 14, fontWeight: focused ? '700' : '500', color: tabTint(tab, focused) }}>{text}</Text>
-        <View style={{ width: 5, height: 5, borderRadius: 3, marginTop: 3, backgroundColor: focused ? colors.brand : 'transparent' }} />
+        <View style={{ width: 5, height: 5, borderRadius: 3, borderCurve: 'continuous' as const, marginTop: 3, backgroundColor: focused ? colors.brand : 'transparent' }} />
       </View>
     );
   }

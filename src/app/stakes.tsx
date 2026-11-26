@@ -116,10 +116,10 @@ export default function Stakes() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: radius, backgroundColor: colors.card },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: radius, borderCurve: 'continuous' as const, backgroundColor: colors.card },
   top: { borderWidth: 1.5, borderColor: colors.brand },
   text: { fontSize: 15, fontWeight: '600', color: colors.text },
-  vote: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.line },
+  vote: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderCurve: 'continuous' as const, borderWidth: 1, borderColor: colors.line },
   voted: { backgroundColor: colors.text, borderColor: colors.text },
   voteText: { fontSize: 13, fontWeight: '600', color: colors.text },
 });

@@ -61,7 +61,7 @@ export function needsStakeVote(uid: string, house: House, stakes: Stake[]): bool
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.brand, padding: 16, gap: 12 },
+  card: { borderRadius: radius, borderCurve: 'continuous' as const, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.brand, padding: 16, gap: 12 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 },
   body: { fontSize: 15, color: colors.muted, lineHeight: 21 },

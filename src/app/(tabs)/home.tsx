@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChoreIcon } from '../../components/ChoreIcon';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +28,8 @@ import { Tip } from '../../components/Tip';
 import { haptics } from '../../lib/haptics';
 import { track } from '../../lib/analytics';
 import { colors, fonts, isLight, shade, soft, streakColor, tint, type } from '../../components/theme';
+import { Tap } from '../../components/Tap';
+import { SkeletonCard } from '../../components/Skeleton';
 
 
 /** Show last period's Wrapped once, in the first 2 weeks of a new period. */
@@ -47,7 +49,7 @@ function useWrappedOnce(houseId: string | undefined, prevKey: string, show: bool
 }
 
 export default function Home() {
-  const { user, profile, house, members, openRequests, offers, logs, wallpaper, isAdmin, stakes, membersIn } = useApp();
+  const { user, profile, house, members, openRequests, offers, logs, wallpaper, isAdmin, stakes, membersIn, houseLoaded } = useApp();
   const [peek, setPeek] = useState(false);
   const logoRef = useRef<React.ComponentRef<typeof View>>(null);
   const today = new Date();
@@ -133,7 +135,7 @@ export default function Home() {
           <Logo size={26} />
         </View>
         <Text style={styles.house} numberOfLines={1}>{house.name}</Text>
-        <Pressable
+        <Tap
           accessibilityRole="switch"
           accessibilityLabel="Away"
           accessibilityState={{ checked: awayNow }}
@@ -142,16 +144,16 @@ export default function Home() {
         >
           <Icon name="airplane" size={13} color={awayNow ? colors.inverse : colors.text} />
           <Text style={[styles.awayText, awayNow && { color: colors.inverse }]}>{awayNow ? 'Away' : 'Away?'}</Text>
-        </Pressable>
-        <Pressable
+        </Tap>
+        <Tap
           accessibilityRole="button"
           accessibilityLabel="Settings"
           hitSlop={10}
           onPress={() => { haptics.tap(); router.push('/settings'); }}
-          style={({ pressed }) => [styles.cog, pressed && { opacity: 0.6 }]}
+          style={[styles.cog]}
         >
           <Icon name="settings-outline" size={22} color={colors.text} />
-        </Pressable>
+        </Tap>
       </View>
 
       {awayNow && myTrip && !peek ? (
@@ -215,7 +217,7 @@ export default function Home() {
         />
       )}
       <VerifyEmailBanner />
-      <TodayCard items={todayList} now={now} />
+      {houseLoaded ? <TodayCard items={todayList} now={now} /> : <SkeletonCard />}
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
       <GettingStarted />
       <NotificationCard />
@@ -229,7 +231,7 @@ export default function Home() {
               ? others.find((r) => chores.some((c) => c.group === t.group && c.key === r.choreKey))
               : others.find((r) => r.choreKey === t.key);
             return (
-              <Pressable
+              <Tap
                 key={t.key}
                 accessibilityRole="button"
                 accessibilityLabel={t.name}
@@ -251,11 +253,11 @@ export default function Home() {
                     <Text style={styles.tileSub} numberOfLines={1}>{t.sub}</Text>
                   )}
                 </View>
-              </Pressable>
+              </Tap>
             );
           })}
           {isAdmin && !tiles.some((t) => t.group) && (
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityLabel="Add a bathroom"
               onPress={() => { haptics.tap(); router.push('/settings/bathrooms'); }}
@@ -263,10 +265,10 @@ export default function Home() {
             >
               <Icon name="water-outline" size={24} color={colors.muted} />
               <Text style={[styles.tileText, { color: colors.muted }]}>Add bathrooms</Text>
-            </Pressable>
+            </Tap>
           )}
           {isAdmin && (
-            <Pressable
+            <Tap
               accessibilityRole="button"
               accessibilityLabel="Add a chore"
               onPress={() => {
@@ -277,7 +279,7 @@ export default function Home() {
             >
               <Icon name="add" size={24} color={colors.muted} />
               <Text style={[styles.tileText, { color: colors.muted }]}>Add a chore</Text>
-            </Pressable>
+            </Tap>
           )}
         </View>
       ) : (
@@ -328,34 +330,34 @@ function FairBar({ share, fair }: { share: number; fair: number }) {
 }
 
 const styles = StyleSheet.create({
-  cog: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
+  cog: { width: 34, height: 34, borderRadius: 17, borderCurve: 'continuous' as const, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   house: { flex: 1, fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.text, textTransform: 'uppercase' },
   period: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.2, color: colors.muted, textTransform: 'uppercase' },
-  hero: { backgroundColor: colors.card, borderRadius: 20, padding: 18, gap: 10 },
+  hero: { backgroundColor: colors.card, borderRadius: 20, borderCurve: 'continuous' as const, padding: 18, gap: 10 },
   helloRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   hello: { fontSize: 18, fontWeight: '600', color: colors.text, flex: 1 },
   scoreRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
   score: { fontSize: 56, fontWeight: '700', color: colors.text, letterSpacing: -2, lineHeight: 62 },
   scoreText: { fontSize: 16, color: colors.muted },
   place: { color: colors.text, fontWeight: '600' },
-  bar: { height: 6, backgroundColor: colors.line, borderRadius: 3, overflow: 'hidden' },
+  bar: { height: 6, backgroundColor: colors.line, borderRadius: 3, borderCurve: 'continuous' as const, overflow: 'hidden' },
   fairWrap: { justifyContent: 'center', marginVertical: 4 },
-  fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.text, borderRadius: 1 },
+  fairMark: { position: 'absolute', width: 2, height: 14, marginLeft: -1, backgroundColor: colors.text, borderRadius: 1, borderCurve: 'continuous' },
   fairLine: { fontSize: 12, color: colors.muted },
-  awayPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 },
+  awayPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.line, borderRadius: 999, borderCurve: 'continuous' as const, paddingVertical: 5, paddingHorizontal: 10 },
   awayText: { fontSize: 12, fontWeight: '600', color: colors.text },
-  awayCard: { backgroundColor: colors.card, borderRadius: 22, padding: 24, alignItems: 'center', gap: 6, marginTop: 8 },
+  awayCard: { backgroundColor: colors.card, borderRadius: 22, borderCurve: 'continuous' as const, padding: 24, alignItems: 'center', gap: 6, marginTop: 8 },
   awayTitle: { fontSize: 30, fontWeight: '700', letterSpacing: -1, color: colors.text },
   awayBack: { fontSize: 17, color: colors.you, fontWeight: '600', marginBottom: 4 },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderCurve: 'continuous' as const, paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
   streakTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
   streakSub: { fontSize: 12, color: colors.muted, marginTop: 1 },
-  sDot: { width: 8, height: 8, borderRadius: 4 },
-  barFill: { height: '100%', backgroundColor: colors.text, borderRadius: 2 },
+  sDot: { width: 8, height: 8, borderRadius: 4, borderCurve: 'continuous' },
+  barFill: { height: '100%', backgroundColor: colors.text, borderRadius: 2, borderCurve: 'continuous' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
   tile: {
-    width: '49%', minHeight: 108, borderRadius: 16, padding: 14, justifyContent: 'space-between',
+    width: '49%', minHeight: 108, borderRadius: 16, borderCurve: 'continuous' as const, padding: 14, justifyContent: 'space-between',
     backgroundColor: colors.card, gap: 8,
   },
   tileText: { fontSize: 15, fontWeight: '600', color: colors.text, letterSpacing: -0.2 },

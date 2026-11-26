@@ -4,7 +4,7 @@
  * off); the chore-doer gets a notification. You can't react to your own.
  */
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../context/AppContext';
 import { reactToLog, REACTIONS } from '../lib/db';
@@ -17,15 +17,19 @@ import { Avatar } from './Avatar';
 import { StatusBadge } from './StatusBadge';
 import { Empty, notify, timeAgo } from './ui';
 import { colors, soft } from './theme';
+import { Tap } from './Tap';
+import { SkeletonList } from './Skeleton';
+import { Item } from './Motion';
 
 const chipOn = () => ({ borderColor: colors.you, backgroundColor: soft(colors.you) });
 
 export function Feed({ step = 10 }: { step?: number }) {
-  const { user, profile, house, members, logs } = useApp();
+  const { user, profile, house, members, logs, houseLoaded } = useApp();
   const [now] = useState(() => Date.now());
   // Show 10 at a time so the page stays quick.
   const [shown, setShown] = useState(step);
   if (!user || !house) return null;
+  if (!houseLoaded) return <SkeletonList rows={4} />;
   const away = members.filter((m) => m.away);
   const streaky = members
     .map((m) => ({ m, w: currentStreak(seedStreak(m.streak, m.lastCompletedAt), now, (a, b) => awayDaysBetween(m.aways, a, b)) }))
@@ -55,14 +59,16 @@ export function Feed({ step = 10 }: { step?: number }) {
       {logs.length === 0 ? (
         <View style={styles.card}><Empty icon="time-outline">No chores logged yet. They&apos;ll show up here.</Empty></View>
       ) : (
-        logs.slice(0, shown).map((l) => (
-          <FeedItem key={l.id} log={l} me={{ uid: user.uid, username: profile?.username ?? '' }} />
+        logs.slice(0, shown).map((l, i) => (
+          <Item key={l.id} index={i}>
+            <FeedItem log={l} me={{ uid: user.uid, username: profile?.username ?? '' }} />
+          </Item>
         ))
       )}
       {logs.length > shown && (
-        <Pressable onPress={() => { haptics.tap(); setShown((n) => n + step); }} accessibilityRole="button" style={styles.more}>
+        <Tap onPress={() => { haptics.tap(); setShown((n) => n + step); }} accessibilityRole="button" style={styles.more}>
           <Text style={styles.moreText}>Show more</Text>
-        </Pressable>
+        </Tap>
       )}
     </View>
   );
@@ -84,7 +90,7 @@ function FeedItem({ log, me }: { log: ChoreLog; me: { uid: string; username: str
 
   return (
     <View style={styles.card}>
-      <Pressable
+      <Tap
         onPress={() => router.push({ pathname: '/photo/[logId]', params: { logId: log.id } })}
         accessibilityRole="button"
         accessibilityLabel={`${mine ? 'You' : log.username}: ${log.choreName}. Open photo`}
@@ -105,12 +111,12 @@ function FeedItem({ log, me }: { log: ChoreLog; me: { uid: string; username: str
         ) : (
           <View style={[styles.thumb, { backgroundColor: colors.cardRaised }]} />
         )}
-      </Pressable>
+      </Tap>
 
       {(counts.length > 0 || !mine) && (
         <View style={styles.reactions}>
           {(picking ? [] : counts).map(({ e, n }) => (
-            <Pressable
+            <Tap
               key={e}
               disabled={mine}
               onPress={() => react(e)}
@@ -119,17 +125,17 @@ function FeedItem({ log, me }: { log: ChoreLog; me: { uid: string; username: str
               style={[styles.chip, myReaction === e && chipOn()]}
             >
               <Text style={styles.chipText}>{e} {n}</Text>
-            </Pressable>
+            </Tap>
           ))}
           {!mine && (picking ? REACTIONS.map((e) => (
-            <Pressable key={e} onPress={() => react(e)} accessibilityRole="button" accessibilityLabel={`React ${e}`}
+            <Tap key={e} onPress={() => react(e)} accessibilityRole="button" accessibilityLabel={`React ${e}`}
               style={[styles.chip, myReaction === e && chipOn()]}>
               <Text style={styles.chipText}>{e}</Text>
-            </Pressable>
+            </Tap>
           )) : (
-            <Pressable onPress={() => { haptics.tap(); setPicking(true); }} accessibilityRole="button" accessibilityLabel="Add a reaction" style={styles.chip}>
+            <Tap onPress={() => { haptics.tap(); setPicking(true); }} accessibilityRole="button" accessibilityLabel="Add a reaction" style={styles.chip}>
               <Text style={[styles.chipText, { color: colors.muted }]}>{counts.length ? '＋' : '＋ React'}</Text>
-            </Pressable>
+            </Tap>
           ))}
         </View>
       )}
@@ -138,15 +144,15 @@ function FeedItem({ log, me }: { log: ChoreLog; me: { uid: string; username: str
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 16, padding: 14 },
-  more: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1, borderColor: colors.line },
+  card: { backgroundColor: colors.card, borderRadius: 16, borderCurve: 'continuous' as const, padding: 14 },
+  more: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 999, borderCurve: 'continuous' as const, borderWidth: 1, borderColor: colors.line },
   moreText: { color: colors.text, fontSize: 14, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   text: { fontSize: 15, color: colors.text },
   name: { fontWeight: '700', color: colors.text },
   sub: { fontSize: 12, color: colors.muted },
-  thumb: { width: 48, height: 48, borderRadius: 10 },
+  thumb: { width: 48, height: 48, borderRadius: 10, borderCurve: 'continuous' },
   reactions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  chip: { backgroundColor: colors.cardRaised, borderRadius: 10, paddingVertical: 5, paddingHorizontal: 10, borderWidth: 1, borderColor: 'transparent' },
+  chip: { backgroundColor: colors.cardRaised, borderRadius: 10, borderCurve: 'continuous' as const, paddingVertical: 5, paddingHorizontal: 10, borderWidth: 1, borderColor: 'transparent' },
   chipText: { fontSize: 13, color: colors.text },
 });

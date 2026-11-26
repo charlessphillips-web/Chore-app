@@ -18,7 +18,7 @@ export function AgreeBox({ value, onChange }: { value: boolean; onChange: (v: bo
         }}
         hitSlop={8}
         style={{
-          width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
+          width: 24, height: 24, borderRadius: 7, borderCurve: 'continuous' as const, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
           borderColor: value ? colors.text : colors.faint, backgroundColor: value ? colors.text : 'transparent',
         }}
       >

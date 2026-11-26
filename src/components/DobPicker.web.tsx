@@ -32,7 +32,7 @@ export function DateField({
   return (
     <View
       style={{
-        backgroundColor: colors.card, borderRadius: radius, borderWidth: 1, borderColor: colors.border,
+        backgroundColor: colors.card, borderRadius: radius, borderCurve: 'continuous' as const, borderWidth: 1, borderColor: colors.border,
         justifyContent: 'center', minHeight: 50,
       }}
     >

@@ -132,14 +132,14 @@ export function PhotoCropper({
           <View
             pointerEvents="none"
             style={{
-              position: 'absolute', width: D + 2 * B, height: D + 2 * B, borderRadius: (D + 2 * B) / 2,
+              position: 'absolute', width: D + 2 * B, height: D + 2 * B, borderRadius: (D + 2 * B) / 2, borderCurve: 'continuous' as const,
               borderWidth: B, borderColor: 'rgba(0,0,0,0.7)', left: (W - D) / 2 - B, top: (H - D) / 2 - B,
             }}
           />
           <View
             pointerEvents="none"
             style={{
-              position: 'absolute', width: D, height: D, borderRadius: D / 2, borderWidth: 1,
+              position: 'absolute', width: D, height: D, borderRadius: D / 2, borderCurve: 'continuous' as const, borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.6)', left: (W - D) / 2, top: (H - D) / 2,
             }}
           />
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   zoomRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   zoomLabel: { color: colors.muted, fontSize: 18, fontFamily: fonts.mono },
   track: { height: 32, justifyContent: 'center' },
-  trackLine: { height: 2, backgroundColor: colors.line, borderRadius: 1 },
-  knob: { position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: colors.text, top: 6 },
+  trackLine: { height: 2, backgroundColor: colors.line, borderRadius: 1, borderCurve: 'continuous' },
+  knob: { position: 'absolute', width: 20, height: 20, borderRadius: 10, borderCurve: 'continuous' as const, backgroundColor: colors.text, top: 6 },
   hint: { color: colors.muted, fontSize: 12 },
   buttons: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.md, alignSelf: 'stretch' },
 });

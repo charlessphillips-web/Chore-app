@@ -18,7 +18,7 @@ export function StatusBadge({ log }: { log: Pick<ChoreLog, 'status' | 'at' | 're
   const by = (s === 'verified' || s === 'rejected') && log.reviewedByName ? ` by ${log.reviewedByName}` : '';
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: b.color }} />
+      <View style={{ width: 7, height: 7, borderRadius: 4, borderCurve: 'continuous' as const, backgroundColor: b.color }} />
       <Text style={{ color: b.color, fontSize: 13, fontWeight: '600' }}>
         {b.label}{progress}{by}{s === 'rejected' ? ` — ${log.rejectReason ?? 'not counted'}` : ''}
       </Text>

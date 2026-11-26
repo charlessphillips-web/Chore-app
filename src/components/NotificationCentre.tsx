@@ -6,7 +6,7 @@
  *  - the red number on the app icon (chores given to you + photos to check)
  */
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { cancelTonightsBinReminders } from '../lib/binsDoneTask';
 import { needsCheckBy } from '../lib/review';
 import { haptics } from '../lib/haptics';
 import { toast } from './Celebration';
+import { Tap } from './Tap';
 
 interface Banner { id: string; title: string; body: string; url: string | null; size: string }
 
@@ -120,18 +121,18 @@ export function NotificationCentre() {
   const close = () => Animated.timing(y, { toValue: -200, duration: 200, useNativeDriver: true }).start(() => setBanner(null));
   return (
     <Animated.View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 6, transform: [{ translateY: y }] }]}>
-      <Pressable
+      <Tap
         accessibilityRole="button"
         accessibilityLabel={`${banner.title}. ${banner.body}`}
         onPress={() => { close(); if (banner.url) router.push(banner.url as never); }}
-        style={({ pressed }) => [styles.banner, { backgroundColor: BANNER[banner.size] ?? BANNER.normal }, pressed && { opacity: 0.85 }]}
+        style={[styles.banner, { backgroundColor: BANNER[banner.size] ?? BANNER.normal }]}
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={2}>{banner.title}</Text>
           {!!banner.body && <Text style={styles.body} numberOfLines={2}>{banner.body}</Text>}
         </View>
         {banner.url && <View style={styles.go}><Text style={[styles.goText, { color: BANNER[banner.size] ?? BANNER.normal }]}>Open</Text></View>}
-      </Pressable>
+      </Tap>
     </Animated.View>
   );
 }
@@ -143,12 +144,12 @@ const INK = '#141414';
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 10, right: 10, zIndex: 100 },
   banner: {
-    borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16,
+    borderRadius: 18, borderCurve: 'continuous' as const, paddingVertical: 14, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
     shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10,
   },
   title: { color: INK, fontSize: 16, fontWeight: '700' },
   body: { color: 'rgba(20,20,20,0.75)', fontSize: 14, marginTop: 2 },
-  go: { backgroundColor: INK, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 12 },
+  go: { backgroundColor: INK, borderRadius: 10, borderCurve: 'continuous' as const, paddingVertical: 7, paddingHorizontal: 12 },
   goText: { fontWeight: '700', fontSize: 14 },
 });

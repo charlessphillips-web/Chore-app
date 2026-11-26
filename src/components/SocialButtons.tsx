@@ -59,7 +59,7 @@ export function SocialButtons({ mode = 'signin', divider = true }: { mode?: 'sig
             disabled={!!busy || done}
             onPress={() => go(p)}
             style={({ pressed }) => [{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, paddingVertical: 14,
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, borderCurve: 'continuous' as const, paddingVertical: 14,
               backgroundColor: colors.primary, opacity: done ? 0.6 : pressed ? 0.8 : 1,
             }]}
           >

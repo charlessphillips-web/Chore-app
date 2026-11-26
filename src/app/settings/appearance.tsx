@@ -30,7 +30,7 @@ export default function AppearanceScreen() {
               accessibilityState={{ selected: on }}
               disabled={on || !!busy}
               onPress={() => { haptics.select(); setBusy(o.pref); saveAppearanceAndReload(o.pref).catch(() => setBusy(null)); }}
-              style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && { backgroundColor: colors.cardRaised }]}
             >
               <View style={[styles.preview, { backgroundColor: o.bg }]}>
                 <View style={[styles.previewCard, { backgroundColor: o.card }]} />
@@ -50,12 +50,12 @@ export default function AppearanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 18, paddingHorizontal: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 18, borderCurve: 'continuous' as const, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  preview: { width: 46, height: 58, borderRadius: 10, padding: 6, gap: 5, borderWidth: 1, borderColor: colors.line },
-  previewCard: { height: 22, borderRadius: 5 },
-  previewLine: { height: 4, width: 22, borderRadius: 2 },
+  preview: { width: 46, height: 58, borderRadius: 10, borderCurve: 'continuous' as const, padding: 6, gap: 5, borderWidth: 1, borderColor: colors.line },
+  previewCard: { height: 22, borderRadius: 5, borderCurve: 'continuous' },
+  previewLine: { height: 4, width: 22, borderRadius: 2, borderCurve: 'continuous' },
   title: { fontSize: 17, fontWeight: '600', color: colors.text },
   sub: { fontSize: 13, color: colors.muted, marginTop: 2 },
 });
