@@ -8,19 +8,15 @@ import { useApp } from '../../context/AppContext';
 import { NotificationCard } from '../../components/NotificationCard';
 import { GettingStarted } from '../../components/GettingStarted';
 import { BinBanner } from '../../components/BinBanner';
-import { TodayCard } from '../../components/TodayCard';
 import { setIntroTarget } from '../../components/IntroSplash';
-import { todayItems } from '../../lib/today';
-import { effectiveStatus, needsCheckBy } from '../../lib/review';
-import { choreSize } from '../../lib/chores';
 import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 import { Avatar } from '../../components/Avatar';
 
-import { periodEnd, periodStart, previousPeriodKey } from '../../lib/period';
+import { periodStart, previousPeriodKey } from '../../lib/period';
 import { lastResult } from '../../lib/stakes';
 import { needsStakeVote } from '../../components/StakesCard';
-import { pointsToFairShare, standing } from '../../lib/standing';
-import { awayDaysBetween, awayLabel, currentOrNextAway, endAway, tillLabel } from '../../lib/away';
+import { standing } from '../../lib/standing';
+import { awayDaysBetween, awayLabel, currentOrNextAway, endAway } from '../../lib/away';
 import { setAways } from '../../lib/db';
 import { currentStreak, daysLeftThisWeek, doneThisWeek, seedStreak } from '../../lib/streak';
 import { Button, confirm, Icon, Label, Loading, Logo, notify, RowButton, Screen } from '../../components/ui';
@@ -29,7 +25,6 @@ import { haptics } from '../../lib/haptics';
 import { track } from '../../lib/analytics';
 import { colors, fonts, isLight, shade, soft, streakColor, tint, type } from '../../components/theme';
 import { Tap } from '../../components/Tap';
-import { SkeletonCard } from '../../components/Skeleton';
 
 
 /** Show last period's Wrapped once, in the first 2 weeks of a new period. */
@@ -49,7 +44,7 @@ function useWrappedOnce(houseId: string | undefined, prevKey: string, show: bool
 }
 
 export default function Home() {
-  const { user, profile, house, members, openRequests, offers, logs, wallpaper, isAdmin, stakes, membersIn, houseLoaded } = useApp();
+  const { user, profile, house, members, openRequests, wallpaper, isAdmin, stakes, membersIn } = useApp();
   const [peek, setPeek] = useState(false);
   const logoRef = useRef<React.ComponentRef<typeof View>>(null);
   const today = new Date();
@@ -90,14 +85,6 @@ export default function Home() {
     }
   }
   const nowMs = new Date().getTime();
-  // "Your house, today": what matters most to you right now.
-  const checkedLog = (id: string | null) => {
-    const l = logs.find((x) => x.id === id);
-    const st = l ? effectiveStatus(l) : null;
-    return st === 'verified' || st === 'auto_verified';
-  };
-  const quickest = [...house.chores].filter((c) => c.active && !c.group).sort((a, b) => choreSize(a) - choreSize(b))[0];
-  const total0 = members.reduce((n, m) => n + (m.points ?? m.totalCompleted), 0);
   const myStreak = seedStreak(me?.streak, me?.lastCompletedAt);
   const streakWeeks = currentStreak(myStreak, nowMs, (a, b) => awayDaysBetween(me?.aways, a, b));
   const streakDone = doneThisWeek(myStreak, nowMs);
@@ -106,21 +93,6 @@ export default function Home() {
     router.push({ pathname: '/chore/[key]', params: requestId ? { key, requestId } : { key } });
   const total = me?.totalCompleted ?? 0;
   const now = new Date();
-  const todayList = todayItems({
-    now,
-    me: user.uid,
-    bins: house.bins,
-    members: members.map((m) => ({ uid: m.uid, username: m.username, points: m.points ?? m.totalCompleted, away: !!m.away, awayTill: m.away ? tillLabel(m.aways, nowMs) : undefined })),
-    // Chores you've offered money for live in Pay, not here.
-    requests: openRequests.filter((r) => !offers.some((o) => o.id === r.id)),
-    logs,
-    toCheck: logs.filter((l) => needsCheckBy(l, user.uid)).map((l) => l.id),
-    offers: offers.map((o) => ({ ...o, checked: checkedLog(o.logId) })),
-    streak: { weeks: streakWeeks, doneThisWeek: streakDone },
-    toFair: s.active ? pointsToFairShare(me?.points ?? total, total0, s.fairPct / 100) : 0,
-    suggestion: quickest?.name ?? null,
-    periodEnd: periodEnd(now, house.reset),
-  });
   // First week of a new period: show how last period's house stakes ended.
   const prev = previousPeriodKey(now, house.reset);
   const stakesNews = house.stakes && now.getTime() - periodStart(now, house.reset).getTime() < 7 * 24 * 3_600_000
@@ -217,7 +189,6 @@ export default function Home() {
         />
       )}
       <VerifyEmailBanner />
-      {houseLoaded ? <TodayCard items={todayList} now={now} /> : <SkeletonCard />}
       <BinBanner bins={house.bins} now={now} isAdmin={isAdmin} />
       <GettingStarted />
       <NotificationCard />

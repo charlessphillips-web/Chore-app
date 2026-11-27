@@ -2,6 +2,7 @@ import { Share, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../../context/AppContext';
 import { Feed } from '../../components/Feed';
+import { YourHouseToday } from '../../components/YourHouseToday';
 import { tillLabel } from '../../lib/away';
 import { WEB_URL } from '../../lib/legal';
 import { nextCollections, scheduleLabel } from '../../lib/bins';
@@ -21,6 +22,7 @@ export default function HouseTab() {
   return (
     <Screen>
       <HouseName name={house.name} />
+      <YourHouseToday />
       <Tip id="house">Share the house code with your housemates so they can join. Tap any activity to see its photo.</Tip>
 
       <Card style={{ alignItems: 'center' }}>
