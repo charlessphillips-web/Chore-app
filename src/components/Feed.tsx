@@ -3,11 +3,11 @@
  * first, with emoji reactions. Tap an emoji to react (tap again to take it
  * off); the chore-doer gets a notification. You can't react to your own.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../context/AppContext';
-import { reactToLog, REACTIONS } from '../lib/db';
+import { reactToLog, REACTIONS, watchBonuses, type Bonus } from '../lib/db';
 import { awayDaysBetween, tillLabel } from '../lib/away';
 import { currentStreak, seedStreak } from '../lib/streak';
 import { jpegUri } from '../lib/photos';
@@ -28,6 +28,9 @@ export function Feed({ step = 10 }: { step?: number }) {
   const [now] = useState(() => Date.now());
   // Show 10 at a time so the page stays quick.
   const [shown, setShown] = useState(step);
+  const [bonuses, setBonuses] = useState<Bonus[]>([]);
+  const houseId = house?.id;
+  useEffect(() => (houseId ? watchBonuses(houseId, setBonuses, () => {}) : undefined), [houseId]);
   if (!user || !house) return null;
   if (!houseLoaded) return <SkeletonList rows={4} />;
   const away = members.filter((m) => m.away);
@@ -54,6 +57,19 @@ export function Feed({ step = 10 }: { step?: number }) {
             <Text style={[styles.name, m.uid === user.uid && { color: colors.you }]}>{m.uid === user.uid ? 'You' : m.username}</Text>
             {m.uid === user.uid ? ' are' : ' is'} on a {w}-week streak 🔥
           </Text>
+        </View>
+      ))}
+      {bonuses.filter((b) => now - b.at < 30 * 86_400_000).map((b) => (
+        <View key={`bonus-${b.id}`} style={[styles.card, styles.row]}>
+          <Text style={{ fontSize: 26 }}>🎁</Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.text}>
+              <Text style={[styles.name, b.to === user.uid && { color: colors.you }]}>{b.to === user.uid ? 'You' : b.toName}</Text>
+              {b.to === user.uid ? ' got ' : ' got '}<Text style={styles.name}>{b.points} bonus points</Text>
+            </Text>
+            {!!b.reason && <Text style={[styles.text, { fontSize: 14, fontStyle: 'italic' }]} numberOfLines={2}>&ldquo;{b.reason}&rdquo;</Text>}
+            <Text style={styles.sub}>From {b.by === user.uid ? 'you' : b.byName} · {timeAgo(b.at)}</Text>
+          </View>
         </View>
       ))}
       {logs.length === 0 ? (

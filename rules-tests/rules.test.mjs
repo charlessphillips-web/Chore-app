@@ -783,3 +783,33 @@ test('streak: someone with chores from before streaks can start on week 2, not m
   await assertFails(updateDoc(ref, { streak: { weeks: 3, lastWeek: '2026-11-23' } }));
   await assertSucceeds(updateDoc(ref, { streak: { weeks: 2, lastWeek: '2026-11-23' } }));
 });
+
+test('bonus points: admin only, 1-20, not to yourself, always with a visible record', async () => {
+  await createHouse('alice');
+  await joinHouse('fillip');
+  await joinHouse('sam');
+  const P = '2026-11';
+  const give = (who, to, pts, recordPts = pts, extra = {}) => {
+    const f = db(who);
+    const b = writeBatch(f);
+    const ref = doc(collection(f, 'houses', 'h1', 'bonuses'));
+    b.set(ref, { to, toName: to, by: who, byName: who, points: recordPts, reason: 'Chores before Rotawise', period: P, at: serverTimestamp() });
+    b.update(doc(f, 'houses', 'h1', 'members', to), { currentPeriod: P, [`stats.${P}.points`]: pts, lastBonus: ref.id, ...extra });
+    return b.commit();
+  };
+  await assertFails(give('sam', 'fillip', 10)); // not the admin
+  await assertFails(give('alice', 'alice', 10)); // not yourself
+  await assertFails(give('alice', 'fillip', 25)); // too many
+  await assertFails(give('alice', 'fillip', 15, 10)); // points don't match the record
+  await assertFails(give('alice', 'fillip', 10, 10, { [`stats.${P}.total`]: 5 })); // can't touch chore counts
+  await assertSucceeds(give('alice', 'fillip', 10));
+  const m = (await getDoc(doc(db('fillip'), 'houses', 'h1', 'members', 'fillip'))).data();
+  assert.equal(m.stats[P].points, 10);
+  // Everyone in the house can see it; nobody can edit or delete it
+  const list = await getDocs(collection(db('sam'), 'houses', 'h1', 'bonuses'));
+  assert.equal(list.size, 1);
+  await assertFails(updateDoc(list.docs[0].ref, { points: 20 }));
+  await assertFails(deleteDoc(doc(db('alice'), 'houses', 'h1', 'bonuses', list.docs[0].id)));
+  // Outsiders can't see it
+  await assertFails(getDocs(collection(db('stranger'), 'houses', 'h1', 'bonuses')));
+});

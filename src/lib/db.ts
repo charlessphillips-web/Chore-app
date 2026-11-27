@@ -1085,3 +1085,44 @@ export async function voteStake(houseId: string, uid: string, stake: Stake, all:
 export async function deleteStake(houseId: string, id: string) {
   await deleteDoc(doc(db, 'houses', houseId, 'stakes', id));
 }
+
+// ---------- Bonus points (admin) ----------
+
+export interface Bonus { id: string; to: string; toName: string; by: string; byName: string; points: number; reason: string; at: number }
+
+export const BONUS_MAX = 20;
+
+/**
+ * The admin gives a housemate bonus points for this period (e.g. for chores
+ * done before the house started using Rotawise). Shows in the house feed.
+ */
+export async function giveBonus(house: House, by: { uid: string; username: string }, to: Member, points: number, reason: string) {
+  const n = Math.round(points);
+  if (!(n >= 1 && n <= BONUS_MAX)) throw new Error(`Pick between 1 and ${BONUS_MAX} points.`);
+  const period = periodKey(new Date(), house.reset);
+  const ref = doc(collection(db, 'houses', house.id, 'bonuses'));
+  const batch = writeBatch(db);
+  batch.set(ref, {
+    to: to.uid, toName: to.username, by: by.uid, byName: by.username, points: n,
+    reason: reason.trim().slice(0, 80), period, at: serverTimestamp(),
+  });
+  batch.update(memberRef(house.id, to.uid), {
+    currentPeriod: period,
+    [`stats.${period}.points`]: (to.points ?? to.totalCompleted) + n,
+    lastBonus: ref.id,
+  });
+  await batch.commit();
+  track('bonus_given');
+}
+
+/** Recent bonuses in the house (newest first). */
+export function watchBonuses(houseId: string, cb: (b: Bonus[]) => void, onError?: OnError) {
+  return onSnapshot(
+    query(collection(db, 'houses', houseId, 'bonuses'), orderBy('at', 'desc'), limit(10)),
+    (snap) => cb(snap.docs.map((s) => {
+      const d = s.data();
+      return { id: s.id, to: d.to, toName: d.toName, by: d.by, byName: d.byName, points: d.points, reason: d.reason ?? '', at: ms(d.at) ?? Date.now() };
+    })),
+    onError,
+  );
+}

@@ -227,7 +227,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['day', 'event', 'n'])
         && request.resource.data.day is string && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && request.resource.data.event in ['app_open', 'intro_start', 'intro_skip', 'intro_finish', 'account_created', 'signup', 'house_create', 'house_join', 'first_chore', 'chore_log', 'chore_flag', 'chore_nudge', 'chore_verify', 'chore_sendback', 'offer_create', 'offer_counter', 'offer_accept', 'offer_paid', 'avatar_set', 'feedback_sent', 'tab_home', 'tab_checks', 'tab_leaderboard', 'tab_pay', 'tab_house', 'tab_settings']
+        && request.resource.data.event in ['app_open', 'intro_start', 'intro_skip', 'intro_finish', 'account_created', 'signup', 'house_create', 'house_join', 'first_chore', 'chore_log', 'chore_flag', 'chore_nudge', 'chore_verify', 'chore_sendback', 'offer_create', 'offer_counter', 'offer_accept', 'offer_paid', 'avatar_set', 'away_set', 'reaction', 'bonus_given', 'signin_apple', 'signin_google', 'wrapped_open', 'wrapped_share', 'bathroom_added', 'feedback_sent', 'tab_home', 'tab_checks', 'tab_leaderboard', 'tab_pay', 'tab_house', 'tab_settings']
         && id == request.resource.data.day + '_' + request.resource.data.event
         && request.resource.data.n == 1;
       allow update: if signedIn()
@@ -324,6 +324,9 @@ service cloud.firestore {
           && validAvatar(request.resource.data.get('avatar', null));
         // A housemate rejecting your chore takes exactly 1 off that chore.
         allow update: if isMember(houseId) && me() != uid && isRejectAdjustment(houseId, uid);
+        // The admin gives someone bonus points (1-20, e.g. for chores before Rotawise),
+        // only alongside a bonus record everyone can see in the feed.
+        allow update: if isAdmin(houseId) && me() != uid && isBonus(houseId, uid);
         // Leave yourself, or be removed by the admin.
         allow delete: if signedIn() && (me() == uid || isAdmin(houseId));
       }
@@ -407,6 +410,21 @@ service cloud.firestore {
       // The app never holds money; people pay each other directly.
       // House stakes: anyone suggests a prize (top of the house) or forfeit
       // (bottom), everyone votes. You can only add or take back your own vote.
+      // Bonus points the admin gave: everyone in the house can see them.
+      match /bonuses/{bonusId} {
+        allow read: if isMember(houseId);
+        allow create: if isAdmin(houseId)
+          && request.resource.data.keys().hasOnly(['to', 'toName', 'by', 'byName', 'points', 'reason', 'period', 'at'])
+          && request.resource.data.by == me() && request.resource.data.to != me()
+          && exists(memberPath(houseId, request.resource.data.to))
+          && request.resource.data.points is int && request.resource.data.points >= 1 && request.resource.data.points <= 20
+          && request.resource.data.reason is string && request.resource.data.reason.size() <= 80
+          && request.resource.data.toName is string && request.resource.data.byName is string
+          && request.resource.data.period is string
+          && request.resource.data.at == request.time
+          && getAfter(memberPath(houseId, request.resource.data.to)).data.lastBonus == bonusId;
+      }
+
       match /stakes/{stakeId} {
         allow read: if isMember(houseId);
         allow create: if isMember(houseId)
@@ -635,6 +653,22 @@ service cloud.firestore {
       return !exists(ownerPath)
         || getAfter(ownerPath).data.get(['stats', log.period, 'total'], 0)
              == get(ownerPath).data.get(['stats', log.period, 'total'], 0) - 1;
+    }
+
+    // Bonus points: exactly the bonus record's points go on, in its period, nothing else changes.
+    function isBonus(houseId, uid) {
+      let id = request.resource.data.lastBonus;
+      let b = getAfter(/databases/$(database)/documents/houses/$(houseId)/bonuses/$(id)).data;
+      let p = b.period;
+      let oldStats = resource.data.get('stats', {});
+      let newStats = request.resource.data.stats;
+      let oldPts = oldStats.get([p, 'points'], oldStats.get([p, 'total'], 0));
+      return b.to == uid && b.by == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats', 'lastBonus', 'currentPeriod'])
+        && newStats.diff(oldStats).affectedKeys().hasOnly([p])
+        && newStats[p].get('points', 0) == oldPts + b.points
+        && newStats[p].get('total', 0) == oldStats.get([p, 'total'], 0)
+        && newStats[p].get('chores', {}) == oldStats.get([p, 'chores'], {});
     }
 
     function isRejectAdjustment(houseId, uid) {

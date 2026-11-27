@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { makeAdmin, removeMember } from '../../lib/db';
-import { Button, Card, confirm, Loading, notify, Screen, Subtitle } from '../../components/ui';
+import { BONUS_MAX, giveBonus, makeAdmin, removeMember } from '../../lib/db';
+import { haptics } from '../../lib/haptics';
+import type { Member } from '../../lib/types';
+import { Button, Card, Chip, ChipRow, confirm, ErrorText, Input, Loading, notify, Screen, Subtitle } from '../../components/ui';
 import { colors, space, type } from '../../components/theme';
 
-/** Admin: remove housemates or hand over the admin role. */
+/** Admin: give bonus points, remove housemates or hand over the admin role. */
 export default function Housemates() {
-  const { user, house, members, isAdmin } = useApp();
+  const { user, profile, house, members, isAdmin } = useApp();
+  const [bonusFor, setBonusFor] = useState<string | null>(null);
   if (!user || !house) return <Loading />;
   if (!isAdmin) return <Screen edges={['left', 'right']}><Subtitle>Only the house admin can manage housemates.</Subtitle></Screen>;
 
@@ -43,6 +47,12 @@ export default function Housemates() {
               </Text>
             )}
             <Text style={type.small}>{m.points ?? m.totalCompleted} points · {m.totalCompleted} chore{m.totalCompleted === 1 ? '' : 's'} this period</Text>
+            {bonusFor === m.uid ? (
+              <BonusForm member={m} onDone={() => setBonusFor(null)}
+                give={(pts, reason) => giveBonus(house, { uid: user.uid, username: profile?.username ?? 'Admin' }, m, pts, reason)} />
+            ) : (
+              <Button title="Give bonus points" icon="gift-outline" variant="secondary" onPress={() => setBonusFor(m.uid)} />
+            )}
             <View style={styles.actions}>
               <Button title="Make admin" variant="secondary" style={{ flex: 1 }} onPress={() => handOver(m.uid, m.username)} />
               <Button title="Remove" variant="danger" style={{ flex: 1 }} onPress={() => remove(m.uid, m.username)} />
@@ -66,4 +76,41 @@ function isLikelyDuplicate(
   const first = (n: string) => n.trim().toLowerCase().split(/\s+/)[0];
   return !m.lastCompletedAt && all.some((o) => o.uid !== m.uid && first(o.username) === first(m.username)
     && (!!o.lastCompletedAt || o.joinedAt < m.joinedAt));
+}
+
+/** Pick 5 / 10 / 15 / 20 points and say why. Everyone sees it in the house feed. */
+function BonusForm({ member, give, onDone }: { member: Member; give: (points: number, reason: string) => Promise<void>; onDone: () => void }) {
+  const [points, setPoints] = useState(10);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function go() {
+    if (!reason.trim()) return setError('Say why, e.g. "Loads of chores before we had Rotawise".');
+    if (!(await confirm(`Give ${member.username} ${points} points?`, 'They go on this period\'s table, and everyone in the house sees it in the feed.', 'Give points'))) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await give(points, reason);
+      haptics.success();
+      notify('Done', `${member.username} got ${points} bonus points.`);
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+  return (
+    <View style={{ gap: space.sm }}>
+      <Text style={type.small}>How many points? (max {BONUS_MAX})</Text>
+      <ChipRow>
+        {[5, 10, 15, 20].map((n) => <Chip key={n} label={`+${n}`} selected={points === n} onPress={() => setPoints(n)} />)}
+      </ChipRow>
+      <Input value={reason} onChangeText={setReason} placeholder='Why? e.g. "Loads of chores before Rotawise"' maxLength={80} accessibilityLabel="Reason" />
+      <ErrorText>{error}</ErrorText>
+      <View style={styles.actions}>
+        <Button title="Cancel" variant="ghost" style={{ flex: 1 }} onPress={onDone} />
+        <Button title={`Give +${points}`} style={{ flex: 1 }} loading={busy} onPress={go} />
+      </View>
+    </View>
+  );
 }
