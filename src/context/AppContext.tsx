@@ -260,10 +260,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const myDoc = current?.members.find((m) => m.id === uid)?.data;
   const binLogs = (current?.logs ?? []).filter((l) => l.choreKey === BIG_BINS_KEY && l.status !== 'rejected').map((l) => l.at);
   const binReq = (current?.openRequests ?? []).find((r) => r.choreKey === BIG_BINS_KEY && r.kind === 'needs');
-  const reminderKey = house && uid && notifStatus === 'granted'
+  // Chores you've been given and not done yet: your phone keeps reminding you.
+  const myTurns = (current?.openRequests ?? [])
+    .filter((r) => r.assignedTo === uid && r.status === 'open')
+    .map((r) => ({ id: r.id, kind: r.kind, needs: r.needs, choreKey: r.choreKey, choreName: r.choreName, createdAt: r.createdAt }));
+  // Only once everything's loaded, so a half-loaded house doesn't wipe reminders.
+  const allLoaded = !!current && ['house', 'members', 'openRequests', 'logs'].every((k) => current.got.includes(k));
+  const reminderKey = house && uid && notifStatus === 'granted' && allLoaded
     ? JSON.stringify({
       bins: house.bins, prefs: myDoc?.notifPrefs ?? {}, end: periodEnd(new Date(), house.reset).getTime(), binLogs,
-      turn: binReq ? { uid: binReq.assignedTo, name: binReq.assignedToName } : null, me: uid, aways: myDoc?.aways ?? [],
+      turn: binReq ? { uid: binReq.assignedTo, name: binReq.assignedToName } : null, me: uid, aways: myDoc?.aways ?? [], turns: myTurns,
     })
     : null;
   useEffect(() => {
@@ -273,6 +279,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       binNight: { bins: r.bins, binLogs: r.binLogs, turn: r.turn, me: r.me, aways: r.aways },
       prefs: r.prefs,
       periodEnd: new Date(r.end),
+      turns: r.turns,
     }).catch(() => {});
   }, [reminderKey]);
   // Scores for the current period, using the house's reset setting.

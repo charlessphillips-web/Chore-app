@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { verifyChore } from '../lib/db';
 import { cancelTonightsBinReminders } from '../lib/binsDoneTask';
+import { cancelTurnReminders } from '../lib/reminders';
 import { needsCheckBy } from '../lib/review';
 import { haptics } from '../lib/haptics';
 import { toast } from './Celebration';
@@ -77,6 +78,7 @@ export function NotificationCentre() {
     const got = Notifications.addNotificationReceivedListener((n) => {
       const c = n.request.content;
       // The invisible "bins are done" wake-up: cancel tonight's bin alarms, show nothing.
+      if (typeof c.data?.turnDone === 'string') cancelTurnReminders(c.data.turnDone).catch(() => {});
       if (c.data?.binsDone || !c.title) {
         if (c.data?.binsDone) cancelTonightsBinReminders().catch(() => {});
         return;

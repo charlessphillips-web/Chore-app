@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { pickAssignee } from '../../lib/assign';
+import { openTaskCounts, pickAssignee } from '../../lib/assign';
 import { fairShareOf, tillLabel } from '../../lib/away';
 import { DEFAULT_RESET_MONTHS, periodEnd, periodLabel, periodStart, previousPeriodKey, resetLabel } from '../../lib/period';
 import { StakesCard } from '../../components/StakesCard';
@@ -15,7 +15,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /** A league table: position, name, chores this period. */
 export default function Leaderboard() {
-  const { user, house, members, membersIn } = useApp();
+  const { user, house, members, membersIn, openRequests } = useApp();
   if (!user || !house) return <Loading />;
 
   const rule = house.reset;
@@ -39,7 +39,7 @@ export default function Leaderboard() {
   // Bars are scaled so a fair share sits in the middle-ish and nobody's bar is tiny.
   const scale = Math.min(100, Math.max(fairPct * 2, ...ranked.map(share), ...ranked.map(fairOf)));
   // Who'd get the next "needs doing" (if someone other than them reported it).
-  const nextUp = members.length > 1 ? pickAssignee(members, '', 'overall', '') : null;
+  const nextUp = members.length > 1 ? pickAssignee(members, '', 'overall', '', null, openTaskCounts(openRequests)) : null;
   // Same score = same position.
   const position = (i: number) => ranked.findIndex((m) => pts(m) === pts(ranked[i])) + 1;
 

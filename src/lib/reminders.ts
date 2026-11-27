@@ -9,6 +9,8 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { wants, type NotifyPrefs } from './notifyPrefs';
 import { binNightPlan, type BinNightInput } from './binNight';
+import { turnReminderPlan, type MyTurn } from './turnReminders';
+import type { PushMessage } from './pushMessages';
 
 const PREFIX = 'rw-';
 const level = { big: 'timeSensitive', normal: 'active', quiet: 'passive' } as const;
@@ -18,6 +20,8 @@ export async function scheduleReminders(opts: {
   prefs: NotifyPrefs;
   /** When the leaderboard resets (start of the next period). */
   periodEnd: Date;
+  /** Chores you've been given and haven't done: follow-up reminders until you do. */
+  turns?: MyTurn[];
 }) {
   if (Platform.OS === 'web') return;
   // Start clean: remove every reminder we scheduled before.
@@ -27,7 +31,7 @@ export async function scheduleReminders(opts: {
 
   if (wants(opts.prefs, 'bins')) {
     // iPhones allow 64 scheduled notifications per app; this stays well under.
-    for (const r of binNightPlan(opts.binNight, now).slice(0, 30)) {
+    for (const r of binNightPlan(opts.binNight, now).slice(0, 15)) {
       await Notifications.scheduleNotificationAsync({
         identifier: `${PREFIX}bin-${r.at.getTime()}`,
         content: {
@@ -41,6 +45,10 @@ export async function scheduleReminders(opts: {
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: r.at },
       });
     }
+  }
+
+  if (wants(opts.prefs, 'turn')) {
+    for (const r of turnReminderPlan(opts.turns ?? [], now.getTime()).slice(0, 30)) await schedule(r.id, r.at, r.msg);
   }
 
   if (wants(opts.prefs, 'reset')) {
@@ -63,4 +71,35 @@ export async function scheduleReminders(opts: {
       trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: 1, hour: 18, minute: 0 },
     });
   }
+}
+
+const levels = { big: 'timeSensitive', normal: 'active', quiet: 'passive' } as const;
+
+async function schedule(id: string, at: Date, msg: PushMessage) {
+  await Notifications.scheduleNotificationAsync({
+    identifier: id,
+    content: {
+      title: msg.title,
+      body: msg.body,
+      sound: msg.size === 'quiet' ? undefined : 'default',
+      interruptionLevel: levels[msg.size],
+      categoryIdentifier: msg.category,
+      data: { url: msg.url, size: msg.size, kind: msg.kind },
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+  });
+}
+
+/** Follow-ups for one chore you've just been given (called in the background when "your turn" arrives). */
+export async function scheduleTurnReminders(turn: MyTurn) {
+  if (Platform.OS === 'web') return;
+  await cancelTurnReminders(turn.id);
+  for (const r of turnReminderPlan([turn], Date.now())) await schedule(r.id, r.at, r.msg);
+}
+
+/** Stop the follow-ups for a chore (it's been done or cancelled). */
+export async function cancelTurnReminders(requestId: string) {
+  if (Platform.OS === 'web') return;
+  const all = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(all.filter((n) => n.identifier.startsWith(`rw-turn-${requestId}-`)).map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
 }

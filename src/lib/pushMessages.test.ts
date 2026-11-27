@@ -88,11 +88,12 @@ test('log updates: send back, duplicate, reactions, check reminder', () => {
   assert.deepEqual(cr[0].to, ['c']);
 });
 
-test('nudges: only real ones, at most every 3 hours', () => {
+test('nudges: only real ones, at most once an hour', () => {
   const t = (h: number) => ({ toMillis: () => h * 3600000 });
   const base = { status: 'open', assignedTo: 'b', needs: 'Bins are full', choreKey: 'bins', lastNudgedBy: 'a' };
   assert.equal(E.requestUpdated({ ...base }, { ...base, lastNudgedAt: t(10) }, { a: 'Fabio' }).length, 1);
-  assert.equal(E.requestUpdated({ ...base, lastNudgedAt: t(10) }, { ...base, lastNudgedAt: t(11) }, { a: 'Fabio' }).length, 0);
+  assert.equal(E.requestUpdated({ ...base, lastNudgedAt: t(10) }, { ...base, lastNudgedAt: t(10.5) }, { a: 'Fabio' }).length, 0);
+  assert.equal(E.requestUpdated({ ...base, lastNudgedAt: t(10) }, { ...base, lastNudgedAt: t(11) }, { a: 'Fabio' }).length, 1);
   assert.equal(E.requestCreated({ kind: 'redo', status: 'open', assignedTo: 'b' }).length, 0);
 });
 

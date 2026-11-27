@@ -480,7 +480,7 @@ service cloud.firestore {
           && request.resource.data.completedBy == me()
           && (me() == resource.data.requestedBy || isAdmin(houseId)
               || (resource.data.get('kind', 'needs') == 'redo' && me() == resource.data.assignedTo));
-        // Any housemate can nudge whoever's turn it is, at most every 3 hours.
+        // Any housemate can nudge whoever's turn it is, at most once an hour.
         allow update: if isMember(houseId)
           && resource.data.status == 'open'
           && resource.data.assignedTo != me()
@@ -488,7 +488,7 @@ service cloud.firestore {
           && request.resource.data.lastNudgedBy == me()
           && request.resource.data.lastNudgedAt == request.time
           && (resource.data.get('lastNudgedAt', null) == null
-              || request.time > resource.data.lastNudgedAt + duration.value(3, 'h'));
+              || request.time > resource.data.lastNudgedAt + duration.value(1, 'h'));
         allow delete: if false;
       }
     }

@@ -83,3 +83,21 @@ test('away people are skipped; `only` limits who can be asked; weight scales poi
   // b was around half the period: 4 points ÷ 0.5 = 8 > c's 6, so c is further below.
   assert.equal(pickAssignee([m('b', 4, { weight: 0.5 }), m('c', 6)], 'x', 'overall', 'k')?.uid, 'c');
 });
+
+test('one task at a time: whoever is holding a chore is skipped until they do it', async () => {
+  const { pickAssignee: pick, openTaskCounts } = await import('./assign.ts');
+  const m = (uid: string, points: number) => ({ uid, username: uid, totalCompleted: points, points, choreCounts: {}, lastCompletedAt: null, joinedAt: 0 });
+  const house = [m('fillip', 0), m('sam', 2), m('alice', 5), m('me', 9)];
+  // Nobody busy → bottom of the table
+  assert.equal(pick(house, 'me', 'overall', 'bins')?.uid, 'fillip');
+  // Fillip's holding the bins → next bottom
+  const open = openTaskCounts([{ assignedTo: 'fillip', status: 'open' }]);
+  assert.equal(pick(house, 'me', 'overall', 'bins', null, open)?.uid, 'sam');
+  // Both busy → Alice
+  assert.equal(pick(house, 'me', 'overall', 'x', null, openTaskCounts([{ assignedTo: 'fillip' }, { assignedTo: 'sam' }]))?.uid, 'alice');
+  // Everyone busy → fewest open, then the table
+  const all = openTaskCounts([{ assignedTo: 'fillip' }, { assignedTo: 'fillip' }, { assignedTo: 'sam' }, { assignedTo: 'alice' }]);
+  assert.equal(pick(house, 'me', 'overall', 'x', null, all)?.uid, 'sam');
+  // Done ones don't count
+  assert.equal(pick(house, 'me', 'overall', 'x', null, openTaskCounts([{ assignedTo: 'fillip', status: 'done' }]))?.uid, 'fillip');
+});

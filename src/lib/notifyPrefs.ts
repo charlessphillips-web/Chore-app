@@ -1,7 +1,7 @@
 /** Kinds of notification, each of which people can switch off in Settings. */
 export const NOTIFY_KINDS = {
-  turn: { title: 'Your turn', desc: 'When something needs doing and it’s your turn' },
-  nudge: { title: 'Nudges', desc: 'When a housemate nudges you to do your chore' },
+  turn: { title: 'Your turn', desc: 'When something needs doing and it’s your turn, then reminders until it’s done' },
+  nudge: { title: 'Nudges', desc: 'When a housemate nudges you (up to once an hour)' },
   check: { title: 'Photos to check', desc: 'When a housemate logs a chore' },
   redo: { title: 'Sent back', desc: 'When a chore you did is sent back to redo' },
   reactions: { title: 'Reactions', desc: 'When a housemate reacts 👏 to a chore you did' },

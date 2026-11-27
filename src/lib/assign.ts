@@ -33,6 +33,9 @@ export interface MemberStats {
  *  - The person reporting the chore is never chosen (they've passed on it).
  *  - Nobody who is away is chosen; if `only` is given (e.g. the people who
  *    use a bathroom), only they can be chosen.
+ *  - One task at a time: anyone still holding an unfinished chore goes to the
+ *    back of the queue until they've done it. If everyone has one, it goes
+ *    to whoever has the fewest.
  *  - mode 'overall': furthest below their fair share: fewest points for the
  *    time they've been around (points ÷ weight).
  *  - mode 'chore':   fewest completions of this specific chore, then fewest overall.
@@ -46,6 +49,8 @@ export function pickAssignee(
   mode: AssignMode,
   choreKey: string,
   only?: string[] | null,
+  /** Unfinished chores each person is holding right now (see openTaskCounts). */
+  openTasks?: Record<string, number>,
 ): MemberStats | null {
   const candidates = members.filter(
     (m) => m.uid !== requesterUid && !m.away && (!only || only.length === 0 || only.includes(m.uid)),
@@ -56,7 +61,10 @@ export function pickAssignee(
   // Never completed anything sorts before any real timestamp.
   const last = (m: MemberStats) => m.lastCompletedAt ?? Number.MIN_SAFE_INTEGER;
 
+  const busy = (m: MemberStats) => openTasks?.[m.uid] ?? 0;
   const sorted = [...candidates].sort((a, b) => {
+    const held = busy(a) - busy(b);
+    if (held !== 0) return held;
     if (mode === 'chore') {
       const diff = choreCount(a) - choreCount(b);
       if (diff !== 0) return diff;
@@ -71,4 +79,11 @@ export function pickAssignee(
   });
 
   return sorted[0];
+}
+
+/** How many unfinished chores each person has been given ("Bins are full", redos). */
+export function openTaskCounts(requests: { assignedTo: string; status?: string }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of requests) if (!r.status || r.status === 'open') out[r.assignedTo] = (out[r.assignedTo] ?? 0) + 1;
+  return out;
 }

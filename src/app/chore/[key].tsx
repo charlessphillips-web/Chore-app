@@ -11,7 +11,7 @@ import { fairShareOf } from '../../lib/away';
 import { seedStreak } from '../../lib/streak';
 import { choreSize } from '../../lib/chores';
 import { celebrate, toast } from '../../components/Celebration';
-import { pickAssignee } from '../../lib/assign';
+import { openTaskCounts, pickAssignee } from '../../lib/assign';
 import { jpegUri, takeBeforePhoto, takeChorePhoto, type ChorePhoto } from '../../lib/photos';
 import { formatPrice } from '../../lib/money';
 import { Button, Card, confirm, ErrorText, Icon, Input, Loading, notify, Screen, timeAgo, Title } from '../../components/ui';
@@ -60,8 +60,8 @@ export default function ChoreScreen() {
 
   const chore = house?.chores.find((c) => c.key === key);
   const assignee = useMemo(
-    () => (user && chore ? pickAssignee(members, user.uid, 'overall', chore.key, chore.users) : null),
-    [members, user, chore],
+    () => (user && chore ? pickAssignee(members, user.uid, 'overall', chore.key, chore.users, openTaskCounts(openRequests)) : null),
+    [members, user, chore, openRequests],
   );
 
   if (!user || !profile || !house) return <Loading />;
@@ -128,7 +128,7 @@ export default function ChoreScreen() {
     setBusy('save');
     try {
       const { assignee: who, notified } = await requestChore({
-        house: house!, members, chore: chore!, requester: { uid: user!.uid, username: profile!.username },
+        house: house!, members, chore: chore!, requester: { uid: user!.uid, username: profile!.username }, openRequests,
       });
       notify(
         'Sent',
@@ -211,7 +211,7 @@ export default function ChoreScreen() {
               variant="ghost"
               onPress={async () => {
                 if (await confirm('Cancel it?', `${request.assignedToName} won't need to do it any more.`, 'Cancel it')) {
-                  await cancelRequest(house.id, request.id, user.uid).then(() => goBackOrHome()).catch((e) => setError((e as Error).message));
+                  await cancelRequest(house.id, request.id, user.uid, members).then(() => goBackOrHome()).catch((e) => setError((e as Error).message));
                 }
               }}
             />
@@ -250,7 +250,7 @@ export default function ChoreScreen() {
                 variant="ghost"
                 onPress={async () => {
                   if (await confirm('Dismiss this redo?', 'Use this if it was a mistake, e.g. the chore was logged twice. The sent-back chore still won’t count.', 'Dismiss')) {
-                    await cancelRequest(house.id, request.id, user.uid).then(() => goBackOrHome()).catch((e) => setError((e as Error).message));
+                    await cancelRequest(house.id, request.id, user.uid, members).then(() => goBackOrHome()).catch((e) => setError((e as Error).message));
                   }
                 }}
               />
@@ -331,12 +331,12 @@ export default function ChoreScreen() {
   );
 }
 
-/** "Waiting on Alice · flagged 3h ago [Nudge Alice]", at most every 3 hours. */
+/** "Waiting on Alice · flagged 3h ago [Nudge Alice]", at most once an hour. */
 function NudgeCard({ name, flaggedAt, lastNudgedAt, now, busy, onNudge }: {
   name: string; flaggedAt: number; lastNudgedAt: number | null; now: number; busy: boolean; onNudge: () => void;
 }) {
   const wait = lastNudgedAt ? lastNudgedAt + NUDGE_EVERY_MS - now : 0;
-  const hours = Math.max(1, Math.round(wait / 3_600_000));
+  const mins = Math.max(1, Math.ceil(wait / 60_000));
   return (
     <Card>
       <Text style={type.body}>Waiting on {name}</Text>
@@ -344,7 +344,7 @@ function NudgeCard({ name, flaggedAt, lastNudgedAt, now, busy, onNudge }: {
         Flagged {timeAgo(flaggedAt)}{lastNudgedAt ? ` · last nudged ${timeAgo(lastNudgedAt)}` : ''}
       </Text>
       {wait > 0 ? (
-        <Text style={type.small}>You can nudge again in {hours} hour{hours === 1 ? '' : 's'}.</Text>
+        <Text style={type.small}>You can nudge again in {mins >= 60 ? '1 hour' : `${mins} min${mins === 1 ? '' : 's'}`}.</Text>
       ) : (
         <Button title={`Nudge ${name}`} icon="hand-left-outline" variant="secondary" onPress={onNudge} loading={busy} />
       )}

@@ -41,9 +41,14 @@ export const notifyQuietly = (members: Member[], sends: Send[]) => { sendNotific
  * cancel tonight's bin reminders (see binsDoneTask.ts). No sound or banner.
  */
 export async function sendBinsDone(members: Member[], to: string[]) {
+  await sendWake(members, to, { binsDone: true });
+}
+
+/** Invisible push that wakes housemates' phones to do something (e.g. cancel reminders). */
+export async function sendWake(members: Member[], to: string[], data: Record<string, unknown>) {
   const msgs = members
     .filter((m) => to.includes(m.uid) && m.pushToken)
-    .map((m) => ({ to: m.pushToken!, contentAvailable: true, priority: 'normal', data: { binsDone: true } }));
+    .map((m) => ({ to: m.pushToken!, contentAvailable: true, priority: 'normal', data }));
   if (!msgs.length) return;
   await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',

@@ -25,6 +25,8 @@ export interface PushMessage {
   category?: 'check' | 'bins';
   /** Extra info for the buttons. */
   extra?: Record<string, string>;
+  /** Also wake the app in the background (e.g. to set up follow-up reminders). */
+  wake?: boolean;
 }
 
 /** The big bins chore ("Taking big bins out on bin days"). */
@@ -72,11 +74,15 @@ const choreLabel = (name: string, key?: string) => (key === BIG_BINS_KEY ? 'the 
 // ---------- Chores ----------
 
 /** It's your turn (someone flagged "Bins are full"). */
-export function yourTurn(o: { name: string; needs: string; choreKey: string }): PushMessage {
+export function yourTurn(o: { name: string; needs: string; choreKey: string; turn?: { id: string; createdAt: number; choreName: string } }): PushMessage {
+  // The chore's details ride along so their phone can set up follow-up reminders (turnReminders.ts).
+  const follow = o.turn
+    ? { wake: true, extra: { turnId: o.turn.id, needs: o.needs, choreKey: o.choreKey, choreName: o.turn.choreName, createdAt: String(o.turn.createdAt) } }
+    : {};
   if (o.choreKey === BIG_BINS_KEY) {
-    return { kind: 'turn', size: 'big', title: `${o.name}, your turn for the bins! 🗑`, url: choreUrl(o.choreKey), category: 'bins' };
+    return { kind: 'turn', size: 'big', title: `${o.name}, your turn for the bins! 🗑`, url: choreUrl(o.choreKey), category: 'bins', ...follow };
   }
-  return { kind: 'turn', size: 'big', title: `${o.name}, your turn: ${lower(o.needs)}`, url: choreUrl(o.choreKey) };
+  return { kind: 'turn', size: 'big', title: `${o.name}, your turn: ${lower(o.needs)}`, url: choreUrl(o.choreKey), ...follow };
 }
 
 export const nudge = (o: { from: string; needs: string; choreKey: string }): PushMessage =>
@@ -156,6 +162,7 @@ export function toExpo(m: PushMessage, token: string, badge?: number) {
     channelId: m.size === 'quiet' ? 'quiet' : 'default',
     ...(m.category ? { categoryId: m.category } : {}),
     ...(typeof badge === 'number' ? { badge } : {}),
+    ...(m.wake ? { contentAvailable: true } : {}),
     data: { url: m.url, kind: m.kind, size: m.size, ...(m.extra ?? {}) },
   };
 }

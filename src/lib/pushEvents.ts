@@ -66,12 +66,12 @@ export function requestCreated(r: Doc): Send[] {
   return [{ to: [r.assignedTo], msg: M.yourTurn({ name: r.assignedToName, needs: r.needs, choreKey: r.choreKey }) }];
 }
 
-/** Someone nudged (at most every 3 hours, also enforced by the rules). */
+/** Someone nudged (at most once an hour, also enforced by the rules). */
 export function requestUpdated(before: Doc, after: Doc, names: Record<string, string>): Send[] {
   const a = ms(after.lastNudgedAt);
   const b = ms(before.lastNudgedAt);
   if (!a || a === b || after.status !== 'open' || !after.assignedTo) return [];
-  if (b && a - b < 3 * HOUR) return [];
+  if (b && a - b < HOUR) return [];
   return [{ to: [after.assignedTo], msg: M.nudge({ from: names[after.lastNudgedBy] ?? 'A housemate', needs: after.needs, choreKey: after.choreKey }) }];
 }
 

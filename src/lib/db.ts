@@ -11,7 +11,7 @@ import Constants from 'expo-constants';
 import { auth, db } from './firebase';
 import { generateHouseCode, normaliseHouseCode } from './houseCode';
 import { choreKey, choreSize, cleanChoreName, DEFAULT_CHORES, type HouseChore } from './chores';
-import { pickAssignee } from './assign';
+import { openTaskCounts, pickAssignee } from './assign';
 import { awayDaysBetween, type Away } from './away';
 import { afterChore, milestoneHit, seedStreak, type Streak } from './streak';
 import { checksNeededFor, needsRedo } from './review';
@@ -21,7 +21,8 @@ import type { PayChoice } from './money';
 import * as Push from './pushMessages';
 import { binNightNow, logCreated } from './pushEvents';
 import { cancelTonightsBinReminders } from './binsDoneTask';
-import { notifyQuietly, sendBinsDone, sendNotifications } from './notify';
+import { notifyQuietly, sendBinsDone, sendNotifications, sendWake } from './notify';
+import { cancelTurnReminders } from './reminders';
 import { toAvatar, type Avatar } from './avatar';
 import type { HouseArea } from './postcode';
 import { PRIVACY_VERSION } from './legal';
@@ -465,6 +466,7 @@ export async function logChore(opts: {
   track('chore_log');
   if (!offer && !opts.members.find((m) => m.uid === uid)?.lastCompletedAt) track('first_chore');
 
+  if (requestId) stopTurnReminders(opts.members, uid, requestId);
   // On bin night: stop everyone's bin reminders (this phone's now, others' via an invisible push).
   if (key === Push.BIG_BINS_KEY && binNightNow(house.bins, new Date()).length) {
     cancelTonightsBinReminders().catch(() => {});
@@ -621,9 +623,9 @@ async function reviewChore(
   });
 }
 
-export const NUDGE_EVERY_MS = 3 * 60 * 60 * 1000;
+export const NUDGE_EVERY_MS = 60 * 60 * 1000;
 
-/** Reminds whoever's turn it is (at most every 3 hours per chore). */
+/** Reminds whoever's turn it is (at most once an hour per chore). */
 export async function nudgeChore(houseId: string, request: ChoreRequest, from: { uid: string; username: string }, members: Member[]) {
   await updateDoc(doc(db, 'houses', houseId, 'requests', request.id), { lastNudgedAt: serverTimestamp(), lastNudgedBy: from.uid });
   track('chore_nudge');
@@ -635,10 +637,17 @@ export async function nudgeChore(houseId: string, request: ChoreRequest, from: {
  * "needs doing" that's no longer needed. Allowed for whoever it's for (redos
  * only), whoever made it, and the house admin.
  */
-export async function cancelRequest(houseId: string, requestId: string, uid: string) {
+export async function cancelRequest(houseId: string, requestId: string, uid: string, members: Member[] = []) {
   await updateDoc(doc(db, 'houses', houseId, 'requests', requestId), {
     status: 'cancelled', completedBy: uid, completedAt: serverTimestamp(),
   });
+  stopTurnReminders(members, uid, requestId);
+}
+
+/** A chore's done or no longer needed: stop its follow-up reminders on everyone's phone. */
+function stopTurnReminders(members: Member[], me: string, requestId: string) {
+  cancelTurnReminders(requestId).catch(() => {});
+  sendWake(members, members.map((m) => m.uid).filter((u) => u !== me), { turnDone: requestId }).catch(() => {});
 }
 
 /**
@@ -650,16 +659,19 @@ export async function requestChore(opts: {
   requester: { uid: string; username: string };
   members: Member[];
   chore: HouseChore;
+  /** Open chores, so whoever's already holding one isn't given another. */
+  openRequests?: ChoreRequest[];
 }): Promise<{ assignee: Member; notified: boolean }> {
   const { house, chore } = opts;
-  const assignee = pickAssignee(opts.members, opts.requester.uid, 'overall', chore.key, chore.users) as Member | null;
+  const assignee = pickAssignee(opts.members, opts.requester.uid, 'overall', chore.key, chore.users, openTaskCounts(opts.openRequests ?? [])) as Member | null;
   if (!assignee) {
     throw new Error(opts.members.length > 1
       ? 'Nobody else can be asked right now: everyone else is away or doesn’t use this one.'
       : "You're the only one in the house so far — share your house code first!");
   }
 
-  await setDoc(doc(collection(db, 'houses', house.id, 'requests')), {
+  const reqRef = doc(collection(db, 'houses', house.id, 'requests'));
+  await setDoc(reqRef, {
     choreKey: chore.key,
     choreName: chore.name,
     needs: chore.needs,
@@ -677,7 +689,7 @@ export async function requestChore(opts: {
   });
   track('chore_flag');
 
-  const notified = await sendNotifications(opts.members, [{ to: [assignee.uid], msg: Push.yourTurn({ name: assignee.username, needs: chore.needs, choreKey: chore.key }) }]);
+  const notified = await sendNotifications(opts.members, [{ to: [assignee.uid], msg: Push.yourTurn({ name: assignee.username, needs: chore.needs, choreKey: chore.key, turn: { id: reqRef.id, createdAt: Date.now(), choreName: chore.name } }) }]);
   return { assignee, notified };
 }
 
